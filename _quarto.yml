@@ -1,0 +1,22 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "DS 3030"
+  site-url: "https://jarad.github.io/DS3030/"
+  repo-url: "https://github.com/jarad/DS3030"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: lectures/index.qmd
+        text: Lectures
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+
+execute:
+  freeze: auto

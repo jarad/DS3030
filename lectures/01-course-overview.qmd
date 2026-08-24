@@ -1,0 +1,26 @@
+---
+title: "Course Overview"
+subtitle: "DS 3030"
+format:
+  revealjs:
+    chalkboard: false
+---
+
+## Welcome to DS 3030
+
+- Concepts and applications of machine learning
+- Slides are authored in Quarto
+- Published as HTML with GitHub Pages
+
+## R example
+
+```{r}
+values <- c(2, 4, 6, 8)
+mean(values)
+```
+
+## Next steps
+
+- Add new slide decks in `/lectures`
+- Keep filenames ordered by lecture number
+- Publish updates by pushing to `main`
