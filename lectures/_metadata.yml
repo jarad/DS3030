@@ -1,0 +1,6 @@
+format:
+  revealjs:
+    slide-number: true
+    incremental: false
+    theme: simple
+    footer: "DS 3030 · Iowa State University"

@@ -1,0 +1,16 @@
+---
+title: "DS 3030"
+---
+
+# Concepts and Applications of Machine Learning
+
+This site hosts public course material for **DS 3030** at Iowa State University.
+
+## Course content
+
+- [Lecture slides](lectures/index.qmd)
+
+## Authoring workflow
+
+Course pages and slides are written in [Quarto](https://quarto.org/).
+Lecture slide decks live in `/lectures`, can include R code chunks, and are published as HTML through GitHub Pages.

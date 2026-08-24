@@ -1,0 +1,12 @@
+---
+title: "Lecture Slides"
+---
+
+# Lecture Slides
+
+Store lecture slide source files in this directory using numbered Quarto documents.
+Use standard Quarto slide content and R chunks such as `{r}` for executable examples.
+
+## Available decks
+
+- [01: Course overview](01-course-overview.qmd)
