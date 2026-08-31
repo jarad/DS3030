@@ -1,5 +1,5 @@
 ---
-title: "Data Science Pipeline"
+title: "Statistical Learning"
 subtitle: "DS 3030"
 format:
   revealjs:
@@ -30,3 +30,11 @@ format:
 
 [![](bls-data-scientist.png){width=60%}](https://www.bls.gov/ooh/math/data-scientists.htm#tab-6)
 
+
+## Statistical Learning
+
+|            | Regression         | Classification | 
+|------------|:-------------------|:-----------------------|
+| Response   | Quantitative       | Qualitative            |
+| Prediction | Number             | Category               |
+| Assessment | Mean squared error | Misclassification rate |

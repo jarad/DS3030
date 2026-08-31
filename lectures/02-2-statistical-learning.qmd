@@ -1,8 +1,0 @@
----
-title: "Statistical Learning"
-subtitle: "DS 3030"
-format:
-  revealjs:
-    chalkboard: false
----
-
