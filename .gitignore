@@ -40,7 +40,12 @@ vignettes/*.pdf
 .Renviron
 
 # pkgdown site
-docs/
+/docs/*.html
+/docs/*.css
+/docs/*.js
+/docs/site_libs/
+/docs/search.json
+/docs/lectures/
 
 # translation temp files
 po/*~
