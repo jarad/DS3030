@@ -4,7 +4,14 @@ subtitle: "DS 3030"
 format:
   revealjs:
     chalkboard: false
+    center: false
 ---
+
+## Outline
+
+- Data Pipelines
+- Data Roles
+- Statistical Learning
 
 ## Tidyverse - Data Science Pipeline
 
@@ -31,7 +38,19 @@ format:
 [![](bls-data-scientist.png){width=60%}](https://www.bls.gov/ooh/math/data-scientists.htm#tab-6)
 
 
+
+
 ## Statistical Learning
+
+|Learning|Response|
+|--------|:--------|
+|Supervised|Observed|
+|Unsupervised|Not observed|
+|Semi-supervised|Observed for some data|
+
+
+
+## Supervised learning
 
 |            | Regression         | Classification | 
 |------------|:-------------------|:-----------------------|
