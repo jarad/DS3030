@@ -50,4 +50,6 @@ rsconnect/
 
 # Quarto build output
 .quarto/
-_site/
+
+/.quarto/
+**/*.quarto_ipynb

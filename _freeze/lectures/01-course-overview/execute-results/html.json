@@ -1,0 +1,15 @@
+{
+  "hash": "68d1b663b1dfb45ed9fd9651729aa573",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Course Overview\"\nsubtitle: \"DS 3030\"\nformat:\n  revealjs:\n    chalkboard: false\n---\n\n## Welcome to DS 3030\n\n- Concepts and applications of machine learning\n- Slides are authored in Quarto\n- Published as HTML with GitHub Pages\n\n## R example\n\n\n::: {.cell}\n\n```{.r .cell-code}\nvalues <- c(2, 4, 6, 8)\nmean(values)\n```\n\n::: {.cell-output .cell-output-stdout}\n\n```\n[1] 5\n```\n\n\n:::\n:::\n\n\n## Next steps\n\n- Add new slide decks in `/lectures`\n- Keep filenames ordered by lecture number\n- Publish updates by pushing to `main`\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "DS 3030",
+    "section": "",
+    "text": "This site hosts public course material for DS 3030 at Iowa State University.\n\n\n\nLecture slides\n\n\n\n\nCourse pages and slides are written in Quarto. Lecture slide decks live in /lectures, can include R code chunks, and are published as HTML through GitHub Pages."
+  },
+  {
+    "objectID": "index.html#course-content",
+    "href": "index.html#course-content",
+    "title": "DS 3030",
+    "section": "",
+    "text": "Lecture slides"
+  },
+  {
+    "objectID": "index.html#authoring-workflow",
+    "href": "index.html#authoring-workflow",
+    "title": "DS 3030",
+    "section": "",
+    "text": "Course pages and slides are written in Quarto. Lecture slide decks live in /lectures, can include R code chunks, and are published as HTML through GitHub Pages."
+  },
+  {
+    "objectID": "lectures/01-course-overview.html",
+    "href": "lectures/01-course-overview.html",
+    "title": "Course Overview",
+    "section": "",
+    "text": "Concepts and applications of machine learning\nSlides are authored in Quarto\nPublished as HTML with GitHub Pages"
+  },
+  {
+    "objectID": "lectures/01-course-overview.html#welcome-to-ds-3030",
+    "href": "lectures/01-course-overview.html#welcome-to-ds-3030",
+    "title": "Course Overview",
+    "section": "",
+    "text": "Concepts and applications of machine learning\nSlides are authored in Quarto\nPublished as HTML with GitHub Pages"
+  },
+  {
+    "objectID": "lectures/01-course-overview.html#r-example",
+    "href": "lectures/01-course-overview.html#r-example",
+    "title": "Course Overview",
+    "section": "R example",
+    "text": "R example\n\nvalues &lt;- c(2, 4, 6, 8)\nmean(values)\n\n[1] 5"
+  },
+  {
+    "objectID": "lectures/01-course-overview.html#next-steps",
+    "href": "lectures/01-course-overview.html#next-steps",
+    "title": "Course Overview",
+    "section": "Next steps",
+    "text": "Next steps\n\nAdd new slide decks in /lectures\nKeep filenames ordered by lecture number\nPublish updates by pushing to main"
+  },
+  {
+    "objectID": "lectures/index.html",
+    "href": "lectures/index.html",
+    "title": "Lecture Slides",
+    "section": "",
+    "text": "Store lecture slide source files in this directory using numbered Quarto documents. Use standard Quarto slide content and R chunks such as {r} for executable examples.\n\n\n\n01: Course overview"
+  },
+  {
+    "objectID": "lectures/index.html#available-decks",
+    "href": "lectures/index.html#available-decks",
+    "title": "Lecture Slides",
+    "section": "",
+    "text": "01: Course overview"
+  }
+]
