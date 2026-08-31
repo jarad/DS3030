@@ -1,0 +1,32 @@
+---
+title: "Data Science Pipeline"
+subtitle: "DS 3030"
+format:
+  revealjs:
+    chalkboard: false
+---
+
+## Tidyverse - Data Science Pipeline
+
+[![](tidyverse-data-science-pipeline.png)](https://tidyverse.tidyverse.org/articles/paper.html)
+
+## Altexsoft - ETL Pipeline
+
+[![](altexsoft-etl-pipeline.webp)](https://www.altexsoft.com/blog/data-pipeline-components-and-types/)
+
+## MonteCarlo.AI - Data Pipeline
+
+[![](montecarlo-data-pipeline.webp)](https://montecarlo.ai/blog-data-pipeline-architecture-explained)
+
+## Geeks for Geeks - Data Science Pipeline
+
+[![](geeksforgeeks-data-science-pipeline.webp)](https://www.geeksforgeeks.org/data-science/whats-data-science-pipeline/)
+
+## Data Analyst vs Scientist vs Engineer
+
+[![](Data-Analyst-vs-Data-Scientist-vs-Data-Engineer.jpg){width=80%}](https://techedo.com/blog/data-analyst-vs-data-scientist-vs-data-engineer/)
+
+## BLS - Data Scientist Outlook
+
+[![](bls-data-scientist.png){width=60%}](https://www.bls.gov/ooh/math/data-scientists.htm#tab-6)
+

@@ -9,4 +9,5 @@ Use standard Quarto slide content and R chunks such as `{r}` for executable exam
 
 ## Available decks
 
-- [01: Course overview](01-course-overview.qmd)
+- [Ch 02-1: Data Science Pipeline](02-1-data-science-pipeline.qmd)
+- [Ch 02-2: Statistical Learning](02-2-statistical-learning.qmd)
