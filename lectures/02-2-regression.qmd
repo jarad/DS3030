@@ -1,0 +1,73 @@
+---
+title: "Regression"
+format: html
+---
+
+## Response variables
+
+For regression models, our response variable is quantitative, continuous value.s
+
+::: {.callout-note collapse="true"}
+### For example,
+- Salary
+- Yield
+- Score
+- Concentration
+:::
+
+
+## True Model
+
+The non-linear regression model of interest is
+
+$$Y = f(X) + \epsilon$$
+where
+
+- $Y$ is the response variable,
+- $X = (X_1,\ldots,X_p)$ is the collection of explanatory variables, and
+- $\epsilon$ is the error with $E[\epsilon] = 0$ and independent of $x$.
+
+
+::: {.callout-note collapse="true"}
+### Goal
+Based on data $(x_i, y_i)$ for $i=1,\ldots,n$, 
+obtain an estimate of the function, $\hat{f}()$.
+:::
+
+
+
+## Prediction vs Understanding
+
+Prediction: we don't care about interpretation, we just want the model that fits the best
+
+Understanding: we would like the model to fit well, but are willing to sacrifice
+some fit to have a model that is simple to understand
+
+::: {.callout-note collapse="true"}
+### Examples
+- Compared to a high school diploma, having a bachelor's degree increases starting salary by $20,000. 
+- A master’s degree in data science typically yields a 5% to 25% salary increase compared to a bachelor’s degree. 
+- The log odds of initial job placement for those with a high school diploma are not statistically significantly different from those with a bachelor's degree.
+:::
+
+
+
+## Model Evaluation
+
+When prediction is the goal, we evaluate the model through its mean squared error:
+
+$$MSE 
+= \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 
+= \frac{1}{n} \sum_{i=1}^n \left[y_i - \hat{f}(x_i)\right]^2$$
+as written, this is the *training MSE* since we used the same data to estimate
+$\hat{f}$ as we used to compute the MSE.
+
+We are actually more interested in how well our model fits *test* data, 
+i.e. data that were not used to estimate $\hat{f}$. 
+Thus, we typically estimate the *expected test MSE*:
+
+$$MSE = E\left\{\left[Y - \hat{f}(X)\right]^2\right\}\approx \frac{1}{m} \sum_{i=1}^m \left[\tilde{y}_i - \hat{f}(\tilde{x}_i)\right]^2$$
+and we refer to this simply as the *test MSE*.
+
+
+
