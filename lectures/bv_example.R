@@ -74,28 +74,11 @@ mse_train <- train_boston |>
   ) |>
   group_by(model) |>
   summarize(
-    mse = mean((medv-prediction)^2)                 # how do we compute the training MSE? 
+    mse = NA                # how do we compute the training MSE? 
   )
 
 
 ## test MSE
-mse_test <- test_boston |> 
-  dplyr::select(lstat, medv) |>
-  mutate(
-    # alternative to using $fitted.values
-    linear = predict(train_m1, newdata = test_boston),
-    order5 = predict(train_m5, newdata = test_boston),
-    order9 = predict(train_m9, newdata = test_boston)
-  ) |>
-  pivot_longer(
-    cols      = linear:order9,
-    names_to  = "model",
-    values_to = "prediction"
-  ) |>
-  group_by(model) |>
-  summarize(
-    mse = mean((medv-prediction)^2)                 # how do we compute the training MSE? 
-  )
 
 
 
