@@ -54,3 +54,6 @@ rsconnect/
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Mac files
+.DS_Store

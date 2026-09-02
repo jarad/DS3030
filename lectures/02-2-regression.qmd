@@ -71,3 +71,106 @@ and we refer to this simply as the *test MSE*.
 
 
 
+## In-class activity
+
+[R script](bv_example.R)
+
+## Bias-variance Tradeoff
+
+::: {.callout-note collapse="true"}
+### Code
+```{r}
+library("tidyverse")
+library("MASS")
+
+set.seed(20260902) # for reproducible results
+n <- dim(Boston)[1]
+train_index  <- sample.int(n, size = n / 2, replace = FALSE)
+train_boston <- Boston[ train_index, ]
+test_boston  <- Boston[-train_index, ]
+
+train_predict <- test_predict <- list()
+for (i in 1:9) {
+    m <- lm(medv ~ poly(lstat, i), data = train_boston)
+    train_predict[[i]] <- predict(m, newdata = train_boston)
+    test_predict[[ i]] <- predict(m, newdata = test_boston)
+}
+
+
+
+mse_train <- train_boston |> 
+  dplyr::select(lstat, medv) |>
+  mutate(
+    order1 = train_predict[[1]],
+    order2 = train_predict[[2]],
+    order3 = train_predict[[3]],
+    order4 = train_predict[[4]],
+    order5 = train_predict[[5]],
+    order6 = train_predict[[6]],
+    order7 = train_predict[[7]],
+    order8 = train_predict[[8]],
+    order9 = train_predict[[9]],
+  ) |>
+  pivot_longer(
+    cols      = starts_with("order"),
+    names_to  = "model",
+    values_to = "prediction"
+  ) |>
+  group_by(model) |>
+  summarize(
+    mse = mean((medv-prediction)^2)         
+  )
+
+mse_test <- test_boston |> 
+  dplyr::select(lstat, medv) |>
+  mutate(
+    order1 = test_predict[[1]],
+    order2 = test_predict[[2]],
+    order3 = test_predict[[3]],
+    order4 = test_predict[[4]],
+    order5 = test_predict[[5]],
+    order6 = test_predict[[6]],
+    order7 = test_predict[[7]],
+    order8 = test_predict[[8]],
+    order9 = test_predict[[9]]
+  ) |>
+  pivot_longer(
+    cols      = starts_with("order"),
+    names_to  = "model",
+    values_to = "prediction"
+  ) |>
+  group_by(model) |>
+  summarize(
+    mse = mean((medv-prediction)^2)         
+  )
+
+
+mse <- bind_rows(
+    mse_train |> mutate(type = "train"),
+    mse_test  |> mutate(type = "test" )
+)
+
+ggplot(mse, aes(x = model, y = mse, 
+                color = type, linetype = type, group = type)) +
+    geom_line() + 
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "bottom") +
+    labs(
+        x     = "Flexibilty", 
+        y     = "Mean squared error",    
+        title = "Bias-variance tradeoff")
+```
+:::
+
+
+## Bias-variance Tradeoff (Mathematically)
+
+$$E\left[\left(Y-\hat{f}(X))^2\right)\right] 
+= Var[\hat{f}(X)] + Bias[\hat{f}(X)]^2 + Var[\epsilon]$$
+
+where, over different **training** data
+
+- $Var[\hat{f}(X)]$ is the variance 
+- $Bias[\hat{f}(X)]$ is the bias
+- $Var[\epsilon]$ is the irreducible error
