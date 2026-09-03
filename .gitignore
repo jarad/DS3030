@@ -51,8 +51,9 @@ rsconnect/
 
 # Quarto build output
 .quarto/
-
 /.quarto/
+/_site/
+/site_libs/
 **/*.quarto_ipynb
 
 # Mac files
