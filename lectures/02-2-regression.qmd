@@ -5,7 +5,7 @@ format: html
 
 ## Response variables
 
-For regression models, our response variable is quantitative, continuous value.s
+For regression models, our response variable is quantitative, continuous values.
 
 ::: {.callout-note collapse="true"}
 ### For example,
@@ -20,19 +20,19 @@ For regression models, our response variable is quantitative, continuous value.s
 
 The non-linear regression model of interest is
 
-$$Y = f(X) + \epsilon$$
-where
+$$Y_i = f(X_i) + \epsilon_i$$
+where, for observation $i$, 
 
-- $Y$ is the response variable,
-- $X = (X_1,\ldots,X_p)$ is the collection of explanatory variables, and
-- $\epsilon$ is the error with $E[\epsilon] = 0$ and independent of $x$.
+- $Y_i$ is the response variable,
+- $X_i = (X_{i1},\ldots,X_{ip})$is the collection of explanatory variables, and
+- $\epsilon_i$ is the error with $E[\epsilon_i] = 0$ and independent of $x$.
 
 
-::: {.callout-note collapse="true"}
+
 ### Goal
 Based on data $(x_i, y_i)$ for $i=1,\ldots,n$, 
 obtain an estimate of the function, $\hat{f}()$.
-:::
+
 
 
 
@@ -47,7 +47,8 @@ some fit to have a model that is simple to understand
 ### Examples
 - Compared to a high school diploma, having a bachelor's degree increases starting salary by $20,000. 
 - A master’s degree in data science typically yields a 5% to 25% salary increase compared to a bachelor’s degree. 
-- The log odds of initial job placement for those with a high school diploma are not statistically significantly different from those with a bachelor's degree.
+- After adjusting for age, gender, and other factors, 
+the average salary of a data scientist is $X higher than that of a software engineer.
 :::
 
 
@@ -56,7 +57,7 @@ some fit to have a model that is simple to understand
 
 When prediction is the goal, we evaluate the model through its mean squared error:
 
-$$MSE 
+$$\text{Training MSE}
 = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 
 = \frac{1}{n} \sum_{i=1}^n \left[y_i - \hat{f}(x_i)\right]^2$$
 as written, this is the *training MSE* since we used the same data to estimate
@@ -66,110 +67,32 @@ We are actually more interested in how well our model fits *test* data,
 i.e. data that were not used to estimate $\hat{f}$. 
 Thus, we typically estimate the *expected test MSE*:
 
-$$MSE = E\left\{\left[Y - \hat{f}(X)\right]^2\right\}\approx \frac{1}{m} \sum_{i=1}^m \left[\tilde{y}_i - \hat{f}(\tilde{x}_i)\right]^2$$
+$$\text{Test MSE} 
+= E\left\{\left[Y - \hat{f}(X)\right]^2\right\}\approx \frac{1}{m} \sum_{i=1}^m \left[\tilde{y}_i - \hat{f}(\tilde{x}_i)\right]^2$$
 and we refer to this simply as the *test MSE*.
 
 
 
-## In-class activity
 
-[R script](bv_example.R)
 
 ## Bias-variance Tradeoff
 
-::: {.callout-note collapse="true"}
-### Code
-```{r}
-library("tidyverse")
-library("MASS")
-
-set.seed(20260902) # for reproducible results
-n <- dim(Boston)[1]
-train_index  <- sample.int(n, size = n / 2, replace = FALSE)
-train_boston <- Boston[ train_index, ]
-test_boston  <- Boston[-train_index, ]
-
-train_predict <- test_predict <- list()
-for (i in 1:9) {
-    m <- lm(medv ~ poly(lstat, i), data = train_boston)
-    train_predict[[i]] <- predict(m, newdata = train_boston)
-    test_predict[[ i]] <- predict(m, newdata = test_boston)
-}
+Using this [Regression script](02-2-regression.R),
+we create this plot that has the model flexibility on the x-axis and the test
+MSE on the y-axis.
 
 
-
-mse_train <- train_boston |> 
-  dplyr::select(lstat, medv) |>
-  mutate(
-    order1 = train_predict[[1]],
-    order2 = train_predict[[2]],
-    order3 = train_predict[[3]],
-    order4 = train_predict[[4]],
-    order5 = train_predict[[5]],
-    order6 = train_predict[[6]],
-    order7 = train_predict[[7]],
-    order8 = train_predict[[8]],
-    order9 = train_predict[[9]],
-  ) |>
-  pivot_longer(
-    cols      = starts_with("order"),
-    names_to  = "model",
-    values_to = "prediction"
-  ) |>
-  group_by(model) |>
-  summarize(
-    mse = mean((medv-prediction)^2)         
-  )
-
-mse_test <- test_boston |> 
-  dplyr::select(lstat, medv) |>
-  mutate(
-    order1 = test_predict[[1]],
-    order2 = test_predict[[2]],
-    order3 = test_predict[[3]],
-    order4 = test_predict[[4]],
-    order5 = test_predict[[5]],
-    order6 = test_predict[[6]],
-    order7 = test_predict[[7]],
-    order8 = test_predict[[8]],
-    order9 = test_predict[[9]]
-  ) |>
-  pivot_longer(
-    cols      = starts_with("order"),
-    names_to  = "model",
-    values_to = "prediction"
-  ) |>
-  group_by(model) |>
-  summarize(
-    mse = mean((medv-prediction)^2)         
-  )
-
-
-mse <- bind_rows(
-    mse_train |> mutate(type = "train"),
-    mse_test  |> mutate(type = "test" )
-)
-
-ggplot(mse, aes(x = model, y = mse, 
-                color = type, linetype = type, group = type)) +
-    geom_line() + 
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      legend.position = "bottom") +
-    labs(
-        x     = "Flexibilty", 
-        y     = "Mean squared error",    
-        title = "Bias-variance tradeoff")
-```
-:::
+![](02-3-regression-bias-variance-tradeoff.jpg)
 
 
 ## Bias-variance Tradeoff (Mathematically)
 
-$$E\left[\left(Y-\hat{f}(X))^2\right)\right] 
-= Var[\hat{f}(X)] + Bias[\hat{f}(X)]^2 + Var[\epsilon]$$
+Over different training data sets, we want to reduce the *expected test MSE*, 
+which can be decomposed as follows:
 
-where, over different **training** data
+$$E\left[\left(Y-\hat{f}(X)\right)^2\right] 
+= Var\left[\hat{f}(X)\right] + Bias\left[\hat{f}(X)\right]^2 + Var[\epsilon]$$
+where 
 
 - $Var[\hat{f}(X)]$ is the variance 
 - $Bias[\hat{f}(X)]$ is the bias
