@@ -74,7 +74,7 @@ $$\text{Test Error Rate}
 and we refer to this simply as the *test MSE*.
 
 
-
+::: {.callout-note collapse="true"}
 ## Alternative metrics
 
 Here are some alternative metrics for evaluating classification models:
@@ -85,7 +85,7 @@ $$\text{Accuracy} = 1 - \text{Error Rate} = \frac{1}{n} \sum_{i=1}^n \mathrm{I}(
 We will stick with Error Rate so that all metrics are constructed with larger
 values indicating worse performance.
 
-## Log-Loss
+### Log-Loss
 
 So far these metrics do not account for the probabilities assigned to each class.
 An alternative metric is the *log loss*: 
@@ -114,7 +114,7 @@ $$\text{Precision} = \frac{TP}{TP + FP}.$$
 Precision is also called the *positive predictive value*.
 
 
-#### C x C
+### C x C
 
 For $C$ classes, the confusion matrix is a $C \times C$ table:
 
@@ -125,7 +125,7 @@ For $C$ classes, the confusion matrix is a $C \times C$ table:
 |...|...|...|...|...|
 |Class C|FP_1|FP_2|...|TP_C|
 
-
+:::
 
 
 
