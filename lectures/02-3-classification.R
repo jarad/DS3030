@@ -36,8 +36,8 @@ test_boston  <- Boston[-train_index, ]
 # Fit models and calculate train and test MSE
 train_predict <- test_predict <- list()
 for (i in 1:9) {
-    # Fit a logistic regression model with additional explanatory variables
-    m <- glm(medv_class == "high" ~ ., data = train_boston[, 1:(1+i)], family = binomial)
+    # Fit a logistic regression model with additional explanatory variables (and interactions)
+    m <- glm(medv_class == "high" ~ .^2, data = train_boston[, 1:(1+i)], family = binomial)
   
     # Predictions are probabilities of "high"
     train_predict[[i]] <- predict(m, newdata = train_boston, type = "response")
