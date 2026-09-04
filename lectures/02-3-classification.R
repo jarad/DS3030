@@ -34,10 +34,13 @@ test_boston  <- Boston[-train_index, ]
 
 
 # Fit models and calculate train and test MSE
+# Fitting models of order 1 (linear) to order 9 in lstat, analogous to the
+# regression example, so that flexibility increases smoothly with i.
 train_predict <- test_predict <- list()
 for (i in 1:9) {
-    # Fit a logistic regression model with additional explanatory variables
-    m <- glm(medv_class == "high" ~ ., data = train_boston[, 1:(1+i)], family = binomial)
+    # Fit a logistic regression model with an increasingly flexible
+    # polynomial term in lstat
+    m <- glm(medv_class == "high" ~ poly(lstat, i), data = train_boston, family = binomial)
   
     # Predictions are probabilities of "high"
     train_predict[[i]] <- predict(m, newdata = train_boston, type = "response")
