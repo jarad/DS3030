@@ -53,20 +53,23 @@ for (i in 1:9) {
 error_train <- train_boston |> 
   dplyr::select(medv_class) |>
   mutate(
-    order1 = train_predict[[1]],
-    order2 = train_predict[[2]],
-    order3 = train_predict[[3]],
-    order4 = train_predict[[4]],
-    order5 = train_predict[[5]],
-    order6 = train_predict[[6]],
-    order7 = train_predict[[7]],
-    order8 = train_predict[[8]],
-    order9 = train_predict[[9]],
+    x1 = train_predict[[1]],
+    x2 = train_predict[[2]],
+    x3 = train_predict[[3]],
+    x4 = train_predict[[4]],
+    x5 = train_predict[[5]],
+    x6 = train_predict[[6]],
+    x7 = train_predict[[7]],
+    x8 = train_predict[[8]],
+    x9 = train_predict[[9]],
   ) |>
   pivot_longer(
-    cols      = starts_with("order"),
+    cols      = starts_with("x"),
     names_to  = "model",
     values_to = "prediction"
+  ) |>
+  mutate(
+    prediction = factor(prediction, levels = c("low", "high"))
   ) |>
   group_by(model) |>
   summarize(
@@ -78,20 +81,23 @@ error_train <- train_boston |>
 error_test <- test_boston |> 
   dplyr::select(medv_class) |>
   mutate(
-    order1 = test_predict[[1]],
-    order2 = test_predict[[2]],
-    order3 = test_predict[[3]],
-    order4 = test_predict[[4]],
-    order5 = test_predict[[5]],
-    order6 = test_predict[[6]],
-    order7 = test_predict[[7]],
-    order8 = test_predict[[8]],
-    order9 = test_predict[[9]]
+    x1 = test_predict[[1]],
+    x2 = test_predict[[2]],
+    x3 = test_predict[[3]],
+    x4 = test_predict[[4]],
+    x5 = test_predict[[5]],
+    x6 = test_predict[[6]],
+    x7 = test_predict[[7]],
+    x8 = test_predict[[8]],
+    x9 = test_predict[[9]]
   ) |>
   pivot_longer(
-    cols      = starts_with("order"),
+    cols      = starts_with("x"),
     names_to  = "model",
     values_to = "prediction"
+  ) |>
+  mutate(
+    prediction = factor(prediction, levels = c("low", "high"))
   ) |>
   group_by(model) |>
   summarize(
