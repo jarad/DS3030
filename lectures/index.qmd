@@ -11,3 +11,4 @@ Use standard Quarto slide content and R chunks such as `{r}` for executable exam
 
 - [Ch 02-1: Statistical Learning](02-1-statistical-learning.qmd)
 - [Ch 02-2: Regression](02-2-regression.qmd)
+- [Ch 02-3: Classification](02-3-classification.qmd)
