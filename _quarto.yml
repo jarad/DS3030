@@ -10,9 +10,9 @@ book:
     - index.qmd
     - part: "Statistical Learning"
       chapters:
-      - lectures/02-1-statistical-learning.qmd
-      - lectures/02-2-regression.qmd
-      - lectures/02-3-classification.qmd
+      - learning/02-1-overview.qmd
+      - learning/02-2-regression.qmd
+      - learning/02-3-classification.qmd
 
 format:
   html:

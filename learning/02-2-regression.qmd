@@ -1,6 +1,5 @@
 ---
 title: "Regression"
-format: html
 ---
 
 ## Response variables
@@ -82,7 +81,7 @@ we create this plot that has the model flexibility on the x-axis and the test
 MSE on the y-axis.
 
 
-![](02-3-regression-bias-variance-tradeoff.jpg)
+![](02-2-regression-bias-variance-tradeoff.jpg)
 
 
 ## Bias-variance Tradeoff (Mathematically)

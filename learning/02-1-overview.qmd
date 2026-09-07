@@ -1,6 +1,5 @@
 ---
-title: "Statistical Learning"
-subtitle: "DS 3030"
+title: "Overview"
 format:
   revealjs:
     chalkboard: false
@@ -62,6 +61,7 @@ format:
 ## Bias-variance tradeoff
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#| label: bias-variance-tradeoff
 library("tidyverse")
 
 d <- tibble(
