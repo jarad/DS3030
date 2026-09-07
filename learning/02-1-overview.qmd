@@ -1,10 +1,4 @@
----
-title: "Overview"
-format:
-  revealjs:
-    chalkboard: false
-    center: false
----
+# Overview
 
 ## Outline
 

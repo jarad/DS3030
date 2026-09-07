@@ -13,6 +13,9 @@ book:
       - learning/02-1-overview.qmd
       - learning/02-2-regression.qmd
       - learning/02-3-classification.qmd
+    - part: "Regression"
+      chapters:
+      - regression/03-1-slr.qmd
 
 format:
   html:

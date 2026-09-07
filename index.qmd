@@ -1,7 +1,3 @@
----
-title: "Preface"
----
-
 # Preface {.unnumbered}
 
 This site hosts public course material for DS 3030 - Concepts and Applications of Machine Learning at Iowa State University.

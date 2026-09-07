@@ -1,6 +1,4 @@
----
-title: "Classification"
----
+# Classification
 
 ## Response variables
 

@@ -1,6 +1,4 @@
----
-title: "Regression"
----
+# Regression
 
 ## Response variables
 

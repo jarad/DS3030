@@ -1,0 +1,13 @@
+Package: DS3030
+Title: Notes for DS3030 and allow quick installation of all packages.
+Version: 0.1
+Authors@R: 
+    person("Jarad", "Niemi", , "niemi@iastate.edu", role = c("aut", "cre"))
+Description: This package contains the notes for DS3030 and allows for quick installation of all packages used in the course.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.1.0
+Imports: 
+    quantmod,
+    tidyverse
