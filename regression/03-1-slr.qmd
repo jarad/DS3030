@@ -19,15 +19,15 @@ $Var[\epsilon_i] = \sigma^2$.
 
 The interpretation of the parameters is as follows:
 
-- $\beta_0$ is the intercept, $E[Y_i|X_i = 0]$.
-- $\beta_1$ is the slope, which represents the expected change in $Y$ for a one-unit increase in $X$, $E[Y_i|X_i = x+1] - E[Y_i|X_i = x]$.
+- $\beta_0$ is the expected response when the explanatory variable is zero, $E[Y_i|X_i = 0]$.
+- $\beta_1$ is the expected change in $Y$ for a one-unit increase in $X$, $E[Y_i|X_i = x+1] - E[Y_i|X_i = x]$.
 
 ::: {.callout-note collapse="true"}
 ### Interpretations using logarithms
 A common transformation is to take the logarithm of the response variable, the explanatory variable, or both. The interpretations of the parameters change accordingly:
-- If we take the logarithm of the response variable, then $e^{\beta_1}$ represents the *multiplicative change in the median* response for a one-unit increase in the explanatory variable.
+- If we take the logarithm of the response variable, then $e^{\beta_1}$ represents the *multiplicative change* in the *median* response for a one-unit increase in the explanatory variable.
 - If we take the logarithm of the explanatory variable, then $\beta_1\log(2)$ represents the expected change in the response for a *doubling* of the explanatory variable.
-- If we take the logarithm of both the response and explanatory variables, then $2^\beta_1$ represents the *multiplicative change in the median* response for a *doubling* of the explanatory variable.
+- If we take the logarithm of both the response and explanatory variables, then $2^{\beta_1}$ represents the *multiplicative change* in the *median* response for a *doubling* of the explanatory variable.
 :::
 
 ## Estimation
@@ -54,8 +54,10 @@ since we have estimated two parameters ($\beta_0$ and $\beta_1$).
 ## Inference
 
 For inference, we need to assume normality of the errors, 
-i.e. $$\epsilon_i \stackrel{ind}{\sim} N(0, \sigma^2)$$.
+i.e. $$\epsilon_i \stackrel{ind}{\sim} N(0, \sigma^2).$$
 This results in the model
+$$Y_i = \beta_0 + \beta_1 X_i + \epsilon_i$$
+or, all together, 
 $$Y_i \stackrel{ind}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2).$$
 
 With this assumption, we can write the likelihood function:
