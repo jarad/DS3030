@@ -16,6 +16,7 @@ book:
     - part: "Regression"
       chapters:
       - regression/03-1-slr.qmd
+      - regression/03-2-mlr.qmd
 
 format:
   html:
