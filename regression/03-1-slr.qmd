@@ -127,3 +127,6 @@ $$TSS = \sum_{i=1}^n (y_i - \bar{y})^2.$$
 
 Thus, $R^2$ can be interpreted as the proportion of the total variability in the response variable that is explained by the model.
 
+## Example
+
+[Example analysis using the Capital Asset Pricing Model](03-1-slr.R).
