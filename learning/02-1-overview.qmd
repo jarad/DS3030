@@ -59,24 +59,35 @@
 library("tidyverse")
 
 d <- tibble(
-  x = seq(0, 1, length.out = 100),
-  `Irreducible Error` = 0.3
-) |>
+    x = seq(0, 1, length.out = 100),
+    `Irreducible Error` = 0.3
+  ) |>
   mutate(
-    Bias = x^2,
-    Variance = rev(Bias),
+    Variance = x^2,
+    Bias = rev(Variance),
     `Expected Test Error` = Bias + Variance + `Irreducible Error`
   ) |>
   pivot_longer(
     cols = -x,
     names_to = "Error Type",
     values_to = "Error"
-  )
+  ) |>
+    mutate(
+      `Error Type` = factor(
+        `Error Type`,
+        levels = c(
+          "Bias",
+          "Variance",
+          "Irreducible Error",
+          "Expected Test Error"
+        )
+      )
+    )
 
 ggplot(
-  d,
-  aes(x = x, y = Error, color = `Error Type`, linetype = `Error Type`)
-) +
+    d,
+    aes(x = x, y = Error, color = `Error Type`, linetype = `Error Type`)
+  ) +
   geom_line(linewidth = 2) +
   labs(
     x = "Model Flexibility",
@@ -88,15 +99,33 @@ ggplot(
       "Bias" = "dotdash",
       "Variance" = "dashed",
       "Irreducible Error" = "dotted"
+    ),
+    labels = c(
+      'Bias' = expression(Bias^2)
     )
   ) +
-  theme_bw(base_size = 20) +
+  scale_color_manual(
+    values = c(
+      "Expected Test Error" = "#E41A1C",
+      "Bias" = "#377EB8",
+      "Variance" = "#4DAF4A",
+      "Irreducible Error" = "#984EA3"
+    ),
+    labels = c(
+      'Bias' = expression(Bias^2)
+    )
+  ) +
+  theme_bw(
+    base_size = 20
+  ) +
   theme(
     # Remove tick marks and labels
     axis.ticks.x = element_blank(),
     axis.text.x = element_blank(),
     axis.ticks.y = element_blank(),
-    axis.text.y = element_blank()
+    axis.text.y = element_blank(),
+
+    legend.key.width = unit(2.5, "cm")
   )
 ```
 
