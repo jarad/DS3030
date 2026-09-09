@@ -1,0 +1,186 @@
+# Multiple (Linear) Regression
+
+Recall our non-linear regression model:
+$$Y = f(X) + \epsilon$$
+
+where $f$ is an unknown function and $\epsilon$ is a random error term with mean 0 and variance $\sigma^2$. 
+We now consider $X$ a vector of $p$ explanatory variables, 
+and we can use a multiple linear regression model to approximate $f$.
+
+
+## Model
+
+The multiple (linear) regression model is
+
+$$Y_i = \beta_0 + \beta_1 X_{i,1} \cdots \beta_p X_{i,p} + \epsilon_i$$
+
+where $\epsilon_i$ is a random error term with $E[\epsilon_i] = 0$ and 
+$Var[\epsilon_i] = \sigma^2$.
+
+## Categorical explanatory variables
+
+If you have categorical explanation variables, you can include them in the model using *dummy variables*.
+Suppse you have a categorical variable $Z$ with $k$ levels. You can create $k-1$ dummy variables to represent the levels of $Z$. 
+
+For example, if $Z$ has levels "A", "B", and "C", 
+you can create two dummy variables:
+
+- $D_1 = 1$ if $Z = "A"$, $0 otherwise
+- $D_2 = 1$ if $Z = "B"$, $0 otherwise
+
+Then, you can include these dummy variables in the regression model as follows:
+$$Y_i = \beta_0 + \beta_1 D_{i,1} + \beta_2 D_{i,2} + \epsilon_i.$$
+
+
+
+## Interpretation
+
+The interpretation of the parameters is as follows:
+
+- $\beta_0$ is the expected response when all explanatory variables are zero and
+- $\beta_j$ is the expected change in $Y$ for a one-unit increase in $X_j$ when all other explanatory variables are held constant.
+
+When using polynomial terms, e.g. quadratic, or interactions, 
+the interpretation of the coefficients becomes more complex. 
+
+
+::: {.callout-note collapse="true"}
+### Interpretations using logarithms
+A common transformation is to take the logarithm of the response variable, the explanatory variable, or both. The interpretations of the parameters change accordingly:
+- If we take the logarithm of the response variable, then $e^{\beta_j}$ represents the multiplicative change in the median response for a one-unit increase in the explanatory variable *when all other explanatory variables are held constant*.
+- If we take the logarithm of the explanatory variable, then $\beta_1\log(2)$ represents the expected change in the response for a doubling of the explanatory variable *when all other explanatory variables are held constant*.
+- If we take the logarithm of both the response and explanatory variables, then $2^\beta_1$ represents the multiplicative change in the median response for a doubling of the explanatory variable *when all other explanatory variables are held constant*.
+:::
+
+## Estimation
+
+The vector $\beta = (\beta_0, \beta_1, \ldots, \beta_p)^T$ is estimated using 
+the method of least squares:
+
+$$\begin{array}{rl}\hat{\beta}
+&= \arg\min_{\beta} \sum_{i=1}^n (y_i - \beta_0 - \beta_1 X_{i,1} - \cdots - \beta_p X_{i,p})^2\\
+&= \arg\min_{\beta} (y-X\beta)^\top (y-X\beta) \\
+&= (X^\top X)^{-1} X^\top y
+\end{array}$$
+where 
+
+- $y = (y_1, \ldots, y_n)^\top$ is the vector of responses,
+- $X$ is the $n \times (p+1)$ design matrix with rows
+$$X_i = (1, X_{i,1}, \ldots, X_{i,p})$$
+- $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of regression coefficients.
+
+This is commonly referred to as the *ordinary least squares* (OLS) estimators. 
+
+The residual sum of squares (RSS) are
+
+$$RSS = \left(y-X\hat\beta\right)^\top \left(y-X\hat\beta\right)$$
+
+We can use this to estimate the error variance $\sigma^2$ using
+
+$$\hat{\sigma}^2 = \frac{RSS}{n-(p+1)}$$
+
+where $n-(p+1))$ is the degrees of freedom, 
+since we have estimated $(p+1)$ coefficients ($\beta_0$ through $\beta_p$).
+
+
+## Inference
+
+For inference, we need to assume normality of the errors, 
+i.e. $$\epsilon_i \stackrel{ind}{\sim} N(0, \sigma^2)$$.
+This results in the model
+$$Y_i \stackrel{ind}{\sim} N(\beta_0 + \beta_1 X_{i,1}+\cdots+\beta_pX_{i,p}, \sigma^2)$$
+or, equivalently,
+
+$$Y \sim N_n(X\beta, \sigma^2\mathrm{I})$$
+where $N_n$ is the $n$-dimensional multivariate normal distribution and 
+$\mathrm{I}$ is the $n \times n$ identity matrix.
+
+With the normality assumption, we can write the likelihood function:
+
+$$\begin{array}{rl}
+L(\beta_0, \beta_1, \sigma^2) &= \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{1}{2\sigma^2}[Y_i - \beta_0 - \beta_1 X_{i,} - \cdots - \beta_pX_{i,p}]^2\right) \\
+&= (2\pi\sigma^2)^{-n/2} \exp\left(-\frac{1}{2\sigma^2} [y-X\beta]^\top [y-X\beta] \right)
+\end{array}$$
+
+the estimate for $\beta$ that maximize this likelihood are the same as those obtained from  least squares.
+These are referred to as the *maximum likelihood estimators* (MLEs) of $\beta$.
+
+### t-tests
+
+For testing hypotheses about the regression coefficients, we use t-tests. The test statistic for $\beta_j$ is
+
+$$t = \frac{\hat{\beta}_j - \beta_j^0}{\text{SE}(\hat{\beta}_j)}$$
+
+which, under the null hypothesis $H_0: \beta_j = \beta_j^0$,
+follows a t-distribution with $n-(p+1)$ degrees of freedom.
+
+
+
+### Confidence intervals
+
+A $(1-\alpha)100\%$ confidence interval for $\beta_j$ is given by
+
+$$\hat{\beta}_j \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}(\hat{\beta}_j)$$
+
+where $t_{n-2, 1-\alpha/2}$ is the $(1-\alpha/2)$ quantile of the t-distribution with $n-2$ degrees of freedom.
+
+### Confidence intervals at $x$
+
+A $(1-\alpha)100\%$ confidence interval for the **mean response** at a specific value $x_0$ is given by
+
+$$\hat{f}(x_0) \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}(\hat{f}(x_0))$$
+
+where $\hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}(\hat{f}(x_0))$ is the *standard error of the predicted mean response*.
+This is the uncertainty in the line at a given point $x_0$.
+
+## Prediction
+
+A $(1-\alpha)100\%$ prediction interval for a new observation at a specific value $x_0$ is given by
+$$\hat{Y}_0 \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}_{\text{pred}}(\hat{Y}_0)$$
+
+where $\hat{Y}_0 = \hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}_{\text{pred}}(\hat{Y}_0)$ is the *standard error of the predicted value*,
+which accounts for both the uncertainty in the mean response and the variability of individual observations.
+The key here is that the prediction interval is wider than the confidence interval for the mean response, reflecting the additional uncertainty in predicting a single new observation due to the residual error $\epsilon$.
+
+
+## F-tests
+
+To evaluate the statistical evidence for a group of explanatory variables,
+e.g. a single categorical variable with $k$ levels, we can use an F-test.
+The null hypothesis is that all coefficients for the group of variables are equal to zero, i.e
+$$H_0: \beta_{j_1} = \beta_{j_2} = \cdots = \beta_{j_k} = 0$$
+where $j_1, j_2, \ldots, j_k$ are the indices of the coefficients
+for the group of variables. The alternative hypothesis is that at least one of the coefficients is not equal to zero. The F-statistic is calculated as
+$$F_{k, n-(p+1)} 
+= \frac{(RSS_r - RSS_f)/k}{RSS_f/(n-[p+1])}
+= \frac{(RSS_r - RSS_f)/k}{\hat\sigma^2_{f}}$$
+
+where 
+
+- $RSS_r$ is the residual sum of squares for the reduced model (without the group of variables), 
+- $RSS_f$ is the residual sum of squares for the full model (with the group of variables),
+- $k$ is the difference in the number of coefficients between the two models, and 
+- $n-(p+1)$ is the degrees of freedom for the full model. 
+
+Under the null hypothesis, 
+the F-statistic follows an F-distribution with $k$ and $n-(p+1)$ degrees of freedom.
+A $p$-value can be calculated from the F-distribution to assess the statistical significance of the group of variables.
+
+
+
+## Model Assessment
+
+### R-squared
+
+The coefficient of determination, $R^2$, measures the proportion of the variance in the dependent variable that is predictable from the independent variable(s). It is defined as
+$$R^2 = 1 - \frac{RSS}{TSS}$$
+
+where $RSS$ is the residual sum of squares and $TSS$ is the total sum of squares, i.e.
+
+$$TSS = \sum_{i=1}^n (y_i - \bar{y})^2.$$
+
+Thus, $R^2$ can be interpreted as the proportion of the total variability in the response variable that is explained by the model.
+
+## Example
+
+[Example](03-2-mlr.R).

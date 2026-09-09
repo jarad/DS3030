@@ -25,9 +25,9 @@ The interpretation of the parameters is as follows:
 ::: {.callout-note collapse="true"}
 ### Interpretations using logarithms
 A common transformation is to take the logarithm of the response variable, the explanatory variable, or both. The interpretations of the parameters change accordingly:
-- If we take the logarithm of the response variable, then $e^{\beta_1}$ represents the multiplicative change in the median response for a one-unit increase in the explanatory variable.
+- If we take the logarithm of the response variable, then $e^{\beta_1}$ represents the *multiplicative change in the median* response for a one-unit increase in the explanatory variable.
 - If we take the logarithm of the explanatory variable, then $\beta_1\log(2)$ represents the expected change in the response for a *doubling* of the explanatory variable.
-- If we take the logarithm of both the response and explanatory variables, then $2^\beta_1$ represents the multiplicative change in the median response for a *doubling* of the explanatory variable.
+- If we take the logarithm of both the response and explanatory variables, then $2^\beta_1$ represents the *multiplicative change in the median* response for a *doubling* of the explanatory variable.
 :::
 
 ## Estimation
