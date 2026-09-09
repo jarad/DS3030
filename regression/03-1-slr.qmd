@@ -25,9 +25,9 @@ The interpretation of the parameters is as follows:
 ::: {.callout-note collapse="true"}
 ### Interpretations using logarithms
 A common transformation is to take the logarithm of the response variable, the explanatory variable, or both. The interpretations of the parameters change accordingly:
-- If we take the logarithm of the response variable, then $\beta_1$ represents the multiplicative change in the median response for a one-unit increase in the explanatory variable.
-- If we take the logarithm of the explanatory variable, then $\beta_1$ represents the expected change in the response for a one-percent increase in the explanatory variable.
-- If we take the logarithm of both the response and explanatory variables, then $\beta_1$ represents the multiplicative change in the median response for a one-percent increase in the explanatory variable.
+- If we take the logarithm of the response variable, then $e^{\beta_1}$ represents the multiplicative change in the median response for a one-unit increase in the explanatory variable.
+- If we take the logarithm of the explanatory variable, then $\beta_1\log(2)$ represents the expected change in the response for a *doubling* of the explanatory variable.
+- If we take the logarithm of both the response and explanatory variables, then $2^\beta_1$ represents the multiplicative change in the median response for a *doubling* of the explanatory variable.
 :::
 
 ## Estimation
@@ -41,13 +41,14 @@ This is commonly referred to as the *ordinary least squares* (OLS) estimators.
 
 The residual sum of squares (RSS) are
 
-$$RSS = \sum_{i=1}^n (Y_i - \hat\beta_0 - \hat\beta_1 X_i)^2$$
+$$RSS = \sum_{i=1}^n \left(Y_i - \hat\beta_0 - \hat\beta_1 X_i\right)^2$$
 
 We can use this to estimate the error variance $\sigma^2$ using
 
 $$\hat{\sigma}^2 = \frac{RSS}{n-2}$$
 
-where $n-2$ is the degrees of freedom, since we have estimated two parameters ($\beta_0$ and $\beta_1$).
+where $n-2$ is the degrees of freedom, 
+since we have estimated two parameters ($\beta_0$ and $\beta_1$).
 
 
 ## Inference
@@ -59,7 +60,10 @@ $$Y_i \stackrel{ind}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2).$$
 
 With this assumption, we can write the likelihood function:
 
-$$L(\beta_0, \beta_1, \sigma^2) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(Y_i - \beta_0 - \beta_1 X_i)^2}{2\sigma^2}\right)$$
+$$\begin{array}{rl}
+L(\beta_0, \beta_1, \sigma^2) &= \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{1}{2\sigma^2}[Y_i - \beta_0 - \beta_1 X_i]^2\right) \\
+&= (2\pi\sigma^2)^{-n/2} \exp\left(-\frac{1}{2\sigma^2} \sum_{i=1}^n [Y_i - \beta_0 - \beta_1 X_i]^2\right)
+\end{array}$$
 
 the estimates for $\beta_0$ and $\beta_1$ that maximize this likelihood are the same as those obtained from ordinary least squares.
 These are referred to as the *maximum likelihood estimators* (MLEs) of $\beta_0$ and $\beta_1$.
@@ -74,10 +78,10 @@ which, under the null hypothesis $H_0: \beta_j = \beta_j^0$,
 follows a t-distribution with $n-2$ degrees of freedom.
 
 The standard error of $\hat{\beta}_0$ is given by
-$$\text{SE}(\hat{\beta}_0) = \sqrt{\hat{\sigma}^2 \left( \frac{1}{n} + \frac{\bar{x}^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}.$$
+$$\text{SE}(\hat{\beta}_0) = \hat{\sigma}\sqrt{ \left( \frac{1}{n} + \frac{\bar{x}^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}.$$
 
 The standard error of $\hat{\beta}_1$ is given by
-$$\text{SE}(\hat{\beta}_1) = \sqrt{\frac{\hat{\sigma}^2}{\sum_{i=1}^n (x_i - \bar{x})^2}}.$$
+$$\text{SE}(\hat{\beta}_1) = \hat{\sigma}\sqrt{\frac{1}{\sum_{i=1}^n (x_i - \bar{x})^2}}.$$
 
 
 
