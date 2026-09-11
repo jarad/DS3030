@@ -46,67 +46,52 @@ colnames(merged_returns) <- db_columns <- c(
 )
 
 # Convert the xts object to a standard data.frame
-final_df <- data.frame(Date = index(merged_returns), coredata(merged_returns))
-
-# Remove rows containing NA values (e.g., first row due to return calculations)
-final_df <- na.omit(final_df)
-
-# Reset row names for clean indexing
-rownames(final_df) <- NULL
-
-# ------------------------------------------------------------------------------
-# Exploratory Data Analysis (EDA)
-# ------------------------------------------------------------------------------
-
-g <- ggplot(final_df, aes(x = SPY_Return, y = AAPL_Return)) +
-  geom_point(color = "blue", alpha = 0.5) +
-  labs(
-    title = "Scatter Plot of AAPL vs SPY Weekly Returns",
-    x = "SPY Weekly Return",
-    y = "AAPL Weekly Return"
-  )
-
-g
-
-# ------------------------------------------------------------------------------
-# Fit the CAPM model using simple linear regression
-# ------------------------------------------------------------------------------
-
-# Calculate excess returns
-final_df <- final_df %>%
+d <- data.frame(Date = index(merged_returns), coredata(merged_returns)) |>
+  na.omit() |>
+  remove_rownames() |>
   mutate(
     AAPL_Excess_Return = AAPL_Return - TBill_Weekly_Yield,
     SPY_Excess_Return = SPY_Return - TBill_Weekly_Yield
   )
 
+# ------------------------------------------------------------------------------
+# Exploratory Data Analysis (EDA)
+# ------------------------------------------------------------------------------
+
+g <- ggplot(d, aes(x = SPY_Excess_Return, y = AAPL_Excess_Return)) +
+  geom_point(alpha = 0.5) +
+  labs(
+    title = "Scatter Plot of AAPL vs SPY Weekly Returns",
+    x = "SPY Weekly Excess Return",
+    y = "AAPL Weekly ExcessReturn"
+  )
+
+g
+
+# Hexbin plot
+g <- ggplot(d, aes(x = SPY_Excess_Return, y = AAPL_Excess_Return)) +
+  geom_hex(bins = 30) +
+  labs(
+    title = "Hexbin Plot of AAPL vs SPY Weekly Returns",
+    x = "SPY Weekly Excess Return",
+    y = "AAPL Weekly ExcessReturn"
+  ) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue")
+
+g
+g + geom_smooth(method = "lm")
+
+# ------------------------------------------------------------------------------
+# Fit the CAPM model using simple linear regression
+# ------------------------------------------------------------------------------
+
 # Fit the linear regression model: AAPL excess return ~ SPY excess return
-capm_model <- lm(AAPL_Excess_Return ~ SPY_Excess_Return, data = final_df)
-g + geom_smooth(method = "lm", color = "red", se = FALSE)
+capm_model <- lm(AAPL_Excess_Return ~ SPY_Excess_Return, data = d)
 
 
 # View the summary of the CAPM model
 summary(capm_model)
 
-# Estimates, standard errors, and t-values for the coefficients
-summary(capm_model)$coefficients
-
-# Confidence intervals for the coefficients
+coef(capm_model)
 confint(capm_model)
-
-# Confidence intervals at x = 0
-predict(
-  capm_model,
-  newdata = data.frame(SPY_Excess_Return = 0),
-  interval = "confidence"
-)
-g + geom_smooth(method = "lm", color = "red", se = TRUE)
-
-# Prediction intervals at x = 0
-predict(
-  capm_model,
-  newdata = data.frame(SPY_Excess_Return = 0),
-  interval = "prediction"
-)
-
-# R-squared
 summary(capm_model)$r.squared
