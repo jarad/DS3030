@@ -81,10 +81,10 @@ which, under the null hypothesis $H_0: \beta_j = \beta_j^0$,
 follows a t-distribution with $n-2$ degrees of freedom.
 
 The standard error of $\hat{\beta}_0$ is given by
-$$\text{SE}(\hat{\beta}_0) = \hat{\sigma}\sqrt{ \left( \frac{1}{n} + \frac{\bar{x}^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}.$$
+$$\text{SE}\left(\hat{\beta}_0\right) = \hat{\sigma}\sqrt{ \left( \frac{1}{n} + \frac{\bar{x}^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}.$$
 
 The standard error of $\hat{\beta}_1$ is given by
-$$\text{SE}(\hat{\beta}_1) = \hat{\sigma}\sqrt{\frac{1}{\sum_{i=1}^n (x_i - \bar{x})^2}}.$$
+$$\text{SE}\left(\hat{\beta}_1\right) = \hat{\sigma}\sqrt{\frac{1}{\sum_{i=1}^n (x_i - \bar{x})^2}}.$$
 
 
 
@@ -92,7 +92,7 @@ $$\text{SE}(\hat{\beta}_1) = \hat{\sigma}\sqrt{\frac{1}{\sum_{i=1}^n (x_i - \bar
 
 A $(1-\alpha)100\%$ confidence interval for $\beta_j$ is given by
 
-$$\hat{\beta}_j \pm t_{n-2, 1-\alpha/2} \cdot \text{SE}(\hat{\beta}_j)$$
+$$\hat{\beta}_j \pm t_{n-2, 1-\alpha/2} \cdot \text{SE}\left(\hat{\beta}_j\right)$$
 
 where $t_{n-2, 1-\alpha/2}$ is the $(1-\alpha/2)$ quantile of the t-distribution with $n-2$ degrees of freedom.
 
@@ -100,12 +100,14 @@ where $t_{n-2, 1-\alpha/2}$ is the $(1-\alpha/2)$ quantile of the t-distribution
 
 A $(1-\alpha)100\%$ confidence interval for the **mean response** at a specific value $x_0$ is given by
 
-$$\hat{f}(x_0) \pm t_{n-2, 1-\alpha/2} \cdot \text{SE}(\hat{f}(x_0))$$
+$$\hat{f}(x_0) \pm t_{n-2, 1-\alpha/2} \cdot \text{SE}\left(\hat{f}(x_0)\right)$$
 
-where $\hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}(\hat{f}(x_0))$ is the *standard error of the predicted mean response*.
-The standard error is calculated as:
+where $\hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and 
+$\text{SE}\left(\hat{f}(x_0)\right)$ is the 
+*standard error of the predicted mean response*.
+This standard error is calculated as:
 
-$$\text{SE}(\hat{f}(x_0)) = \sqrt{\sigma^2 \left( \frac{1}{n} + \frac{(x_0 - \bar{x})^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}$$
+$$\text{SE}(\hat{f}(x_0)) = \hat\sigma\sqrt{ \left( \frac{1}{n} + \frac{(x_0 - \bar{x})^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}$$
 
 This is the uncertainty in the line at a given point $x_0$.
 
@@ -114,9 +116,12 @@ This is the uncertainty in the line at a given point $x_0$.
 A $(1-\alpha)100\%$ prediction interval for a new observation at a specific value $x_0$ is given by
 $$\hat{Y}_0 \pm t_{n-2, 1-\alpha/2} \cdot \text{SE}_{\text{pred}}(\hat{Y}_0)$$
 
-where $\hat{Y}_0 = \hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}_{\text{pred}}(\hat{Y}_0)$ is the *standard error of the predicted value*,
-which accounts for both the uncertainty in the mean response and the variability of individual observations:
-$$\text{SE}_{\text{pred}}(\hat{Y}_0) = \sqrt{\sigma^2 \left( 1 + \frac{1}{n} + \frac{(x_0 - \bar{x})^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}$$
+where $\hat{Y}_0 = \hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and 
+$\text{SE}_{\text{pred}}(\hat{Y}_0)$ is the 
+*standard error of the predicted value*,
+which accounts for both the uncertainty in the mean response and the variability of individual observations.
+This standard error is calculated as:
+$$\text{SE}_{\text{pred}}\left(\hat{Y}_0\right) = \hat\sigma\sqrt{ \left( 1 + \frac{1}{n} + \frac{(x_0 - \bar{x})^2}{\sum_{i=1}^n (x_i - \bar{x})^2} \right)}$$
 
 The key here is that the prediction interval is wider than the confidence interval for the mean response, reflecting the additional uncertainty in predicting a single new observation due to the residual error $\epsilon$.
 
