@@ -1,11 +1,33 @@
 # Multiple (Linear) Regression
 
+```{r packages}
+#| include: false
+library("tidyverse")
+theme_set(theme_bw())
+```
+
 Recall our non-linear regression model:
 $$Y = f(X) + \epsilon$$
 
 where $f$ is an unknown function and $\epsilon$ is a random error term with mean 0 and variance $\sigma^2$. 
 We now consider $X$ a vector of $p$ explanatory variables, 
 and we can use a multiple linear regression model to approximate $f$.
+
+## Example
+
+```{r data}
+d <- Sleuth3::case0901 |>
+    mutate(Time = case_when(
+        Time == 1 ~ "Late",
+        Time == 2 ~ "Early"
+    ))
+
+g <- ggplot(d, aes(x = Intensity, y = Flowers, color = Time, shape = Time)) +
+    geom_point() +
+    labs(title = "Sleuth3::case0901")
+
+g
+```
 
 
 ## Model
@@ -40,8 +62,8 @@ Suppse you have a categorical variable $Z$ with $k$ levels. You can create $k-1$
 For example, if $Z$ has levels "A", "B", and "C", 
 you can create two dummy variables:
 
-- $D_1 = 1$ if $Z = "A"$, $0 otherwise
-- $D_2 = 1$ if $Z = "B"$, $0 otherwise
+- $D_1 = 1$ if $Z = "A"$, 0 otherwise
+- $D_2 = 1$ if $Z = "B"$, 0 otherwise
 
 Then, you can include these dummy variables in the regression model as follows:
 $$Y_i = \beta_0 + \beta_1 D_{i,1} + \beta_2 D_{i,2} + \epsilon_i.$$
@@ -75,7 +97,7 @@ the method of least squares:
 $$\begin{array}{rl}\hat{\beta}
 &= \arg\min_{\beta} \sum_{i=1}^n (y_i - \beta_0 - \beta_1 X_{i,1} - \cdots - \beta_p X_{i,p})^2\\
 &= \arg\min_{\beta} (y-X\beta)^\top (y-X\beta) \\
-&= (X^\top X)^{-1} X^\top y
+&= \left(X^\top X\right)^{-1} X^\top y
 \end{array}$$
 
 This is commonly referred to as the *ordinary least squares* (OLS) estimators. 
@@ -91,11 +113,39 @@ $$\hat{\sigma}^2 = \frac{RSS}{n-(p+1)}$$
 where $n-(p+1))$ is the degrees of freedom, 
 since we have estimated $(p+1)$ coefficients ($\beta_0$ through $\beta_p$).
 
+```{r fit-model}
+m <- lm(Flowers ~ Intensity + Time, data = d) # Additive model
+```
+
+Visualization of residuals:
+```{r visualize-residuals}
+shared_jitter <- position_jitter(width = 0.5, height = 0, seed = 20260914)
+ggplot(m, aes(x = .fitted, y = .fitted + .resid)) +
+    geom_point(position = shared_jitter) +
+    geom_segment(
+        aes(xend = .fitted, yend = .fitted), 
+        position = shared_jitter,
+        color = "red") +
+    geom_abline(slope = 1, intercept = 0, color = "blue") +
+    labs(
+        title = "Fitted vs Observed",
+        x = "Predicted value", 
+        y = "Observed value")
+
+
+```
+
+Parameter estimates:
+```{r parameter-estimates}
+coef(m)
+summary(m)$sigma
+```
+
 
 ## Inference
 
 For inference, we need to assume normality of the errors, 
-i.e. $$\epsilon_i \stackrel{ind}{\sim} N(0, \sigma^2)$$.
+i.e. $$\epsilon_i \stackrel{ind}{\sim} N(0, \sigma^2).$$
 This results in the model
 $$Y_i \stackrel{ind}{\sim} N(\beta_0 + \beta_1 X_{i,1}+\cdots+\beta_pX_{i,p}, \sigma^2)$$
 or, equivalently,
@@ -122,6 +172,9 @@ $$t = \frac{\hat{\beta}_j - \beta_j^0}{\text{SE}(\hat{\beta}_j)}$$
 which, under the null hypothesis $H_0: \beta_j = \beta_j^0$,
 follows a t-distribution with $n-(p+1)$ degrees of freedom.
 
+```{r t-tests}
+summary(m)$coefficients
+```
 
 
 ### Confidence intervals
@@ -132,6 +185,10 @@ $$\hat{\beta}_j \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}\left(\hat{\beta}_j\r
 
 where $t_{n-2, 1-\alpha/2}$ is the $(1-\alpha/2)$ quantile of the t-distribution with $n-2$ degrees of freedom.
 
+```{r confidence-intervals}
+confint(m, level = 0.95)
+```
+
 ### Confidence intervals at $x$
 
 A $(1-\alpha)100\%$ confidence interval for the **mean response** at a specific value $x_0$ is given by
@@ -140,6 +197,28 @@ $$\hat{f}(x_0) \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}\left(\hat{f}(x_0)\rig
 
 where $\hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}(\hat{f}(x_0))$ is the *standard error of the predicted mean response*.
 This is the uncertainty in the line at a given point $x_0$.
+
+```{r confidence-intervals-at-x}
+nd <- unique(d |> select(Intensity, Time))
+
+cx <- bind_cols(nd, 
+  predict(
+    m, 
+    newdata = unique(d |> select(Intensity, Time)), 
+    interval = "confidence", 
+    level = 0.95)) |>
+  rename(
+    Flowers = fit
+  )
+
+cx
+```
+
+```{r confidence-intervals-at-x-plot}
+g + 
+    geom_ribbon(data = cx, aes(ymin = lwr, ymax = upr), color = NA, alpha = 0.2) +
+    geom_line(data = cx)
+```
 
 ## Prediction
 
@@ -150,6 +229,25 @@ where $\hat{Y}_0 = \hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{
 which accounts for both the uncertainty in the mean response and the variability of individual observations.
 The key here is that the prediction interval is wider than the confidence interval for the mean response, reflecting the additional uncertainty in predicting a single new observation due to the residual error $\epsilon$.
 
+```{r prediction-intervals-at-x}
+px <- bind_cols(nd, 
+  predict(
+    m, 
+    newdata = unique(d |> select(Intensity, Time)), 
+    interval = "prediction",  # THIS CHANGED
+    level = 0.95)) |>
+  rename(
+    Flowers = fit
+  )
+
+px 
+```
+
+```{r prediction-intervals-at-x-plot}
+g + 
+    geom_ribbon(data = px, aes(ymin = lwr, ymax = upr), color = NA, alpha = 0.2) +
+    geom_line(data = px)
+```
 
 ## F-tests
 
@@ -174,6 +272,16 @@ Under the null hypothesis,
 the F-statistic follows an F-distribution with $k$ and $n-(p+1)$ degrees of freedom.
 A $p$-value can be calculated from the F-distribution to assess the statistical significance of the group of variables.
 
+```{r f-tests}
+# Default
+anova(m)
+drop1(m, test="F")
+tail(capture.output(summary(m)), n = 2)[1]
+
+# Manual (for nested models)
+m0 <- lm(Flowers ~ 1, data = d) # Intercept only model
+anova(m0, m)
+```
 
 
 ## Model Assessment
@@ -189,6 +297,22 @@ $$TSS = \sum_{i=1}^n (y_i - \bar{y})^2.$$
 
 Thus, $R^2$ can be interpreted as the proportion of the total variability in the response variable that is explained by the model.
 
-## Example
+```{r r-squared}
+summary(m)$r.squared
+```
+
+## Examples
+
+### Flowers
+
+Default plot:
+```{r flowers-plot}
+g + geom_smooth(method = "lm") # lines are not parallel 
+```
+
+Model summary:
+```{r flowers-summary}
+summary(m)
+```
 
 [Example](03-2-mlr.R).
