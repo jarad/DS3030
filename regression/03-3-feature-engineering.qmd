@@ -222,11 +222,16 @@ alcohol down in the stomach.
 ### Code for the figure below
 ```{r metabolism-plot}
 #| output: false
+noteworthy <- Sleuth3::case1101 |> filter(Subject %in% c(17, 31, 32))
+
 metabolism_plot <- ggplot(Sleuth3::case1101,
                           aes(x = Gastric, y = Metabol,
                               color = Sex, shape = Sex, linetype = Sex)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
+  geom_text(data = noteworthy, aes(label = Subject),
+            hjust = -0.6, size = 3, show.legend = FALSE) +
+  expand_limits(x = 5.6) +
   labs(title = "Sleuth3::case1101",
        x = "Gastric alcohol dehydrogenase activity",
        y = "First-pass metabolism")
@@ -254,10 +259,16 @@ are two of them, and you have to say which sex you mean.
 
 ::: {.callout-note collapse="true"}
 ### A preview of a problem
-The two male subjects at the far right have gastric activity well beyond anyone
-else's. Those are high-leverage points, and they are doing a large share of the
-work in estimating the male slope. Leverage appears in the list of potential
-problems next lecture; this is what it looks like in practice.
+Three observations are labelled by subject number in the figure. Subjects 31 and
+32 have gastric activity well beyond any other man's, and subject 17 is the most
+extreme of the women. These are high-leverage points: they sit far from the bulk
+of the feature values, so they do a disproportionate share of the work in
+estimating the two slopes.
+
+Notice that they are not all the same kind of unusual. Subject 31 sits close to
+the male line, while subject 32 is far above it. Next lecture we return to these
+three by number and separate leverage — an unusual *feature* value — from
+outliers, an unusual *response*.
 :::
 
 ## What we have not fixed

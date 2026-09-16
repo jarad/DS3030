@@ -16,7 +16,10 @@ dummy-variable machinery applied to a quantitative feature,
 flexibility parameter,
 - **compare** a parametric fit against a nonparametric one and **state** the
 conditions under which each is preferable,
-- **diagnose** the potential problems of ISLR2 Section 3.3.3, and
+- **diagnose** the potential problems of ISLR2 Section 3.3.3 from a residual
+plot, leverage values, and variance inflation factors,
+- **distinguish** a high-leverage point from an outlier, and **use** Cook's
+distance to judge which observations actually influence the fit, and
 - **evaluate** added flexibility in terms of the bias-variance tradeoff.
 :::
 
@@ -194,8 +197,13 @@ Polynomials and interactions create collinearity by construction.
 ### Detecting leverage and collinearity
 **Leverage** is $h_i$, the $i$th diagonal element of the hat matrix
 $H = X(X^\top X)^{-1}X^\top$. It averages $(p+1)/n$, so values several times
-that deserve a look. The dangerous points have high leverage *and* a large
-studentized residual, say beyond $\pm 3$.
+that deserve a look. Leverage depends only on the features — you can compute it
+before seeing a single response.
+
+**Cook's distance** combines leverage with the size of the residual into a
+single number measuring how much the fitted values would move if an observation
+were deleted. Values near or above $1$ warrant attention. In R, `hatvalues()`,
+`rstudent()`, and `cooks.distance()` compute all three.
 
 **Collinearity** is measured by the variance inflation factor
 
@@ -205,6 +213,189 @@ where $R^2_{X_j|X_{-j}}$ comes from regressing $X_j$ on all other features. VIF
 is 1 under no collinearity; past 5 or 10 is commonly flagged. Remedies: drop one
 feature, combine them, center them, or — for polynomials — use `poly()`.
 :::
+
+Every one of these except correlated errors shows up in data we have already
+used this semester. Number 2 is the exception only because none of our examples
+are collected over time; the CAPM demonstration, with weekly returns ordered by
+date, is exactly where you would worry about it.
+
+### Reading residuals: curvature and changing spread
+
+A plot of residuals against fitted values diagnoses problems 1 and 3 at a
+glance. Both of our regressions from last lecture have something to confess.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r residual-diagnostics}
+#| output: false
+galileo_lin <- lm(Distance ~ Height,          data = Sleuth3::case1001)
+metabol_fit <- lm(Metabol  ~ Gastric * Sex,   data = Sleuth3::case1101)
+
+residual_data <- bind_rows(
+  tibble(fitted = fitted(galileo_lin), resid = residuals(galileo_lin),
+         panel  = "Galileo, linear fit: curvature"),
+  tibble(fitted = fitted(metabol_fit), resid = residuals(metabol_fit),
+         panel  = "Metabolism: non-constant variance")
+)
+
+residual_plot <- ggplot(residual_data, aes(x = fitted, y = resid)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_point() +
+  facet_wrap(~ panel, scales = "free") +
+  labs(x = "Fitted value", y = "Residual")
+```
+:::
+
+```{r residual-diagnostics-figure}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 3.3
+residual_plot
+```
+
+On the left, the residuals from the *linear* fit to Galileo's data run negative,
+positive, then negative again — the inverted U that says a straight line is the
+wrong shape. That is problem 1, and it is precisely what the quadratic term
+fixed last lecture.
+
+On the right, the residuals from the alcohol metabolism model fan out: near zero
+for small fitted values and spanning several units for large ones. That is
+problem 3. The constant-variance assumption behind every standard error in that
+output is not holding, and a $\log$ or $\sqrt{\cdot}$ transformation of the
+response would be the usual response.
+
+### Leverage and outliers are different things
+
+Last lecture we noticed two men at the far right of the metabolism plot. Now we
+can be precise about them. With $p + 1 = 4$ coefficients and $n = 32$
+observations, average leverage is $4/32 = 0.125$.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r leverage-diagnostics}
+#| output: false
+average_leverage <- length(coef(metabol_fit)) / nrow(Sleuth3::case1101)
+
+influence_data <- Sleuth3::case1101 |>
+  mutate(leverage    = hatvalues(metabol_fit),
+         studentized = rstudent(metabol_fit))
+
+influence_plot <- ggplot(influence_data, aes(x = leverage, y = studentized)) +
+  geom_hline(yintercept = c(-3, 3),            linetype = "dashed", color = "grey40") +
+  geom_vline(xintercept = 2 * average_leverage, linetype = "dashed", color = "grey40") +
+  geom_point() +
+  geom_text(aes(label = ifelse(leverage > 2 * average_leverage | abs(studentized) > 3,
+                               paste("Subject", Subject), "")),
+            hjust = -0.15, size = 3) +
+  expand_limits(x = 0.65) +
+  labs(x = "Leverage", y = "Studentized residual")
+```
+:::
+
+```{r leverage-diagnostics-figure}
+#| echo: false
+influence_plot
+```
+
+Three subjects sit outside the dashed guides, and they are outside for different
+reasons. **Cook's distance** settles which of them actually matter.
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r influence-table}
+#| output: false
+influence_table <- tibble(
+  Subject     = Sleuth3::case1101$Subject,
+  Studentized = rstudent(metabol_fit),
+  Leverage    = hatvalues(metabol_fit),
+  CooksD      = cooks.distance(metabol_fit)) |>
+  filter(Subject %in% c(17, 31, 32)) |>
+  knitr::kable(digits = 3,
+               col.names = c("Subject", "Studentized residual", "Leverage", "Cook's D"))
+```
+:::
+
+```{r influence-table-display}
+#| echo: false
+influence_table
+```
+
+Cook's distance answers a direct question: if we deleted this one observation
+and refit, how much would all the fitted values move? A large value means the
+model depends meaningfully on that single point.
+
+It rises with both of the columns beside it. A point has to disagree with the
+model *and* have room to pull the line toward itself before it can do real
+damage — and having room is exactly what leverage measures. Either ingredient
+alone is harmless; the combination is not.
+
+The table makes the distinction concrete. Subject 17 has leverage $0.393$, more
+than three times the average of $4/32 = 0.125$, and yet Cook's distance is
+$0.006$. It sits far from the other feature values and agrees completely with
+the trend, so deleting it would change essentially nothing. High leverage by
+itself is not a problem.
+
+Subjects 31 and 32 both land near or above $1$, the conventional cutoff, and
+they get there by opposite routes. Subject 32 has only moderate leverage but a
+studentized residual of $5.12$ — it disagrees violently. Subject 31 has the
+largest leverage in the data with an unremarkable residual of $-1.91$ — it
+barely disagrees, but it has so much room that a small disagreement is enough.
+
+Deleting either one would visibly move the male line, which is worth knowing
+before reporting that men metabolize alcohol at three times the female rate.
+
+### Collinearity you create yourself
+
+Last lecture's `poly()` callout claimed that raw powers are dangerously
+correlated. Galileo's data lets us put a number on it.
+
+```{r vif-example}
+vif <- function(X) {
+  sapply(seq_along(X), function(j)
+    1 / (1 - summary(lm(X[[j]] ~ ., data = X[-j]))$r.squared))
+}
+
+Height     <- Sleuth3::case1001$Height
+raw_powers <- data.frame(Height = Height, Height2 = Height^2, Height3 = Height^3)
+
+round(vif(raw_powers), 1)
+round(vif(as.data.frame(poly(Height, 3))), 3)
+```
+
+The raw powers carry variance inflation factors of roughly $172$, $960$, and
+$356$ — the standard errors on those coefficients are inflated by factors of
+$\sqrt{960} \approx 31$. The orthogonal basis from `poly()` gives exactly $1$,
+$1$, and $1$.
+
+Both parameterizations produce **identical** fitted values, residuals, and
+$R^2$. Nothing about the quality of the fit changed. What changed is whether the
+individual coefficients can be interpreted and tested one at a time — and this
+is collinearity we manufactured ourselves by choosing a basis, not a defect in
+Galileo's measurements.
+
+### Why not just look at the data?
+
+Every problem in this section could have been caught by eye. Seven observations
+of Galileo's, thirty-two subjects, one or two features — plot the data and you
+can see the curvature, see the two men stranded out on the right, see the spread
+widening.
+
+That is about to stop being true. From here on the course adds features faster
+than you can plot them and models whose fitted surface cannot be drawn at all.
+There is no scatterplot of a random forest on twenty features, and no way to
+squint at observation 4,812 of 50,000 to decide whether it is dragging the fit.
+
+What survives the transition is the numbers. Leverage, studentized residuals,
+Cook's distance, and variance inflation factors are defined for any number of
+features, and they can be sorted, thresholded, and scanned without a human
+looking at anything. So can the diagnostic plots we just used: residuals against
+fitted values, or leverage against studentized residual, stay two-dimensional no
+matter how large $p$ gets, because they plot *model output* rather than the data
+itself.
+
+The habit worth building now, while you can still check the answer by looking,
+is to compute the diagnostic anyway and learn what its values mean. Later the
+number is all you will have.
 
 ## The cost of flexibility
 
