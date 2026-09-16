@@ -17,6 +17,7 @@ book:
       chapters:
       - regression/03-1-slr.qmd
       - regression/03-2-mlr.qmd
+      - regression/03-3-feature-engineering.qmd
 
 format:
   html:

@@ -1,0 +1,352 @@
+# Feature Engineering
+
+```{r packages}
+#| include: false
+library("tidyverse")
+theme_set(theme_bw())
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **explain** why a model built from polynomials, interactions, and step
+functions is still a *linear* model,
+- **construct** these features and **write** the corresponding `lm()` formula,
+- **interpret** a coefficient in each case, and explain why "a one-unit increase,
+holding all else constant" can stop making sense,
+- **diagnose** the potential problems, and
+- **evaluate** added flexibility in terms of the bias-variance tradeoff.
+:::
+
+## Linear in the parameters
+
+Multiple linear regression looks restrictive: a straight line in each feature.
+It is not. Consider
+
+$$Y_i = \beta_0 + \beta_1 h_1(X_i) + \cdots + \beta_K h_K(X_i) + \epsilon_i$$
+
+where $h_1, \ldots, h_K$ are known, fixed functions of the features $X_i$,
+called *basis functions*.
+
+This model is linear in $\beta$, which is all least squares ever required.
+Every result from last lecture therefore carries over **unchanged**:
+$\hat\beta = (X^\top X)^{-1}X^\top y$, the t-tests, the F-tests, the intervals.
+Only the columns of the design matrix change.
+
+Choosing the $h_k$ is **feature engineering**, and it is where most of the
+modeling judgment in a regression analysis lives.
+
+## Polynomials
+
+Use the powers of a single feature as the basis:
+
+$$Y_i = \beta_0 + \beta_1 X_i + \beta_2 X_i^2 + \cdots + \beta_p X_i^p + \epsilon_i.$$
+
+The fit is now a curve, and no single coefficient is "the effect of $X$." That
+effect is the derivative
+
+$$\frac{\partial}{\partial x} E[Y|X = x] = \beta_1 + 2\beta_2 x + \cdots + p\beta_p x^{p-1},$$
+
+which **depends on where you are**. Reporting $\hat\beta_1$ by itself is
+meaningless.
+
+```{r polynomials}
+#| eval: false
+lm(y ~ poly(x, 3))               # orthogonal polynomial basis
+lm(y ~ x + I(x^2) + I(x^3))      # raw powers
+lm(y ~ poly(x, 3, raw = TRUE))   # also raw powers
+```
+
+Two cautions. 
+
+- **Hierarchy**: if $X^2$ is in the model, keep $X$. 
+- **Extrapolation**: high-degree polynomials behave badly outside the range of the data.
+
+::: {.callout-note collapse="true"}
+### Why `poly()` instead of raw powers?
+Over a range like $x \in [0,10]$, the columns $x$, $x^2$, and $x^3$ are
+enormously correlated — they all increase together. That is collinearity, and it
+inflates standard errors and destabilizes $\hat\beta$ numerically.
+
+`poly()` builds an *orthogonal* basis spanning the same space, so $\hat{y}$,
+the RSS, and $R^2$ are **identical**. What changes is that the coefficients are
+now uncorrelated, so their t-tests can be read one at a time — a convenient way
+to ask "is the cubic term needed?"
+:::
+
+
+
+
+### Example: Galileo's falling bodies
+
+Galileo released a ball from a ramp at seven different heights and measured how
+far it travelled horizontally. Physics says that relationship should be curved,
+so this is a natural place to ask *how much* curvature the data support.
+
+```{r galileo-models}
+m1 <- lm(Distance ~ Height,          data = Sleuth3::case1001)
+m2 <- lm(Distance ~ poly(Height, 2), data = Sleuth3::case1001)
+m3 <- lm(Distance ~ poly(Height, 3), data = Sleuth3::case1001)
+
+anova(m1, m2, m3)
+```
+
+Because each model is nested in the next, `anova()` reports a *sequential*
+F-test on each row, comparing that model to the one above it. Row 2 tests
+$H_0: \beta_2 = 0$ and gives $F = 306.33$ on $1$ and $4$ degrees of freedom — the
+quadratic term is clearly needed. Row 3 tests $H_0: \beta_3 = 0$ and gives
+$F = 43.26$, so the cubic term improves the fit as well. The residual sum of
+squares falls from $5671$ to $744$ to $48$.
+
+```{r galileo-plot}
+galileo_grid <- tibble(Height = seq(100, 1000, length.out = 200))
+
+galileo_pred <- bind_rows(
+  galileo_grid |> mutate(Distance = predict(m1, galileo_grid), Model = "linear"),
+  galileo_grid |> mutate(Distance = predict(m2, galileo_grid), Model = "quadratic"),
+  galileo_grid |> mutate(Distance = predict(m3, galileo_grid), Model = "cubic")
+) |>
+  mutate(Model = factor(Model, levels = c("linear", "quadratic", "cubic")))
+
+ggplot(Sleuth3::case1001, aes(x = Height, y = Distance)) +
+  geom_point() +
+  geom_line(data = galileo_pred, aes(color = Model, linetype = Model)) +
+  labs(title = "Sleuth3::case1001",
+       x = "Release height", y = "Horizontal distance")
+```
+
+Be careful about what that second F-test has established. There are $n = 7$
+observations, and the cubic model spends $4$ parameters on them, leaving $3$
+degrees of freedom — the cubic curve nearly interpolates the data. A significant
+F-test says the cubic fits the *training* data better than the quadratic. It
+does not say the cubic will predict a new release height better, and the physics
+argues for a quadratic. We return to this distinction at the end of the lecture.
+
+
+## Interactions
+
+Let the effect of one feature depend on another:
+
+$$Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \beta_3 X_{i1}X_{i2} + \epsilon_i.$$
+
+Collect the terms involving $X_{i1}$:
+
+$$Y_i = \underbrace{(\beta_0 + \beta_2 X_{i2})}_{\text{intercept on } X_1} + \underbrace{(\beta_1 + \beta_3 X_{i2})}_{\text{slope on } X_1} X_{i1} + \epsilon_i.$$
+
+The slope on $X_1$ is a *function of the other feature*. This is exactly where
+"holding all else constant" breaks: you cannot move $X_1$ while holding
+$X_1X_2$ fixed. And $\beta_1$ is now the slope on $X_1$ **when $X_2 = 0$**,
+which may be a value $X_2$ never takes — centering usually makes the main
+effects interpretable again.
+
+```{r interactions}
+#| eval: false
+lm(y ~ x1 * x2)   # expands to x1 + x2 + x1:x2
+```
+
+Hierarchy applies here too: keep $X_1$ and $X_2$ whenever $X_1X_2$ is present,
+whatever their individual p-values say.
+
+::: {.callout-note collapse="true"}
+### Interaction with a categorical feature
+With $D = 1$ for group B and $0$ for group A,
+
+$$Y_i = \beta_0 + \beta_1 X_i + \beta_2 D_i + \beta_3 X_i D_i + \epsilon_i$$
+
+fits group A with intercept $\beta_0$ and slope $\beta_1$, and group B with
+intercept $\beta_0 + \beta_2$ and slope $\beta_1 + \beta_3$. Without the
+interaction, the groups are forced to share a slope (parallel lines). With it,
+$H_0: \beta_3 = 0$ tests whether the slopes differ.
+:::
+
+### Example: meadowfoam, where the interaction is not needed
+
+Twenty-four meadowfoam plots were grown at six light intensities, with the light
+begun either early or late. Does the timing change the *slope* on intensity, or
+only the intercept?
+
+```{r meadowfoam-data}
+meadowfoam <- Sleuth3::case0901 |>
+  mutate(Time = factor(Time, levels = 1:2, labels = c("Late", "Early")))
+```
+
+```{r meadowfoam-plot}
+ggplot(meadowfoam, aes(x = Intensity, y = Flowers, color = Time, shape = Time, linetype = Time)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
+  labs(title = "Sleuth3::case0901")
+```
+
+```{r meadowfoam-anova}
+anova(lm(Flowers ~ Intensity * Time, data = meadowfoam))
+```
+
+The interaction gives $F = 0.013$ on $1$ and $20$ degrees of freedom, so
+$p = 0.91$. The separately fitted lines are about as close to parallel as noisy
+data allow, and the test agrees: no evidence that the slope on intensity depends
+on timing. Drop the interaction and report the additive model, in which timing
+shifts the intercept by a constant amount and "the effect of intensity" is a
+single number again.
+
+Dropping the *interaction* is fine. Dropping a main effect would not be.
+
+### Example: alcohol metabolism, where the interaction matters
+
+Thirty-two subjects had their first-pass metabolism of alcohol measured along
+with the activity of gastric alcohol dehydrogenase, the enzyme that breaks
+alcohol down in the stomach.
+
+```{r metabolism-plot}
+ggplot(Sleuth3::case1101, aes(x = Gastric, y = Metabol, color = Sex, shape = Sex)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
+  labs(title = "Sleuth3::case1101",
+       x = "Gastric alcohol dehydrogenase activity",
+       y = "First-pass metabolism")
+```
+
+```{r metabolism-fit}
+metabolism <- lm(Metabol ~ Gastric * Sex, data = Sleuth3::case1101)
+
+anova(metabolism)
+coef(metabolism)
+```
+
+Here the interaction gives $F = 7.26$ on $1$ and $28$ degrees of freedom, so
+$p = 0.012$, and the lines are visibly non-parallel. The fitted slope is $0.84$
+for females and $0.84 + 1.51 = 2.34$ for males — nearly three times steeper.
+
+In this model there is no such thing as "the effect of gastric activity." There
+are two of them, and you have to say which sex you mean.
+
+::: {.callout-note collapse="true"}
+### A preview of a problem below
+The two male subjects at the far right have gastric activity well beyond anyone
+else's. Those are high-leverage points, and they are doing a large share of the
+work in estimating the male slope. Leverage appears in the list of potential
+problems below; this is what it looks like in practice.
+:::
+
+## Step functions
+
+Polynomials impose one global shape. A step function gives up smoothness
+instead. Choose cut points $c_1 < \cdots < c_K$, define indicators
+$C_k(X) = I(c_k \le X < c_{k+1})$, and fit
+
+$$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_K C_K(X_i) + \epsilon_i$$
+
+dropping the first bin as the baseline. This is **exactly** the dummy-variable
+machinery from last lecture: we have turned a quantitative feature into a
+categorical one. The fitted value in a bin is the sample mean of $y$ in that
+bin, and $\beta_k$ is that bin's mean minus the baseline bin's mean.
+
+```{r step-functions}
+#| eval: false
+lm(y ~ cut(x, breaks = c(0, 2, 4, 6, 8, 10)))
+```
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r flexibility-comparison}
+#| output: false
+set.seed(20260916)
+
+sim <- tibble(x = runif(100, 0, 10)) |>
+  mutate(y = 2 + 0.6 * x + 1.8 * sin(x / 1.4) + rnorm(100, 0, 0.9))
+
+cuts     <- seq(0, 10, length.out = 6)
+sim_grid <- tibble(x = seq(0, 10, length.out = 400))
+
+fit_grid <- function(model, label, binned = FALSE) {
+  sim_grid |>
+    mutate(yhat = predict(model, sim_grid),
+           fit  = label,
+           bin  = if (binned) as.character(cut(x, cuts, include.lowest = TRUE))
+                  else "all")
+}
+
+sim_pred <- bind_rows(
+  fit_grid(lm(y ~ x,                                   data = sim), "Linear in x"),
+  fit_grid(lm(y ~ poly(x, 5),                          data = sim), "Polynomial (degree 5)"),
+  fit_grid(lm(y ~ cut(x, cuts, include.lowest = TRUE), data = sim), "Step function (5 bins)",
+           binned = TRUE)
+)
+
+flexibility_plot <- ggplot(sim, aes(x = x, y = y)) +
+  geom_point(alpha = 0.35) +
+  geom_line(data = sim_pred, aes(y = yhat, group = interaction(fit, bin)),
+            color = "blue", linewidth = 1) +
+  facet_wrap(~ fit)
+```
+:::
+
+```{r flexibility-comparison-figure}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 3.2
+flexibility_plot
+```
+
+The costs are visible on the right: the fit jumps at the cut points and ignores
+any trend within a bin. And *we* chose those cut points — nothing in the data
+told us where to put them.
+
+::: {.callout-important collapse="true"}
+### Where this is going
+That last complaint is the whole idea behind **regression trees** (Chapter 8).
+A tree is a step function whose cut points are *learned from the data*, applied
+recursively and in several features at once — so a tree gets interactions for
+free, without our specifying them. A **random forest** averages many such step
+functions to cut their variance.
+:::
+
+## Potential problems
+
+Feature engineering is the *cure* for the first of these and the *cause* of the
+last two.
+
+1. **Non-linearity.** Structure in a plot of residuals against fitted values
+means the model is missing systematic signal — the motivation for everything
+above.
+2. **Correlated errors.** Common with data over time or space. Standard errors
+come out too small, so you are more confident than you have earned.
+3. **Non-constant variance.** A funnel in the residual plot; often handled by
+transforming the response, $\log Y$ or $\sqrt{Y}$.
+4. **Outliers.** An unusual *response*. Inflates $\hat\sigma^2$ and depresses
+$R^2$ without necessarily moving the line.
+5. **High-leverage points.** An unusual *feature* value. These do move the line,
+and polynomials make it worse — an extreme $x$ raised to the fifth power is an
+extraordinarily influential row.
+6. **Collinearity.** Features carrying nearly the same information. The data
+cannot separate their effects, so $\text{SE}(\hat\beta_j)$ inflates and the
+t-test loses power: a coefficient can matter and still look "insignificant."
+Polynomials and interactions create collinearity by construction.
+
+::: {.callout-note collapse="true"}
+### Detecting leverage and collinearity
+**Leverage** is $h_i$, the $i$th diagonal element of the hat matrix
+$H = X(X^\top X)^{-1}X^\top$. It averages $(p+1)/n$, so values several times
+that deserve a look. The dangerous points have high leverage *and* a large
+studentized residual, say beyond $\pm 3$.
+
+**Collinearity** is measured by the variance inflation factor
+
+$$\text{VIF}(\hat\beta_j) = \frac{1}{1 - R^2_{X_j | X_{-j}}}$$
+
+where $R^2_{X_j|X_{-j}}$ comes from regressing $X_j$ on all other features. VIF
+is 1 under no collinearity; past 5 or 10 is commonly flagged. Remedies: drop one
+feature, combine them, center them, or — for polynomials — use `poly()`.
+:::
+
+## The cost of flexibility
+
+Every basis function you add is another turn of the flexibility dial from
+Chapter 2. The training RSS can only fall and $R^2$ can only rise as columns are
+added to $X$; the **test** MSE need not, because you are trading bias for
+variance.
+
+So feature engineering hands us more candidate models than we can judge by eye,
+and training error cannot referee among them. Honest test-error estimates come
+from resampling (Chapter 5), and automatic ways to choose which features to keep
+come from selection and regularization (Chapter 6).
