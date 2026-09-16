@@ -117,4 +117,10 @@ published site will show stale results.
 
 Project agents for this course live in `../.claude/agents/` (the `DS3030class`
 parent folder) and are available when Claude Code is launched from there:
-`notes-author`, `homework-author`, `quiz-reviewer`, `exam-author`.
+`notes-author`, `homework-author`, `quiz-reviewer`, `exam-author`, and
+`proof-reader`.
+
+`proof-reader` works on any course file and reports — without editing — typos,
+notation collisions, stale cross-references, convention violations, and
+statements that are incorrect. It verifies numbers quoted in prose by actually
+running the chunks, which is worth doing after any change to a chapter's code.

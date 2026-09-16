@@ -24,9 +24,9 @@ data actually support.
 Multiple linear regression looks restrictive: a straight line in each feature.
 It is not. Consider
 
-$$Y_i = \beta_0 + \beta_1 h_1(X_i) + \cdots + \beta_p h_K(X_i) + \epsilon_i$$
+$$Y_i = \beta_0 + \beta_1 h_1(X_i) + \cdots + \beta_p h_p(X_i) + \epsilon_i$$
 
-where $h_1, \ldots, h_K$ are known, fixed functions of the features $X_i$,
+where $h_1, \ldots, h_p$ are known, fixed functions of the features $X_i$,
 called *basis functions*.
 
 This model is linear in $\beta$, which is all least squares ever required.

@@ -27,10 +27,10 @@ distance to judge which observations actually influence the fit, and
 
 Last lecture we used polynomials, which impose one global shape on the whole
 range of $X$. A step function gives up smoothness instead. Choose cut points
-$c_1 < \cdots < c_K$, define indicators
+$c_1 < \cdots < c_p$, define indicators
 $C_k(X) = I(c_k \le X < c_{k+1})$, and fit
 
-$$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_K C_K(X_i) + \epsilon_i$$
+$$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_p C_p(X_i) + \epsilon_i$$
 
 dropping the first bin as the baseline. This is **exactly** the dummy-variable
 machinery from multiple regression: we have turned a quantitative feature into a
@@ -399,9 +399,10 @@ number is all you will have.
 
 ## The cost of flexibility
 
-Every basis function you add, and every reduction in $K$, is another turn of the
-flexibility dial from Chapter 2. The training RSS can only fall as you turn it;
-the **test** MSE need not, because you are trading bias for variance.
+Every feature you add to $X$, and every reduction in the number of neighbors
+$K$, is another turn of the flexibility dial from Chapter 2. The training RSS
+can only fall as you turn it; the **test** MSE need not, because you are trading
+bias for variance.
 
 So these methods hand us more candidate models than we can judge by eye, and
 training error cannot referee among them. Honest test-error estimates come from
