@@ -10,13 +10,13 @@ theme_set(theme_bw())
 ### Learning objectives
 After this lecture you should be able to
 
-- **explain** why a model built from polynomials, interactions, and step
-functions is still a *linear* model,
+- **explain** why a model built from polynomials and interactions is still a
+*linear* model,
 - **construct** these features and **write** the corresponding `lm()` formula,
 - **interpret** a coefficient in each case, and explain why "a one-unit increase,
-holding all else constant" can stop making sense,
-- **diagnose** the potential problems, and
-- **evaluate** added flexibility in terms of the bias-variance tradeoff.
+holding all else constant" can stop making sense, and
+- **use** an F-test to decide how much curvature, or whether an interaction, the
+data actually support.
 :::
 
 ## Linear in the parameters
@@ -24,7 +24,7 @@ holding all else constant" can stop making sense,
 Multiple linear regression looks restrictive: a straight line in each feature.
 It is not. Consider
 
-$$Y_i = \beta_0 + \beta_1 h_1(X_i) + \cdots + \beta_K h_K(X_i) + \epsilon_i$$
+$$Y_i = \beta_0 + \beta_1 h_1(X_i) + \cdots + \beta_p h_K(X_i) + \epsilon_i$$
 
 where $h_1, \ldots, h_K$ are known, fixed functions of the features $X_i$,
 called *basis functions*.
@@ -37,16 +37,17 @@ Only the columns of the design matrix change.
 Choosing the $h_k$ is **feature engineering**, and it is where most of the
 modeling judgment in a regression analysis lives.
 
+
 ## Polynomials
 
 Use the powers of a single feature as the basis:
 
-$$Y_i = \beta_0 + \beta_1 X_i + \beta_2 X_i^2 + \cdots + \beta_p X_i^p + \epsilon_i.$$
+$$Y_i = \beta_0 + \beta_1 X_i + \beta_2 X_i^2 + \cdots + \beta_d X_i^d + \epsilon_i.$$
 
 The fit is now a curve, and no single coefficient is "the effect of $X$." That
 effect is the derivative
 
-$$\frac{\partial}{\partial x} E[Y|X = x] = \beta_1 + 2\beta_2 x + \cdots + p\beta_p x^{p-1},$$
+$$\frac{\partial}{\partial x} E[Y|X = x] = \beta_1 + 2\beta_2 x + \cdots + d\beta_d x^{d-1},$$
 
 which **depends on where you are**. Reporting $\hat\beta_1$ by itself is
 meaningless.
@@ -99,6 +100,9 @@ quadratic term is clearly needed. Row 3 tests $H_0: \beta_3 = 0$ and gives
 $F = 43.26$, so the cubic term improves the fit as well. The residual sum of
 squares falls from $5671$ to $744$ to $48$.
 
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
 ```{r galileo-plot}
 galileo_grid <- tibble(Height = seq(100, 1000, length.out = 200))
 
@@ -109,11 +113,17 @@ galileo_pred <- bind_rows(
 ) |>
   mutate(Model = factor(Model, levels = c("linear", "quadratic", "cubic")))
 
-ggplot(Sleuth3::case1001, aes(x = Height, y = Distance)) +
+galileo_plot <- ggplot(Sleuth3::case1001, aes(x = Height, y = Distance)) +
   geom_point() +
   geom_line(data = galileo_pred, aes(color = Model, linetype = Model)) +
   labs(title = "Sleuth3::case1001",
        x = "Release height", y = "Horizontal distance")
+```
+:::
+
+```{r galileo-figure}
+#| echo: false
+galileo_plot
 ```
 
 Be careful about what that second F-test has established. There are $n = 7$
@@ -121,7 +131,7 @@ observations, and the cubic model spends $4$ parameters on them, leaving $3$
 degrees of freedom — the cubic curve nearly interpolates the data. A significant
 F-test says the cubic fits the *training* data better than the quadratic. It
 does not say the cubic will predict a new release height better, and the physics
-argues for a quadratic. We return to this distinction at the end of the lecture.
+argues for a quadratic. We return to this distinction next lecture.
 
 
 ## Interactions
@@ -171,11 +181,22 @@ meadowfoam <- Sleuth3::case0901 |>
   mutate(Time = factor(Time, levels = 1:2, labels = c("Late", "Early")))
 ```
 
+::: {.callout-note collapse="true"}
+### Code for the figure below
 ```{r meadowfoam-plot}
-ggplot(meadowfoam, aes(x = Intensity, y = Flowers, color = Time, shape = Time, linetype = Time)) +
+#| output: false
+meadowfoam_plot <- ggplot(meadowfoam,
+                          aes(x = Intensity, y = Flowers,
+                              color = Time, shape = Time, linetype = Time)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
   labs(title = "Sleuth3::case0901")
+```
+:::
+
+```{r meadowfoam-figure}
+#| echo: false
+meadowfoam_plot
 ```
 
 ```{r meadowfoam-anova}
@@ -197,13 +218,24 @@ Thirty-two subjects had their first-pass metabolism of alcohol measured along
 with the activity of gastric alcohol dehydrogenase, the enzyme that breaks
 alcohol down in the stomach.
 
+::: {.callout-note collapse="true"}
+### Code for the figure below
 ```{r metabolism-plot}
-ggplot(Sleuth3::case1101, aes(x = Gastric, y = Metabol, color = Sex, shape = Sex)) +
+#| output: false
+metabolism_plot <- ggplot(Sleuth3::case1101,
+                          aes(x = Gastric, y = Metabol,
+                              color = Sex, shape = Sex, linetype = Sex)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
   labs(title = "Sleuth3::case1101",
        x = "Gastric alcohol dehydrogenase activity",
        y = "First-pass metabolism")
+```
+:::
+
+```{r metabolism-figure}
+#| echo: false
+metabolism_plot
 ```
 
 ```{r metabolism-fit}
@@ -221,132 +253,16 @@ In this model there is no such thing as "the effect of gastric activity." There
 are two of them, and you have to say which sex you mean.
 
 ::: {.callout-note collapse="true"}
-### A preview of a problem below
+### A preview of a problem
 The two male subjects at the far right have gastric activity well beyond anyone
 else's. Those are high-leverage points, and they are doing a large share of the
 work in estimating the male slope. Leverage appears in the list of potential
-problems below; this is what it looks like in practice.
+problems next lecture; this is what it looks like in practice.
 :::
 
-## Step functions
+## What we have not fixed
 
-Polynomials impose one global shape. A step function gives up smoothness
-instead. Choose cut points $c_1 < \cdots < c_K$, define indicators
-$C_k(X) = I(c_k \le X < c_{k+1})$, and fit
-
-$$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_K C_K(X_i) + \epsilon_i$$
-
-dropping the first bin as the baseline. This is **exactly** the dummy-variable
-machinery from last lecture: we have turned a quantitative feature into a
-categorical one. The fitted value in a bin is the sample mean of $y$ in that
-bin, and $\beta_k$ is that bin's mean minus the baseline bin's mean.
-
-```{r step-functions}
-#| eval: false
-lm(y ~ cut(x, breaks = c(0, 2, 4, 6, 8, 10)))
-```
-
-::: {.callout-note collapse="true"}
-### Code for the figure below
-```{r flexibility-comparison}
-#| output: false
-set.seed(20260916)
-
-sim <- tibble(x = runif(100, 0, 10)) |>
-  mutate(y = 2 + 0.6 * x + 1.8 * sin(x / 1.4) + rnorm(100, 0, 0.9))
-
-cuts     <- seq(0, 10, length.out = 6)
-sim_grid <- tibble(x = seq(0, 10, length.out = 400))
-
-fit_grid <- function(model, label, binned = FALSE) {
-  sim_grid |>
-    mutate(yhat = predict(model, sim_grid),
-           fit  = label,
-           bin  = if (binned) as.character(cut(x, cuts, include.lowest = TRUE))
-                  else "all")
-}
-
-sim_pred <- bind_rows(
-  fit_grid(lm(y ~ x,                                   data = sim), "Linear in x"),
-  fit_grid(lm(y ~ poly(x, 5),                          data = sim), "Polynomial (degree 5)"),
-  fit_grid(lm(y ~ cut(x, cuts, include.lowest = TRUE), data = sim), "Step function (5 bins)",
-           binned = TRUE)
-)
-
-flexibility_plot <- ggplot(sim, aes(x = x, y = y)) +
-  geom_point(alpha = 0.35) +
-  geom_line(data = sim_pred, aes(y = yhat, group = interaction(fit, bin)),
-            color = "blue", linewidth = 1) +
-  facet_wrap(~ fit)
-```
-:::
-
-```{r flexibility-comparison-figure}
-#| echo: false
-#| fig-width: 9
-#| fig-height: 3.2
-flexibility_plot
-```
-
-The costs are visible on the right: the fit jumps at the cut points and ignores
-any trend within a bin. And *we* chose those cut points — nothing in the data
-told us where to put them.
-
-::: {.callout-important collapse="true"}
-### Where this is going
-That last complaint is the whole idea behind **regression trees** (Chapter 8).
-A tree is a step function whose cut points are *learned from the data*, applied
-recursively and in several features at once — so a tree gets interactions for
-free, without our specifying them. A **random forest** averages many such step
-functions to cut their variance.
-:::
-
-## Potential problems
-
-Feature engineering is the *cure* for the first of these and the *cause* of the
-last two.
-
-1. **Non-linearity.** Structure in a plot of residuals against fitted values
-means the model is missing systematic signal — the motivation for everything
-above.
-2. **Correlated errors.** Common with data over time or space. Standard errors
-come out too small, so you are more confident than you have earned.
-3. **Non-constant variance.** A funnel in the residual plot; often handled by
-transforming the response, $\log Y$ or $\sqrt{Y}$.
-4. **Outliers.** An unusual *response*. Inflates $\hat\sigma^2$ and depresses
-$R^2$ without necessarily moving the line.
-5. **High-leverage points.** An unusual *feature* value. These do move the line,
-and polynomials make it worse — an extreme $x$ raised to the fifth power is an
-extraordinarily influential row.
-6. **Collinearity.** Features carrying nearly the same information. The data
-cannot separate their effects, so $\text{SE}(\hat\beta_j)$ inflates and the
-t-test loses power: a coefficient can matter and still look "insignificant."
-Polynomials and interactions create collinearity by construction.
-
-::: {.callout-note collapse="true"}
-### Detecting leverage and collinearity
-**Leverage** is $h_i$, the $i$th diagonal element of the hat matrix
-$H = X(X^\top X)^{-1}X^\top$. It averages $(p+1)/n$, so values several times
-that deserve a look. The dangerous points have high leverage *and* a large
-studentized residual, say beyond $\pm 3$.
-
-**Collinearity** is measured by the variance inflation factor
-
-$$\text{VIF}(\hat\beta_j) = \frac{1}{1 - R^2_{X_j | X_{-j}}}$$
-
-where $R^2_{X_j|X_{-j}}$ comes from regressing $X_j$ on all other features. VIF
-is 1 under no collinearity; past 5 or 10 is commonly flagged. Remedies: drop one
-feature, combine them, center them, or — for polynomials — use `poly()`.
-:::
-
-## The cost of flexibility
-
-Every basis function you add is another turn of the flexibility dial from
-Chapter 2. The training RSS can only fall and $R^2$ can only rise as columns are
-added to $X$; the **test** MSE need not, because you are trading bias for
-variance.
-
-So feature engineering hands us more candidate models than we can judge by eye,
-and training error cannot referee among them. Honest test-error estimates come
-from resampling (Chapter 5), and automatic ways to choose which features to keep
-come from selection and regularization (Chapter 6).
+Polynomials and interactions both stay inside the linear model: we pick the
+basis functions $h_k$ by hand and least squares does the rest. Next lecture we
+let the data take over more of that choice — step functions and K-nearest
+neighbors — and then take stock of what can go wrong.

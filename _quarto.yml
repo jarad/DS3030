@@ -18,6 +18,7 @@ book:
       - regression/03-1-slr.qmd
       - regression/03-2-mlr.qmd
       - regression/03-3-feature-engineering.qmd
+      - regression/03-4-flexibility.qmd
 
 format:
   html:

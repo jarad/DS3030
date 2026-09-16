@@ -15,7 +15,7 @@ and we can use a multiple linear regression model to approximate $f$.
 
 ## Example
 
-```{r data}
+```{r case0901}
 d <- Sleuth3::case0901 |>
     mutate(Time = case_when(
         Time == 1 ~ "Late",
@@ -65,8 +65,8 @@ Suppse you have a categorical variable $Z$ with $k$ levels. You can create $k-1$
 For example, if $Z$ has levels "A", "B", and "C", 
 you can create two dummy variables:
 
-- $D_1 = 1$ if $Z = "A"$, 0 otherwise
-- $D_2 = 1$ if $Z = "B"$, 0 otherwise
+- $D_1 = 1$ if $Z = $"A", 0 otherwise
+- $D_2 = 1$ if $Z = $"B", 0 otherwise
 
 Then, you can include these dummy variables in the regression model as follows:
 $$Y_i = \beta_0 + \beta_1 D_{i,1} + \beta_2 D_{i,2} + \epsilon_i.$$
@@ -341,5 +341,3 @@ Model summary:
 ```{r flowers-summary}
 summary(m)
 ```
-
-[Example](03-2-mlr.R).
