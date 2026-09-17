@@ -28,17 +28,37 @@ comment, not in a commit message.
 
 ## File layout
 
-Chapters live in topic folders, named `NN-M-slug.qmd` where `NN` is the ISLR2
-chapter number and `M` is the section index within it:
+Chapters live in topic folders, named `NN-MM-slug.qmd`. `NN` is the ISLR2
+chapter number (loosely — it just matches the folder). `MM` is the order the
+material is actually covered in class, **not** the ISLR2 section number —
+those don't map cleanly onto lecture days, since one section can span several
+class days and several sections can be covered in one. `MM` is spaced by tens
+(`10`, `20`, `30`, ...) so a lecture discovered later to belong between two
+existing ones can take an unused number (e.g. `15`) without renumbering every
+file after it — and without touching the Canvas links that point at the
+already-published ones.
 
 ```
-learning/02-1-overview.qmd      regression/03-1-slr.qmd
-learning/02-2-regression.qmd    regression/03-2-mlr.qmd
-learning/02-3-classification.qmd
+regression/03-10-slr.qmd
+regression/03-20-mlr.qmd
+regression/03-30-feature-engineering.qmd
+regression/03-40-flexibility.qmd
 ```
+
+`learning/` still uses the old `02-1`, `02-2`, `02-3` numbering pending
+migration to this scheme — don't take it as a model for new chapters.
+
+The actual calendar date each file was used in class is **not** encoded in the
+filename — it lives in `LECTURE-LOG.md` instead, since this book is reused
+across semesters and the calendar shifts every year. Update that log whenever
+a file is presented in class.
 
 A new chapter must be registered in the `chapters:` list in `_quarto.yml` under
 the right `part:`, in order, or it will not appear on the site.
+
+Renaming a published chapter breaks any Canvas link that points at its
+rendered page directly. When renaming, list every old → new filename so the
+instructor can update Canvas.
 
 `DESCRIPTION` makes this repository an R package whose only job is to let
 students install every package the course uses in one step. A chapter that
@@ -115,12 +135,14 @@ published site will show stale results.
 
 ## Agents
 
-Project agents for this course live in `../.claude/agents/` (the `DS3030class`
-parent folder) and are available when Claude Code is launched from there:
-`notes-author`, `homework-author`, `quiz-reviewer`, `exam-author`, and
-`proof-reader`.
+Project agents for this repository live in `.claude/agents/`: `notes-author`
+and `proof-reader`. `homework-author`, `exam-author`, and `quiz-reviewer` live
+in the sibling private repository, `../DS3030Private/`, and are only available
+when Claude Code is launched from there.
 
-`proof-reader` works on any course file and reports — without editing — typos,
-notation collisions, stale cross-references, convention violations, and
-statements that are incorrect. It verifies numbers quoted in prose by actually
-running the chunks, which is worth doing after any change to a chapter's code.
+`proof-reader` works on any course file — here or in `DS3030Private` — and
+reports, without editing, typos, notation collisions, stale cross-references,
+convention violations, and statements that are incorrect. It verifies numbers
+quoted in prose by actually running the chunks, which is worth doing after any
+change to a chapter's code. Because it works on both repositories, this copy is
+canonical; `DS3030Private/.claude/agents/proof-reader.md` is a symlink to it.

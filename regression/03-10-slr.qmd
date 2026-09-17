@@ -168,4 +168,4 @@ The coefficient interpretations in this model are
 - $\beta_1$ is the asset's sensitivity to market movements, also known as the asset's *beta*.
 
 
-[Example analysis using the CAPM](03-1-slr.R).
+[Example analysis using the CAPM](03-10-slr.R).
