@@ -15,10 +15,10 @@ book:
       - learning/02-3-classification.qmd
     - part: "Regression"
       chapters:
-      - regression/03-1-slr.qmd
-      - regression/03-2-mlr.qmd
-      - regression/03-3-feature-engineering.qmd
-      - regression/03-4-flexibility.qmd
+      - regression/03-10-slr.qmd
+      - regression/03-20-mlr.qmd
+      - regression/03-30-feature-engineering.qmd
+      - regression/03-40-flexibility.qmd
 
 format:
   html:
