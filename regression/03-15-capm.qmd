@@ -1,9 +1,50 @@
-# author: Jarad Niemi
-# date: 2026-09-07
-# purpose: Simple linear regression examples using the
-#          capital asset pricing model (CAPM).
-# ------------------------------------------------------------------------------
+# Capital Asset Pricing Model
 
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **derive** the CAPM regression equation from the CAPM formula,
+- **interpret** the intercept and slope of the fitted regression in financial
+terms, i.e. excess return and *beta*,
+- **fit** the CAPM model in R using weekly returns downloaded from Yahoo
+Finance, and
+- **evaluate** a fitted CAPM model by comparing its $R^2$ and estimated beta
+to those of another asset.
+:::
+
+The Capital Asset Pricing Model (CAPM) is a widely used model in finance that describes the relationship between systematic risk and expected return for assets, particularly stocks. The CAPM formula is given by:
+$$E[R] = R_f + \beta (E[R_m] - R_f)$$
+where
+
+- $R$ is the return of the asset,
+- $R_f$ is the risk-free rate, and
+- $R_m$ is the return of the market portfolio.
+
+The return of the asset is calculated based on the current and previous price
+of the asset. If the price at time $t$ is $P_t$ and the price at time $t-1$ is $P_{t-1}$, then the return of the asset at time $t$ is given by:
+$$R_t = \frac{P_t - P_{t-1}}{P_{t-1}}.$$
+
+To fit a simple linear regression model to the CAPM,
+we can rewrite the equation in the form of a linear regression model:
+$$\underbrace{R_t - R_{t,f}}_{\text{response}} = \beta_0 + \beta_1 \underbrace{(R_{t,m} - R_{t,f})}_{\text{explanatory}} + \epsilon_t$$
+where, at time $t$,
+
+- $R_t$ is the asset return,
+- $R_{t,f}$ is the risk-free return, and
+- $R_{t,m}$ is the market return.
+
+The coefficient interpretations in this model are
+
+- $\beta_0$ is the expected *excess* return of the asset (typically around 0),
+- $\beta_1$ is the asset's sensitivity to market movements, also known as the asset's *beta*.
+
+## Example: AAPL vs SPY
+
+We fit the CAPM using Apple (AAPL) as the asset, the S&P 500 ETF (SPY) as the
+market portfolio, and the 13-week T-bill yield (`^IRX`) as the risk-free rate.
+
+```{r capm-analysis}
 library("tidyverse")
 library("quantmod")
 
@@ -88,10 +129,22 @@ g + geom_smooth(method = "lm")
 # Fit the linear regression model: AAPL excess return ~ SPY excess return
 capm_model <- lm(AAPL_Excess_Return ~ SPY_Excess_Return, data = d)
 
-
 # View the summary of the CAPM model
 summary(capm_model)
 
 coef(capm_model)
 confint(capm_model)
 summary(capm_model)$r.squared
+```
+
+## Class activity
+
+Find a stock, or an index, whose CAPM fit against SPY has
+
+- a **higher $R^2$** than AAPL's, and
+- a **more extreme beta**, i.e. farther from 1 in either direction, than
+AAPL's.
+
+Adapt the code above by substituting your chosen ticker for `AAPL` (`getSymbols()`
+accepts any Yahoo Finance ticker), re-fit the model, and report the resulting
+$R^2$ and $\hat\beta_1$ alongside AAPL's for comparison.

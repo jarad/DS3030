@@ -57,8 +57,8 @@ A new chapter must be registered in the `chapters:` list in `_quarto.yml` under
 the right `part:`, in order, or it will not appear on the site.
 
 Renaming a published chapter breaks any Canvas link that points at its
-rendered page directly. When renaming, list every old → new filename so the
-instructor can update Canvas.
+rendered page directly. Every rename or new chapter must get a row in
+`CANVAS-LINKS.md` so the instructor can update Canvas.
 
 `DESCRIPTION` makes this repository an R package whose only job is to let
 students install every package the course uses in one step. A chapter that
@@ -135,10 +135,10 @@ published site will show stale results.
 
 ## Agents
 
-Project agents for this repository live in `.claude/agents/`: `notes-author`
-and `proof-reader`. `homework-author`, `exam-author`, and `quiz-reviewer` live
-in the sibling private repository, `../DS3030Private/`, and are only available
-when Claude Code is launched from there.
+Project agents for this repository live in `.claude/agents/`: `notes-author`,
+`proof-reader`, and `semester-refresh`. `homework-author`, `exam-author`, and
+`quiz-reviewer` live in the sibling private repository, `../DS3030Private/`,
+and are only available when Claude Code is launched from there.
 
 `proof-reader` works on any course file — here or in `DS3030Private` — and
 reports, without editing, typos, notation collisions, stale cross-references,
@@ -146,3 +146,11 @@ convention violations, and statements that are incorrect. It verifies numbers
 quoted in prose by actually running the chunks, which is worth doing after any
 change to a chapter's code. Because it works on both repositories, this copy is
 canonical; `DS3030Private/.claude/agents/proof-reader.md` is a symlink to it.
+
+`semester-refresh` checks whether the course still works before it is taught
+again: it runs `install-packages.R` to install anything `DESCRIPTION` lists
+that is missing (never upgrading what's already there — mid-semester upgrades
+have broken lecture code before), then renders every chapter and reports which
+ones fail and why, without editing anything. Run it at the start of a new
+semester or after a long gap, since packages, datasets, and external services
+like Yahoo Finance can drift out from under the notes between offerings.

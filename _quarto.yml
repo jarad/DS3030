@@ -16,6 +16,7 @@ book:
     - part: "Regression"
       chapters:
       - regression/03-10-slr.qmd
+      - regression/03-15-capm.qmd
       - regression/03-20-mlr.qmd
       - regression/03-30-feature-engineering.qmd
       - regression/03-40-flexibility.qmd
