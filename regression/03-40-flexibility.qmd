@@ -28,14 +28,15 @@ distance to judge which observations actually influence the fit, and
 Last lecture we used polynomials, which impose one global shape on the whole
 range of $X$. A step function gives up smoothness instead. Choose cut points
 $c_1 < \cdots < c_p$, define indicators
-$C_k(X) = I(c_k \le X < c_{k+1})$, and fit
+$C_j(X) = I(c_j \le X < c_{j+1})$ for $j = 1, \ldots, p-1$ and
+$C_p(X) = I(c_p \le X)$, and fit
 
 $$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_p C_p(X_i) + \epsilon_i$$
 
 dropping the first bin as the baseline. This is **exactly** the dummy-variable
 machinery from multiple regression: we have turned a quantitative feature into a
 categorical one. The fitted value in a bin is the sample mean of $y$ in that
-bin, and $\beta_k$ is that bin's mean minus the baseline bin's mean.
+bin, and $\beta_j$ is that bin's mean minus the baseline bin's mean.
 
 ```{r step-functions}
 #| eval: false
@@ -90,7 +91,7 @@ told us where to put them.
 
 ::: {.callout-important collapse="true"}
 ### Where this is going
-That last complaint is the whole idea behind **regression trees** (Chapter 8).
+That last complaint is the whole idea behind **regression trees** (ISLR2 Chapter 8).
 A tree is a step function whose cut points are *learned from the data*, applied
 recursively and in several features at once — so a tree gets interactions for
 free, without our specifying them. A **random forest** averages many such step
@@ -164,12 +165,13 @@ that line using every observation at once rather than only $K$ of them.
 The decisive issue is the number of features. As $p$ grows, the $K$ "nearest"
 neighbors of $x_0$ stop being anywhere near it — in high dimensions everything
 is far from everything — so averaging their responses estimates $f$ somewhere
-other than at $x_0$, which is bias. This is the **curse of dimensionality**, and
-it is severe: ISLR2 shows KNN losing to linear regression at $p = 20$ and
-$n = 100$ *even when the true relationship is not linear*.
+other than at $x_0$, which is bias. This is the **curse of dimensionality**.
 
 A parametric model that is merely approximately right will usually beat a
-nonparametric one when $p$ is large relative to $n$.
+nonparametric one when $p$ is large relative to $n$ — even when the true
+relationship is not linear, because the nonparametric method's variance from
+having too few effective neighbors outweighs the parametric method's bias from
+having the wrong functional form.
 
 ## Potential problems
 
@@ -214,10 +216,10 @@ is 1 under no collinearity; past 5 or 10 is commonly flagged. Remedies: drop one
 feature, combine them, center them, or — for polynomials — use `poly()`.
 :::
 
-Every one of these except correlated errors shows up in data we have already
-used this semester. Number 2 is the exception only because none of our examples
-are collected over time; the CAPM demonstration, with weekly returns ordered by
-date, is exactly where you would worry about it.
+Every one of these shows up in data we have already used this semester. Number
+2 is the least visible, because most of our examples are not collected over
+time — but the CAPM demonstration, with weekly returns ordered by date, is
+exactly where you would worry about it.
 
 ### Reading residuals: curvature and changing spread
 
@@ -266,9 +268,11 @@ response would be the usual response.
 
 ### Leverage and outliers are different things
 
-Last lecture we noticed two men at the far right of the metabolism plot. Now we
-can be precise about them. With $p + 1 = 4$ coefficients and $n = 32$
-observations, average leverage is $4/32 = 0.125$.
+Last lecture we labelled three subjects on the metabolism plot — 17, 31, and
+32. Now we can be precise about them. With
+$p + 1 = `r length(coef(metabol_fit))`$ coefficients and
+$n = `r nrow(Sleuth3::case1101)`$ observations, average leverage is
+$`r length(coef(metabol_fit))`/`r nrow(Sleuth3::case1101)` = `r round(length(coef(metabol_fit)) / nrow(Sleuth3::case1101), 3)`$.
 
 ::: {.callout-note collapse="true"}
 ### Code for the figure below
@@ -304,14 +308,22 @@ reasons. **Cook's distance** settles which of them actually matter.
 ### Code for the table below
 ```{r influence-table}
 #| output: false
-influence_table <- tibble(
+influence_data_full <- tibble(
   Subject     = Sleuth3::case1101$Subject,
   Studentized = rstudent(metabol_fit),
   Leverage    = hatvalues(metabol_fit),
-  CooksD      = cooks.distance(metabol_fit)) |>
-  filter(Subject %in% c(17, 31, 32)) |>
+  CooksD      = cooks.distance(metabol_fit))
+
+influence_table_data <- influence_data_full |>
+  filter(Subject %in% c(17, 31, 32))
+
+influence_table <- influence_table_data |>
   knitr::kable(digits = 3,
                col.names = c("Subject", "Studentized residual", "Leverage", "Cook's D"))
+
+influence_of <- function(subject, column) {
+  influence_table_data[[column]][influence_table_data$Subject == subject]
+}
 ```
 :::
 
@@ -329,17 +341,21 @@ model *and* have room to pull the line toward itself before it can do real
 damage — and having room is exactly what leverage measures. Either ingredient
 alone is harmless; the combination is not.
 
-The table makes the distinction concrete. Subject 17 has leverage $0.393$, more
-than three times the average of $4/32 = 0.125$, and yet Cook's distance is
-$0.006$. It sits far from the other feature values and agrees completely with
-the trend, so deleting it would change essentially nothing. High leverage by
-itself is not a problem.
+The table makes the distinction concrete. Subject 17 has leverage
+$`r round(influence_of(17, "Leverage"), 3)`$, more than three times the average
+of $4/32 = `r round(length(coef(metabol_fit)) / nrow(Sleuth3::case1101), 3)`$,
+and yet Cook's distance is $`r round(influence_of(17, "CooksD"), 3)`$. It sits
+far from the other feature values and agrees completely with the trend, so
+deleting it would change essentially nothing. High leverage by itself is not a
+problem.
 
 Subjects 31 and 32 both land near or above $1$, the conventional cutoff, and
 they get there by opposite routes. Subject 32 has only moderate leverage but a
-studentized residual of $5.12$ — it disagrees violently. Subject 31 has the
-largest leverage in the data with an unremarkable residual of $-1.91$ — it
-barely disagrees, but it has so much room that a small disagreement is enough.
+studentized residual of $`r round(influence_of(32, "Studentized"), 2)`$ — it
+disagrees violently. Subject 31 has the largest leverage in the data
+(`r round(max(influence_data_full$Leverage), 3)`) with an unremarkable residual
+of $`r round(influence_of(31, "Studentized"), 2)`$ — it barely disagrees, but
+it has so much room that a small disagreement is enough.
 
 Deleting either one would visibly move the male line, which is worth knowing
 before reporting that men metabolize alcohol at three times the female rate.
@@ -357,15 +373,18 @@ vif <- function(X) {
 
 Height     <- Sleuth3::case1001$Height
 raw_powers <- data.frame(Height = Height, Height2 = Height^2, Height3 = Height^3)
+raw_power_vif <- vif(raw_powers)
 
-round(vif(raw_powers), 1)
+round(raw_power_vif, 1)
 round(vif(as.data.frame(poly(Height, 3))), 3)
 ```
 
-The raw powers carry variance inflation factors of roughly $172$, $960$, and
-$356$ — the standard errors on those coefficients are inflated by factors of
-$\sqrt{960} \approx 31$. The orthogonal basis from `poly()` gives exactly $1$,
-$1$, and $1$.
+The raw powers carry variance inflation factors of roughly
+$`r round(raw_power_vif[1])`$, $`r round(raw_power_vif[2])`$, and
+$`r round(raw_power_vif[3])`$ — the standard errors on those coefficients are
+inflated by factors of $\sqrt{`r round(max(raw_power_vif))`} \approx `r round(sqrt(max(raw_power_vif)))`$.
+The orthogonal basis from `poly()` gives
+exactly $1$, $1$, and $1$.
 
 Both parameterizations produce **identical** fitted values, residuals, and
 $R^2$. Nothing about the quality of the fit changed. What changed is whether the
@@ -375,8 +394,9 @@ Galileo's measurements.
 
 ### Why not just look at the data?
 
-Every problem in this section could have been caught by eye. Seven observations
-of Galileo's, thirty-two subjects, one or two features — plot the data and you
+Every problem in this section could have been caught by eye:
+`r nrow(Sleuth3::case1001)` observations of Galileo's, `r nrow(Sleuth3::case1101)`
+subjects, one or two features — plot the data and you
 can see the curvature, see the two men stranded out on the right, see the spread
 widening.
 
@@ -400,11 +420,11 @@ number is all you will have.
 ## The cost of flexibility
 
 Every feature you add to $X$, and every reduction in the number of neighbors
-$K$, is another turn of the flexibility dial from Chapter 2. The training RSS
-can only fall as you turn it; the **test** MSE need not, because you are trading
-bias for variance.
+$K$, is another turn of the flexibility dial from ISLR2 Chapter 2. The training
+RSS can only fall as you turn it; the **test** MSE need not, because you are
+trading bias for variance.
 
 So these methods hand us more candidate models than we can judge by eye, and
 training error cannot referee among them. Honest test-error estimates come from
-resampling (Chapter 5), and automatic ways to choose which features to keep come
-from selection and regularization (Chapter 6).
+resampling (ISLR2 Chapter 5), and automatic ways to choose which features to
+keep come from selection and regularization (ISLR2 Chapter 6).

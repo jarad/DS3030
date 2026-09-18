@@ -34,9 +34,20 @@ where, at time $t$,
 - $R_{t,f}$ is the risk-free return, and
 - $R_{t,m}$ is the market return.
 
+Taking expectations of both sides and substituting the CAPM formula for
+$E[R_t]$ and $E[R_{t,m}]$,
+
+$$E[R_t - R_{t,f}] = \beta_1 (E[R_{t,m}] - R_{t,f}),$$
+
+which matches the regression equation above only if $\beta_0 = 0$. CAPM is
+therefore making a testable prediction about the intercept, not just the
+slope.
+
 The coefficient interpretations in this model are
 
-- $\beta_0$ is the expected *excess* return of the asset (typically around 0),
+- $\beta_0$ is the asset's *abnormal return*, or *alpha* — the part of its
+excess return not explained by market exposure. CAPM implies $\beta_0 = 0$, so
+an estimate far from zero is evidence against the model, and
 - $\beta_1$ is the asset's sensitivity to market movements, also known as the asset's *beta*.
 
 ## Example: AAPL vs SPY
@@ -44,7 +55,13 @@ The coefficient interpretations in this model are
 We fit the CAPM using Apple (AAPL) as the asset, the S&P 500 ETF (SPY) as the
 market portfolio, and the 13-week T-bill yield (`^IRX`) as the risk-free rate.
 
+::: {.callout-note collapse="true"}
+### Code for this analysis
 ```{r capm-analysis}
+#| results: hide
+#| fig-keep: none
+#| message: false
+#| warning: false
 library("tidyverse")
 library("quantmod")
 
@@ -80,7 +97,7 @@ t_bill_weekly_return <- (t_bill_weekly_yield / 100) / 52
 
 # Merge all series into one object and rename columns
 merged_returns <- merge(aapl_weekly, spy_weekly, t_bill_weekly_return)
-colnames(merged_returns) <- db_columns <- c(
+colnames(merged_returns) <- c(
   "AAPL_Return",
   "SPY_Return",
   "TBill_Weekly_Yield"
@@ -99,28 +116,30 @@ d <- data.frame(Date = index(merged_returns), coredata(merged_returns)) |>
 # Exploratory Data Analysis (EDA)
 # ------------------------------------------------------------------------------
 
-g <- ggplot(d, aes(x = SPY_Excess_Return, y = AAPL_Excess_Return)) +
+scatter_plot <- ggplot(d, aes(x = SPY_Excess_Return, y = AAPL_Excess_Return)) +
   geom_point(alpha = 0.5) +
   labs(
     title = "Scatter Plot of AAPL vs SPY Weekly Returns",
     x = "SPY Weekly Excess Return",
-    y = "AAPL Weekly ExcessReturn"
+    y = "AAPL Weekly Excess Return"
   )
 
-g
+scatter_plot
 
 # Hexbin plot
-g <- ggplot(d, aes(x = SPY_Excess_Return, y = AAPL_Excess_Return)) +
+hexbin_plot <- ggplot(d, aes(x = SPY_Excess_Return, y = AAPL_Excess_Return)) +
   geom_hex(bins = 30) +
   labs(
     title = "Hexbin Plot of AAPL vs SPY Weekly Returns",
     x = "SPY Weekly Excess Return",
-    y = "AAPL Weekly ExcessReturn"
+    y = "AAPL Weekly Excess Return"
   ) +
   scale_fill_gradient(low = "lightblue", high = "darkblue")
 
-g
-g + geom_smooth(method = "lm")
+hexbin_plot
+
+hexbin_smooth_plot <- hexbin_plot + geom_smooth(method = "lm", formula = y ~ x)
+hexbin_smooth_plot
 
 # ------------------------------------------------------------------------------
 # Fit the CAPM model using simple linear regression
@@ -132,6 +151,30 @@ capm_model <- lm(AAPL_Excess_Return ~ SPY_Excess_Return, data = d)
 # View the summary of the CAPM model
 summary(capm_model)
 
+coef(capm_model)
+confint(capm_model)
+summary(capm_model)$r.squared
+```
+:::
+
+```{r capm-scatter-plot}
+#| echo: false
+scatter_plot
+```
+
+```{r capm-hexbin-plot}
+#| echo: false
+hexbin_plot
+```
+
+```{r capm-hexbin-smooth-plot}
+#| echo: false
+hexbin_smooth_plot
+```
+
+```{r capm-model-output}
+#| echo: false
+summary(capm_model)
 coef(capm_model)
 confint(capm_model)
 summary(capm_model)$r.squared

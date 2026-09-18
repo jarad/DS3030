@@ -11,8 +11,9 @@ $p_{ic} = P(Y_i = c|X_i)$,
 model,
 - **define** the training and test error rate and **explain** why the test error
 rate is the quantity of interest,
-- **compute** accuracy, log loss, sensitivity, specificity, and precision from a
-confusion matrix, and **interpret** what each one measures, and
+- **compute** accuracy, sensitivity, specificity, and precision from a
+confusion matrix, and **compute** log loss from predicted class probabilities,
+and **interpret** what each one measures, and
 - **describe** how the test error rate of a classifier changes with model
 flexibility in terms of the bias-variance tradeoff.
 :::
@@ -23,7 +24,7 @@ For classification models, our response variable is qualitative, categorical
 value, 
 
 ::: {.callout-note collapse="true"}
-### for example,
+### For example,
 - Yes/No
 - Male/Female
 - Democrat/Republican/Independent
@@ -81,15 +82,15 @@ $\hat{f}$ as we used to compute the error rate.
 
 We are actually more interested in how well our model fits *test* data, 
 i.e. data that were not used to estimate $\hat{f}$. 
-Thus, we typically estimate the *expected test MSE*:
+Thus, we typically estimate the *expected test error rate*:
 
 $$\text{Test Error Rate}
 = \frac{1}{m} \sum_{i=1}^m \mathrm{I}(\tilde{y}_i \ne \hat{\tilde{y}}_i)$$
-and we refer to this simply as the *test MSE*.
+and we refer to this simply as the *test error rate*.
 
 
 ::: {.callout-note collapse="true"}
-## Alternative metrics
+### Alternative metrics
 
 Here are some alternative metrics for evaluating classification models:
 

@@ -70,8 +70,10 @@ increases.
 
 ## Bias-variance tradeoff
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-#| label: bias-variance-tradeoff
+```{r bias-variance-tradeoff}
+#| echo: false
+#| message: false
+#| warning: false
 library("tidyverse")
 
 d <- tibble(

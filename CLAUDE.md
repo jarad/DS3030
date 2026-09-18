@@ -75,14 +75,27 @@ introduces a new package should add it to `Imports:`.
   repository require `\(...\)` for Canvas — that convention does not apply here.)
 - Define every symbol the first time it appears, as a bulleted list immediately
   after the equation introducing it.
-- Use collapsible callouts for examples and asides:
+- Use collapsible callouts for worked examples of taught material:
   `::: {.callout-note collapse="true"}` with a `### For example,` heading.
+- Use a collapsible callout headed `### Beyond this course` for a pointer to
+  related material that is mentioned but not taught or tested — e.g. noting
+  that contrasts exist without teaching how to construct one. Content under
+  this heading must never be echoed in the chapter's learning objectives,
+  however developed the callout becomes: the heading itself is what marks it
+  out of scope for assessment, not its length or polish.
 - Short paragraphs, frequent `##` headings. These pages are read on the web and
   used live in class.
 - Worked examples follow **motivation → exploratory data analysis → model →
   inference → conclusion**. Show the data before fitting anything to it: a plot
   of the raw data comes before any model, so students see what a method is
   responding to rather than taking the fit on faith.
+- **Never cite ISLR2 as the evidence for a claim** — e.g. "ISLR2 shows KNN
+  losing to linear regression at $p=20$." These notes must be self-contained:
+  if a point needs evidence, generate it here (a derivation, a simulation, a
+  fitted example) rather than asserting that the textbook demonstrates it
+  elsewhere. A bare pointer to a chapter or section for *further reading*
+  (`ISLR2 Chapter 8`) is fine; an unverifiable claim about what the textbook
+  contains is not.
 
 ## Code
 

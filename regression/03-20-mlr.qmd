@@ -14,10 +14,10 @@ After this lecture you should be able to
 least squares estimator $\hat\beta = (X^\top X)^{-1}X^\top y$,
 - **encode** a categorical explanatory variable with dummy variables and
 **interpret** the resulting coefficients relative to the baseline level,
-- **interpret** a coefficient, a contrast, and a coefficient on a logged
-response or explanatory variable,
-- **construct** t-tests and confidence intervals for coefficients and contrasts,
-and **distinguish** a confidence interval for the mean response at $x_0$ from a
+- **interpret** a coefficient and a coefficient on a logged response or
+explanatory variable,
+- **construct** t-tests and confidence intervals for coefficients, and
+**distinguish** a confidence interval for the mean response at $x_0$ from a
 prediction interval for a new observation, and
 - **conduct** an F-test comparing two nested models and **explain** the
 F-statistic in terms of the residual sums of squares of the reduced and full
@@ -71,23 +71,27 @@ $$X_i = (1, X_{i1}, \ldots, X_{ip})$$
 
 The error assumptions are now $E[\epsilon] = 0$ and $Var[\epsilon] = \sigma^2 I$, where $I$ is the $n \times n$ identity matrix.
 
-Throughout we will assume the $X$ matrix is of full rank, i.e. $rank(X) = p+1$,
+Throughout we will assume the $X$ matrix is of full rank, i.e. $\mathrm{rank}(X) = p+1$,
 but later we will learn about methods such as *ridge regression*, *lasso* and 
 *principal component regression* that can be used when this assumption is violated.
 
 ## Categorical explanatory variables
 
-If you have categorical explanation variables, you can include them in the model using *dummy variables*.
-Suppse you have a categorical variable $Z$ with $k$ levels. You can create $k-1$ dummy variables to represent the levels of $Z$. 
+If you have categorical explanatory variables, you can include them in the model using *dummy variables*.
+Suppose you have a categorical variable $Z$ with $k$ levels. You can create $k-1$ dummy variables to represent the levels of $Z$. 
 
-For example, if $Z$ has levels "A", "B", and "C", 
-you can create two dummy variables:
+For example, if $Z$ has levels A, B, and C, let's choose C as the 
+*reference level* and create create two dummy variables for A and B:
 
-- $D_1 = 1$ if $Z = $"A", 0 otherwise
-- $D_2 = 1$ if $Z = $"B", 0 otherwise
+$$D_A = \mathrm{I}(Z=A) = \left\{ \begin{array}{ll} 1 & \text{if $Z$ = A} \\
+0 & \text{otherwise} \end{array} \right.$$
+and 
+
+$$D_B = \mathrm{I}(Z=B) = \left\{ \begin{array}{ll} 1 & \text{if $Z$ = B} \\
+0 & \text{otherwise} \end{array} \right.$$
 
 Then, you can include these dummy variables in the regression model as follows:
-$$Y_i = \beta_0 + \beta_1 D_{i1} + \beta_2 D_{i2} + \epsilon_i.$$
+$$Y_i = \beta_0 + \beta_1 D_{iA} + \beta_2 D_{iB} + \epsilon_i.$$
 
 
 
@@ -107,21 +111,21 @@ the interpretation of the coefficients becomes more complex.
 A common transformation is to take the logarithm of the response variable, the explanatory variable, or both. The interpretations of the parameters change accordingly:
 
 - If we take the logarithm of the response variable, then $e^{\beta_j}$ represents the multiplicative change in the median response for a one-unit increase in the explanatory variable *when all other explanatory variables are held constant*.
-- If we take the logarithm of the explanatory variable, then $\beta_1\log(2)$ represents the expected change in the response for a doubling of the explanatory variable *when all other explanatory variables are held constant*.
-- If we take the logarithm of both the response and explanatory variables, then $2^\beta_1$ represents the multiplicative change in the median response for a doubling of the explanatory variable *when all other explanatory variables are held constant*.
+- If we take the logarithm of the explanatory variable, then $\beta_j\log(2)$ represents the expected change in the response for a doubling of the explanatory variable *when all other explanatory variables are held constant*.
+- If we take the logarithm of both the response and explanatory variables, then $2^{\beta_j}$ represents the multiplicative change in the median response for a doubling of the explanatory variable *when all other explanatory variables are held constant*.
 :::
 
 ::: {.callout-note collapse="true"}
-### Contrasts
-Another tool that helps interpretation of models is the use of contrasts. 
-Contrasts are linear combinations of the regression coefficients that allow us 
-to test specific hypotheses about the relationships between the explanatory 
+### Beyond this course
+Another tool that helps interpretation of models is the use of contrasts.
+Contrasts are linear combinations of the regression coefficients that allow us
+to test specific hypotheses about the relationships between the explanatory
 variables and the response variable.
 :::
 
 ## Estimation
 
-The vector $\beta = (\beta_0, \beta_1, \ldots, \beta_p)^T$ is estimated using 
+The vector $\beta = (\beta_0, \beta_1, \ldots, \beta_p)^\top$ is estimated using 
 the method of least squares:
 
 $$\begin{array}{rl}\hat{\beta}
@@ -130,7 +134,7 @@ $$\begin{array}{rl}\hat{\beta}
 &= \left(X^\top X\right)^{-1} X^\top y
 \end{array}$$
 
-This is commonly referred to as the *ordinary least squares* (OLS) estimators. 
+These are commonly referred to as the *ordinary least squares* (OLS) estimators. 
 
 The residual sum of squares (RSS) are
 
@@ -180,7 +184,7 @@ This results in the model
 $$Y_i \stackrel{ind}{\sim} N(\beta_0 + \beta_1 X_{i1}+\cdots+\beta_pX_{ip}, \sigma^2)$$
 or, equivalently,
 
-$$Y \sim N_n(X\beta, \sigma^2\mathrm{I})$$
+$$Y \sim N_n(X\beta, \sigma^2 I)$$
 where $N_n$ is the $n$-dimensional multivariate normal distribution.
 
 With the normality assumption, we can write the likelihood function:
@@ -206,19 +210,13 @@ follows a t-distribution with $n-(p+1)$ degrees of freedom.
 summary(m)$coefficients
 ```
 
-::: {.callout-note collapse="true"}
-### Contrasts
-Contrasts also utilize t-tools, e.g. t-tests and confidence intervals.
-:::
-
-
 ### Confidence intervals
 
 A $(1-\alpha)100\%$ confidence interval for $\beta_j$ is given by
 
 $$\hat{\beta}_j \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}\left(\hat{\beta}_j\right)$$
 
-where $t_{n-2, 1-\alpha/2}$ is the $(1-\alpha/2)$ quantile of the t-distribution with $n-2$ degrees of freedom.
+where $t_{n-(p+1), 1-\alpha/2}$ is the $(1-\alpha/2)$ quantile of the t-distribution with $n-(p+1)$ degrees of freedom.
 
 The standard error of $\hat{\beta}_j$ is given by
 $$\text{SE}\left(\hat{\beta}_j\right) = \sqrt{\hat{\sigma}^2 \left(X^\top X\right)^{-1}_{jj}}$$
@@ -230,7 +228,7 @@ confint(m, level = 0.95)
 ```
 
 ::: {.callout-note collapse="true"}
-### Contrasts
+### Beyond this course
 Contrasts also utilize t-tools, e.g. t-tests and confidence intervals.
 :::
 
@@ -240,7 +238,9 @@ A $(1-\alpha)100\%$ confidence interval for the **mean response** at a specific 
 
 $$\hat{f}(x_0) \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}\left(\hat{f}(x_0)\right)$$
 
-where $\hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}(\hat{f}(x_0))$ is the *standard error of the predicted mean response*.
+where $x_0$ is now a vector of feature values,
+$\hat{f}(x_0) = x_0^\top\hat\beta = \hat{\beta}_0 + \hat{\beta}_1 x_{01} + \cdots + \hat\beta_p x_{0p}$,
+and $\text{SE}(\hat{f}(x_0))$ is the *standard error of the predicted mean response*.
 This is the uncertainty in the line at a given point $x_0$.
 
 ```{r confidence-intervals-at-x}
@@ -260,9 +260,9 @@ cx
 ```
 
 ```{r confidence-intervals-at-x-plot}
-g + 
-    geom_ribbon(data = cx, aes(ymin = lwr, ymax = upr), color = NA, alpha = 0.2) +
-    geom_line(data = cx)
+g +
+    geom_ribbon(data = cx, aes(ymin = lwr, ymax = upr, fill = Time), color = NA, alpha = 0.2) +
+    geom_line(data = cx, aes(linetype = Time))
 ```
 
 ## Prediction
@@ -270,7 +270,7 @@ g +
 A $(1-\alpha)100\%$ prediction interval for a new observation at a specific value $x_0$ is given by
 $$\hat{Y}_0 \pm t_{n-(p+1), 1-\alpha/2} \cdot \text{SE}_{\text{pred}}(\hat{Y}_0)$$
 
-where $\hat{Y}_0 = \hat{f}(x_0) = \hat{\beta}_0 + \hat{\beta}_1 x_0$ and $\text{SE}_{\text{pred}}(\hat{Y}_0)$ is the *standard error of the predicted value*,
+where $\hat{Y}_0 = \hat{f}(x_0) = x_0^\top\hat\beta$ and $\text{SE}_{\text{pred}}(\hat{Y}_0)$ is the *standard error of the predicted value*,
 which accounts for both the uncertainty in the mean response and the variability of individual observations.
 The key here is that the prediction interval is wider than the confidence interval for the mean response, reflecting the additional uncertainty in predicting a single new observation due to the residual error $\epsilon$.
 
@@ -289,15 +289,15 @@ px
 ```
 
 ```{r prediction-intervals-at-x-plot}
-g + 
-    geom_ribbon(data = px, aes(ymin = lwr, ymax = upr), color = NA, alpha = 0.2) +
-    geom_line(data = px)
+g +
+    geom_ribbon(data = px, aes(ymin = lwr, ymax = upr, fill = Time), color = NA, alpha = 0.2) +
+    geom_line(data = px, aes(linetype = Time))
 ```
 
 ## F-tests
 
 To evaluate the statistical evidence for a group of explanatory variables,
-e.g. a single categorical variable with $k$ levels, we can use an F-test.
+e.g. a single categorical variable with $k+1$ levels, we can use an F-test.
 The null hypothesis is that all coefficients for the group of variables are equal to zero, i.e
 $$H_0: \beta_{j_1} = \beta_{j_2} = \cdots = \beta_{j_k} = 0$$
 where $j_1, j_2, \ldots, j_k$ are the indices of the coefficients
@@ -333,7 +333,7 @@ anova(m0, m)
 
 ### R-squared
 
-The coefficient of determination, $R^2$, measures the proportion of the variance in the dependent variable that is predictable from the independent variable(s). It is defined as
+The coefficient of determination, $R^2$, measures the proportion of the variance in the response variable that is predictable from the explanatory variable(s). It is defined as
 $$R^2 = 1 - \frac{RSS}{TSS}$$
 
 where $RSS$ is the residual sum of squares and $TSS$ is the total sum of squares, i.e.
@@ -352,7 +352,7 @@ summary(m)$r.squared
 
 Default plot:
 ```{r flowers-plot}
-g + geom_smooth(method = "lm") # lines are not parallel 
+g + geom_smooth(method = "lm", formula = y ~ x) # lines are not parallel 
 ```
 
 Model summary:

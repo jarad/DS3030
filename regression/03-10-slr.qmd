@@ -60,7 +60,7 @@ The parameters $\beta_0$ and $\beta_1$ are estimated using the method of least s
 $$\hat{\beta}_0, \hat{\beta}_1 
 = \arg\min_{\beta_0, \beta_1} \sum_{i=1}^n (Y_i - \beta_0 - \beta_1 X_i)^2.$$
 
-This is commonly referred to as the *ordinary least squares* (OLS) estimators. 
+These are commonly referred to as the *ordinary least squares* (OLS) estimators. 
 
 The residual sum of squares (RSS) are
 
@@ -152,7 +152,7 @@ The key here is that the prediction interval is wider than the confidence interv
 
 ### R-squared
 
-The coefficient of determination, $R^2$, measures the proportion of the variance in the dependent variable that is predictable from the independent variable(s). It is defined as
+The coefficient of determination, $R^2$, measures the proportion of the variance in the response variable that is predictable from the explanatory variable(s). It is defined as
 $$R^2 = 1 - \frac{RSS}{TSS}$$
 
 where $RSS$ is the residual sum of squares and $TSS$ is the total sum of squares, i.e.

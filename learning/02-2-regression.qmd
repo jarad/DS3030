@@ -37,8 +37,8 @@ $$Y_i = f(X_i) + \epsilon_i$$
 where, for observation $i$, 
 
 - $Y_i$ is the response variable,
-- $X_i = (X_{i1},\ldots,X_{ip})$is the collection of explanatory variables, and
-- $\epsilon_i$ is the error with $E[\epsilon_i] = 0$ and independent of $x$.
+- $X_i = (X_{i1},\ldots,X_{ip})$ is the collection of explanatory variables, and
+- $\epsilon_i$ is the error with $E[\epsilon_i] = 0$, $Var[\epsilon_i] = \sigma^2$, and independent of $X_i$.
 
 
 
