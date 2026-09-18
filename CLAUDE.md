@@ -96,6 +96,13 @@ introduces a new package should add it to `Imports:`.
   elsewhere. A bare pointer to a chapter or section for *further reading*
   (`ISLR2 Chapter 8`) is fine; an unverifiable claim about what the textbook
   contains is not.
+- **Prefer a real dataset over simulated data, ideally from a package already
+  in `DESCRIPTION`** (ISLR2, Sleuth3, ...). Simulated data is fine when the
+  point is about a data-generating process itself (e.g. demonstrating that a
+  method recovers a known truth), but a worked example illustrating a method
+  on realistic data teaches the method better with data students could
+  actually encounter. `ISLR2::Wage` (age vs. wage) and `ISLR2::Boston`
+  (housing) are already in use for exactly this reason.
 
 ## Code
 

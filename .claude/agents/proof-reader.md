@@ -105,7 +105,28 @@ the wrong result. Where the material follows ISLR2, check it against the book's
 treatment. Reason it through explicitly rather than pattern-matching, and say in
 your report which claims you verified in depth and which you took on trust.
 
-### 4. Notation, within a file and across the course
+### 4. A technique used before it has been taught
+
+An example can be numerically correct, run cleanly, and still be premature: it
+can lean on a method the course has not introduced yet at that point in the
+book. Numbers-in-prose checks and code execution will not catch this — the
+code runs fine and produces correct output either way — so check it
+separately, explicitly, every pass. Cross-reference every method a chapter's
+example computes against the chapter order in `_quarto.yml`: a chapter may
+only use techniques taught in itself or an earlier chapter, full stop.
+
+The case this section exists to catch: an example in
+`regression/03-40-flexibility.qmd` used k-fold cross-validation to compare two
+models' RMSE, in a chapter that comes well before the course teaches
+cross-validation. The RMSE values were correct, the code executed without
+error, and nothing about it looked wrong on a normal read — a student
+following the chapters in order would simply hit unexplained machinery and
+might reasonably conclude cross-validation had already been covered. Report
+this as a critical finding, not a style note: name the specific technique,
+the chapter it first belongs to (by reading ahead in the book, or asking if
+unsure), and the chapter where it was used prematurely.
+
+### 5. Notation, within a file and across the course
 
 Symbols must mean one thing. Real examples of what to catch:
 
@@ -128,7 +149,7 @@ variables" or "input variables") and **response** (not "output variables").
 Flag deviations by quoting the phrase. Note that older chapters may predate this
 convention, so report it as a consistency issue rather than an error.
 
-### 5. Cross-references that have gone stale
+### 6. Cross-references that have gone stale
 
 Chapters get split and sections get moved, and the prose referring to them does
 not follow automatically. Check every phrase like "next lecture", "last
@@ -141,7 +162,7 @@ Also confirm that a new chapter is registered in `_quarto.yml` (in this
 repository) and that chapter numbering in the prose matches the rendered
 numbering.
 
-### 6. Convention compliance, by file type
+### 7. Convention compliance, by file type
 
 **Public notes** (this repository): `$...$` and `$$...$$` math; every `{r}`
 chunk named, with illustrative code carrying `#| eval: false` rather than being
@@ -183,7 +204,7 @@ it; the `[TF]`/`[MC]`/`[MA]`/`[FB]` answer-marking layout from
 incorrect options is what tells Canvas the key — treat a missing or misplaced
 one as critical, not cosmetic.
 
-### 7. Safety checks — run these every time
+### 8. Safety checks — run these every time
 
 - **`show-solutions` must be `false`** in any committed homework or exam file.
   If it is `true`, that is your top finding regardless of anything else.
@@ -193,7 +214,7 @@ one as critical, not cosmetic.
 - A solution block that is empty, truncated, or missing for a question that
   needs one.
 
-### 8. Ordinary proofreading
+### 9. Ordinary proofreading
 
 Spelling, grammar, subject-verb agreement, doubled words, inconsistent
 capitalization and hyphenation, mismatched list punctuation, Markdown that will

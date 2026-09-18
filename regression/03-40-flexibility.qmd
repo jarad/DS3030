@@ -3,6 +3,7 @@
 ```{r packages}
 #| include: false
 library("tidyverse")
+library("ISLR2")
 theme_set(theme_bw())
 ```
 
@@ -27,11 +28,17 @@ distance to judge which observations actually influence the fit, and
 
 Last lecture we used polynomials, which impose one global shape on the whole
 range of $X$. A step function gives up smoothness instead. Choose cut points
-$c_1 < \cdots < c_p$, define indicators
-$C_j(X) = I(c_j \le X < c_{j+1})$ for $j = 1, \ldots, p-1$ and
-$C_p(X) = I(c_p \le X)$, and fit
 
-$$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_p C_p(X_i) + \epsilon_i$$
+$$-\infty = c_0 < c_1 < \cdots < c_p < c_{p+1} = \infty,$$
+
+pinning the outer two at $\pm\infty$ so the bins they define cover the entire
+range of $X$, and define indicators
+
+$$C_j(X) = I(c_j \le X < c_{j+1}), \quad j = 1, \ldots, p.$$
+
+Then fit
+
+$$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_p C_p(X_i) + \epsilon_i,$$
 
 dropping the first bin as the baseline. This is **exactly** the dummy-variable
 machinery from multiple regression: we have turned a quantitative feature into a
@@ -40,41 +47,40 @@ bin, and $\beta_j$ is that bin's mean minus the baseline bin's mean.
 
 ```{r step-functions}
 #| eval: false
-lm(y ~ cut(x, breaks = c(0, 2, 4, 6, 8, 10)))
+lm(wage ~ cut(age, breaks = c(18, 30, 42, 54, 66, 80)))
 ```
+
+We can see how a step function compares to a polynomial on real data: wages
+against age for the `r nrow(Wage)` workers in `ISLR2::Wage`.
 
 ::: {.callout-note collapse="true"}
 ### Code for the figure below
 ```{r flexibility-comparison}
 #| output: false
-set.seed(20260916)
-
-sim <- tibble(x = runif(100, 0, 10)) |>
-  mutate(y = 2 + 0.6 * x + 1.8 * sin(x / 1.4) + rnorm(100, 0, 0.9))
-
-cuts     <- seq(0, 10, length.out = 6)
-sim_grid <- tibble(x = seq(0, 10, length.out = 400))
+age_cuts <- seq(min(Wage$age), max(Wage$age), length.out = 6)
+age_grid <- tibble(age = seq(min(Wage$age), max(Wage$age), length.out = 400))
 
 fit_grid <- function(model, label, binned = FALSE) {
-  sim_grid |>
-    mutate(yhat = predict(model, sim_grid),
+  age_grid |>
+    mutate(yhat = predict(model, age_grid),
            fit  = label,
-           bin  = if (binned) as.character(cut(x, cuts, include.lowest = TRUE))
+           bin  = if (binned) as.character(cut(age, age_cuts, include.lowest = TRUE))
                   else "all")
 }
 
-sim_pred <- bind_rows(
-  fit_grid(lm(y ~ x,                                   data = sim), "Linear in x"),
-  fit_grid(lm(y ~ poly(x, 5),                          data = sim), "Polynomial (degree 5)"),
-  fit_grid(lm(y ~ cut(x, cuts, include.lowest = TRUE), data = sim), "Step function (5 bins)",
+wage_pred <- bind_rows(
+  fit_grid(lm(wage ~ age,                                       data = Wage), "Linear in age"),
+  fit_grid(lm(wage ~ poly(age, 5),                              data = Wage), "Polynomial (degree 5)"),
+  fit_grid(lm(wage ~ cut(age, age_cuts, include.lowest = TRUE), data = Wage), "Step function (5 bins)",
            binned = TRUE)
 )
 
-flexibility_plot <- ggplot(sim, aes(x = x, y = y)) +
-  geom_point(alpha = 0.35) +
-  geom_line(data = sim_pred, aes(y = yhat, group = interaction(fit, bin)),
+flexibility_plot <- ggplot(Wage, aes(x = age, y = wage)) +
+  geom_point(alpha = 0.1) +
+  geom_line(data = wage_pred, aes(y = yhat, group = interaction(fit, bin)),
             color = "blue", linewidth = 1) +
-  facet_wrap(~ fit)
+  facet_wrap(~ fit) +
+  labs(title = "ISLR2::Wage")
 ```
 :::
 
@@ -134,16 +140,17 @@ So it is $1/K$ that plays the role of flexibility.
 ```{r knn-comparison}
 #| output: false
 knn_pred <- map_df(c(1, 10, 50), function(K) {
-  sim_grid |>
-    mutate(yhat = knn_reg(x, sim$x, sim$y, K),
+  age_grid |>
+    mutate(yhat = knn_reg(age, Wage$age, Wage$wage, K),
            K    = paste("K =", K))
 }) |>
   mutate(K = factor(K, levels = paste("K =", c(1, 10, 50))))
 
-knn_plot <- ggplot(sim, aes(x = x, y = y)) +
-  geom_point(alpha = 0.35) +
+knn_plot <- ggplot(Wage, aes(x = age, y = wage)) +
+  geom_point(alpha = 0.1) +
   geom_line(data = knn_pred, aes(y = yhat), color = "blue", linewidth = 1) +
-  facet_wrap(~ K)
+  facet_wrap(~ K) +
+  labs(title = "ISLR2::Wage")
 ```
 :::
 
@@ -153,6 +160,125 @@ knn_plot <- ggplot(sim, aes(x = x, y = y)) +
 #| fig-height: 3.2
 knn_plot
 ```
+
+### KNN with more than one feature
+
+Nothing about the method changes with $p > 1$ features — only what "closest"
+means. With $p$ features, $\mathcal{N}_0$ becomes the $K$ training points with
+the smallest Euclidean distance to $x_0$ in $p$-dimensional space,
+
+$$d(x_i, x_0) = \sqrt{\sum_{j=1}^p (x_{ij} - x_{0j})^2},$$
+
+and because that distance depends on the scale of each feature, every feature
+should be standardized first, or a feature measured in thousands of dollars
+would dominate one measured in single digits regardless of which one actually
+predicts the response.
+
+`ISLR2::Boston` has two such features: the percentage of the neighborhood that
+is lower-status (`lstat`) and the average number of rooms per home (`rm`),
+both used to predict median home value (`medv`). Before fitting anything, look
+at the relationship itself:
+
+::: {.callout-note collapse="true"}
+### Code for the plots below
+```{r knn-2d-setup}
+#| output: false
+knn_reg_multi <- function(X0, X, y, K) {
+  Xs  <- scale(X)
+  X0s <- scale(X0, center = attr(Xs, "scaled:center"), scale = attr(Xs, "scaled:scale"))
+  apply(X0s, 1, function(z) {
+    d <- sqrt(rowSums((Xs - matrix(z, nrow(Xs), length(z), byrow = TRUE))^2))
+    mean(y[order(d)[1:K]])
+  })
+}
+
+knn_2d_grid <- expand_grid(
+  lstat = seq(min(Boston$lstat), max(Boston$lstat), length.out = 60),
+  rm    = seq(min(Boston$rm), max(Boston$rm), length.out = 60)
+)
+
+knn_2d_grid$medv_lstat <- knn_reg_multi(
+  as.matrix(knn_2d_grid[, "lstat", drop = FALSE]),
+  as.matrix(Boston[, "lstat", drop = FALSE]),
+  Boston$medv, K = 10)
+
+knn_2d_grid$medv_rm <- knn_reg_multi(
+  as.matrix(knn_2d_grid[, "rm", drop = FALSE]),
+  as.matrix(Boston[, "rm", drop = FALSE]),
+  Boston$medv, K = 10)
+
+knn_2d_grid$medv_both <- knn_reg_multi(
+  as.matrix(knn_2d_grid[, c("lstat", "rm")]),
+  as.matrix(Boston[, c("lstat", "rm")]),
+  Boston$medv, K = 10)
+
+# Same color scale on every tab, so only the surface itself changes.
+medv_range <- range(Boston$medv, knn_2d_grid$medv_lstat,
+                     knn_2d_grid$medv_rm, knn_2d_grid$medv_both)
+
+# A shared base layer, so the four views below differ only in what's drawn
+# over it -- the panel itself never changes size, shape, or color scale.
+knn_2d_base <- ggplot(mapping = aes(x = lstat, y = rm)) +
+  coord_cartesian(xlim = range(Boston$lstat), ylim = range(Boston$rm)) +
+  labs(x = "Percent lower-status population (lstat)",
+       y = "Average rooms per dwelling (rm)",
+       title = "ISLR2::Boston") +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.98, 0.98),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = alpha("white", 0.8), color = "grey70"))
+
+knn_2d_data_plot <- knn_2d_base +
+  geom_point(data = Boston, aes(color = medv)) +
+  scale_color_viridis_c(name = "medv", limits = medv_range)
+
+knn_2d_lstat_plot <- knn_2d_base +
+  geom_raster(data = knn_2d_grid, aes(fill = medv_lstat)) +
+  geom_point(data = Boston, color = "white", alpha = 0.4, size = 0.6) +
+  scale_fill_viridis_c(name = "medv", limits = medv_range)
+
+knn_2d_rm_plot <- knn_2d_base +
+  geom_raster(data = knn_2d_grid, aes(fill = medv_rm)) +
+  geom_point(data = Boston, color = "white", alpha = 0.4, size = 0.6) +
+  scale_fill_viridis_c(name = "medv", limits = medv_range)
+
+knn_2d_both_plot <- knn_2d_base +
+  geom_raster(data = knn_2d_grid, aes(fill = medv_both)) +
+  geom_point(data = Boston, color = "white", alpha = 0.4, size = 0.6) +
+  scale_fill_viridis_c(name = "medv", limits = medv_range)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r knn-2d-data-plot}
+#| echo: false
+knn_2d_data_plot
+```
+
+#### + lstat
+```{r knn-2d-lstat-plot}
+#| echo: false
+knn_2d_lstat_plot
+```
+
+#### + rm
+```{r knn-2d-rm-plot}
+#| echo: false
+knn_2d_rm_plot
+```
+
+#### + lstat and rm
+```{r knn-2d-both-plot}
+#| echo: false
+knn_2d_both_plot
+```
+:::
+
+Click through the tabs: KNN on `lstat` alone varies only left to right, KNN on
+`rm` alone varies only bottom to top, and KNN on both varies in every
+direction at once — the fitted value genuinely depends on where $x_0$ sits in
+the full two-dimensional feature space, not just its position on one axis.
 
 ### When does KNN beat linear regression?
 
