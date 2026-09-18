@@ -34,7 +34,7 @@ Every result from last lecture therefore carries over **unchanged**:
 $\hat\beta = (X^\top X)^{-1}X^\top y$, the t-tests, the F-tests, the intervals.
 Only the columns of the design matrix change.
 
-Choosing the $h_k$ is **feature engineering**, and it is where most of the
+Choosing the $h_j$ is **feature engineering**, and it is where most of the
 modeling judgment in a regression analysis lives.
 
 
@@ -59,7 +59,7 @@ lm(y ~ x + I(x^2) + I(x^3))      # raw powers
 lm(y ~ poly(x, 3, raw = TRUE))   # also raw powers
 ```
 
-Two cautions. 
+Two cautions:
 
 - **Hierarchy**: if $X^2$ is in the model, keep $X$. 
 - **Extrapolation**: high-degree polynomials behave badly outside the range of the data.
@@ -85,53 +85,143 @@ Galileo released a ball from a ramp at seven different heights and measured how
 far it travelled horizontally. Physics says that relationship should be curved,
 so this is a natural place to ask *how much* curvature the data support.
 
-```{r galileo-models}
+Before fitting anything, look at the relationship itself:
+
+::: {.callout-note collapse="true"}
+### Code for the plots below
+```{r galileo-plot-setup}
+#| output: false
 m1 <- lm(Distance ~ Height,          data = Sleuth3::case1001)
 m2 <- lm(Distance ~ poly(Height, 2), data = Sleuth3::case1001)
 m3 <- lm(Distance ~ poly(Height, 3), data = Sleuth3::case1001)
 
-anova(m1, m2, m3)
-```
+model_levels    <- c("linear", "quadratic", "cubic")
+model_colors    <- c(linear = "#E69F00", quadratic = "#56B4E9", cubic = "#009E73")
+model_linetypes <- c(linear = "solid",   quadratic = "dashed",  cubic = "dotted")
 
-Because each model is nested in the next, `anova()` reports a *sequential*
-F-test on each row, comparing that model to the one above it. Row 2 tests
-$H_0: \beta_2 = 0$ and gives $F = 306.33$ on $1$ and $4$ degrees of freedom — the
-quadratic term is clearly needed. Row 3 tests $H_0: \beta_3 = 0$ and gives
-$F = 43.26$, so the cubic term improves the fit as well. The residual sum of
-squares falls from $5671$ to $744$ to $48$.
-
-
-::: {.callout-note collapse="true"}
-### Code for the figure below
-```{r galileo-plot}
 galileo_grid <- tibble(Height = seq(100, 1000, length.out = 200))
 
 galileo_pred <- bind_rows(
   galileo_grid |> mutate(Distance = predict(m1, galileo_grid), Model = "linear"),
   galileo_grid |> mutate(Distance = predict(m2, galileo_grid), Model = "quadratic"),
   galileo_grid |> mutate(Distance = predict(m3, galileo_grid), Model = "cubic")
-) |>
-  mutate(Model = factor(Model, levels = c("linear", "quadratic", "cubic")))
+)
 
-galileo_plot <- ggplot(Sleuth3::case1001, aes(x = Height, y = Distance)) +
+# A shared base layer, so the four views below differ only in which lines
+# (and legend rows) are layered on top of it. The color/linetype scales are
+# attached separately below, only on the plots that actually map them --
+# attaching an unused manual scale to the data-only plot triggers a spurious
+# "no shared levels" warning from ggplot2.
+galileo_base <- ggplot(Sleuth3::case1001, aes(x = Height, y = Distance)) +
   geom_point() +
-  geom_line(data = galileo_pred, aes(color = Model, linetype = Model)) +
-  labs(title = "Sleuth3::case1001",
-       x = "Release height", y = "Horizontal distance")
+  coord_cartesian(xlim = range(galileo_grid$Height),
+                   ylim = range(Sleuth3::case1001$Distance, galileo_pred$Distance)) +
+  labs(title = "Sleuth3::case1001", x = "Release height", y = "Horizontal distance") +
+  # Legend drawn inside the panel, bottom right, so the panel itself is the
+  # same size on every tab -- an outside legend would grow the plot's total
+  # width as rows are added, shifting the panel between tabs.
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.98, 0.02),
+        legend.justification = c(1, 0),
+        legend.background = element_rect(fill = alpha("white", 0.8), color = "grey70"))
+
+galileo_data_plot <- galileo_base
+
+galileo_linear_plot <- galileo_base +
+  geom_line(
+    data = galileo_pred |>
+      filter(Model == "linear") |>
+      mutate(Model = factor(Model, levels = "linear")),
+    aes(color = Model, linetype = Model)
+  ) +
+  scale_color_manual(values = model_colors) +
+  scale_linetype_manual(values = model_linetypes)
+
+galileo_quadratic_plot <- galileo_base +
+  geom_line(
+    data = galileo_pred |>
+      filter(Model %in% c("linear", "quadratic")) |>
+      mutate(Model = factor(Model, levels = c("linear", "quadratic"))),
+    aes(color = Model, linetype = Model)
+  ) +
+  scale_color_manual(values = model_colors) +
+  scale_linetype_manual(values = model_linetypes)
+
+galileo_cubic_plot <- galileo_base +
+  geom_line(
+    data = galileo_pred |> mutate(Model = factor(Model, levels = model_levels)),
+    aes(color = Model, linetype = Model)
+  ) +
+  scale_color_manual(values = model_colors) +
+  scale_linetype_manual(values = model_linetypes)
 ```
 :::
 
-```{r galileo-figure}
+::: {.panel-tabset}
+#### Data
+```{r galileo-data-plot}
 #| echo: false
-galileo_plot
+galileo_data_plot
 ```
 
-Be careful about what that second F-test has established. There are $n = 7$
-observations, and the cubic model spends $4$ parameters on them, leaving $3$
-degrees of freedom — the cubic curve nearly interpolates the data. A significant
+#### + Linear
+```{r galileo-linear-plot}
+#| echo: false
+galileo_linear_plot
+```
+
+#### + Quadratic
+```{r galileo-quadratic-plot}
+#| echo: false
+galileo_quadratic_plot
+```
+
+#### + Cubic
+```{r galileo-cubic-plot}
+#| echo: false
+galileo_cubic_plot
+```
+:::
+
+Click through the tabs: a line is added, and a row joins the legend, each
+time. Even by eye, the cubic barely bends past the quadratic — the question is
+whether that bend is worth the extra parameter.
+
+Now fit the three models explicitly and compare them with a nested F-test:
+
+```{r galileo-models}
+m1 <- lm(Distance ~ Height,          data = Sleuth3::case1001)
+m2 <- lm(Distance ~ poly(Height, 2), data = Sleuth3::case1001)
+m3 <- lm(Distance ~ poly(Height, 3), data = Sleuth3::case1001)
+
+galileo_anova <- anova(m1, m2, m3)
+galileo_anova
+```
+
+Because each model is nested in the next, `anova()` reports a *sequential*
+F-test on each row, comparing that model to the one above it. With three
+models compared at once, every row's F-test uses the residual degrees of
+freedom of the **largest** model, `r df.residual(m3)`, in the denominator —
+not each row's own `Res.Df`. Row 2 tests $H_0: \beta_2 = 0$ and gives
+$F = `r round(galileo_anova$F[2], 2)`$ on $`r galileo_anova$Df[2]`$ and
+$`r df.residual(m3)`$ degrees of freedom — the quadratic term is clearly
+needed. Row 3 tests $H_0: \beta_3 = 0$ and gives
+$F = `r round(galileo_anova$F[3], 2)`$, so the cubic term improves the fit as
+well. The residual sum of squares falls from
+$`r round(galileo_anova$RSS[1])`$ to $`r round(galileo_anova$RSS[2])`$ to
+$`r round(galileo_anova$RSS[3])`$.
+
+Be careful about what that second F-test has established. There are
+$n = `r nrow(Sleuth3::case1001)`$ observations, and the cubic model spends
+$`r length(coef(m3))`$ parameters on them, leaving
+$`r df.residual(m3)`$ degrees of freedom — the cubic curve nearly interpolates
+the data. A significant
 F-test says the cubic fits the *training* data better than the quadratic. It
-does not say the cubic will predict a new release height better, and the physics
-argues for a quadratic. We return to this distinction next lecture.
+does not say the cubic will predict a new release height better. Physics in a
+vacuum argues for a quadratic, but physics with air resistance can make a
+cubic a reasonable approximation too — statistical significance alone should
+not settle which curve to extrapolate with. We return to this distinction next
+lecture.
 
 
 ## Interactions
@@ -176,39 +266,108 @@ Twenty-four meadowfoam plots were grown at six light intensities, with the light
 begun either early or late. Does the timing change the *slope* on intensity, or
 only the intercept?
 
-```{r meadowfoam-data}
-meadowfoam <- Sleuth3::case0901 |>
-  mutate(Time = factor(Time, levels = 1:2, labels = c("Late", "Early")))
-```
+Before fitting anything, look at the relationship itself:
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
-```{r meadowfoam-plot}
+### Code for the plots below
+```{r meadowfoam-plot-setup}
 #| output: false
-meadowfoam_plot <- ggplot(meadowfoam,
-                          aes(x = Intensity, y = Flowers,
-                              color = Time, shape = Time, linetype = Time)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
-  labs(title = "Sleuth3::case0901")
+meadowfoam <- Sleuth3::case0901 |>
+  mutate(Time = factor(Time, levels = 1:2, labels = c("Late", "Early")))
+
+meadowfoam_single      <- lm(Flowers ~ Intensity,        data = meadowfoam)
+meadowfoam_additive    <- lm(Flowers ~ Intensity + Time, data = meadowfoam)
+meadowfoam_interaction <- lm(Flowers ~ Intensity * Time, data = meadowfoam)
+
+meadowfoam_grid <- expand_grid(
+  Intensity = seq(min(meadowfoam$Intensity), max(meadowfoam$Intensity), length.out = 100),
+  Time = levels(meadowfoam$Time)
+) |>
+  mutate(Time = factor(Time, levels = levels(meadowfoam$Time)))
+
+# A shared base layer, so the four views below differ only in which line(s)
+# are layered on top of it -- the panel itself never changes size or shape.
+meadowfoam_base <- ggplot(meadowfoam, aes(x = Intensity, y = Flowers)) +
+  geom_point(aes(color = Time, shape = Time)) +
+  coord_cartesian(xlim = range(meadowfoam$Intensity),
+                   ylim = range(meadowfoam$Flowers)) +
+  labs(title = "Sleuth3::case0901") +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.98, 0.98),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(fill = alpha("white", 0.8), color = "grey70"))
+
+meadowfoam_data_plot <- meadowfoam_base
+
+meadowfoam_single_plot <- meadowfoam_base +
+  geom_line(
+    data = meadowfoam_grid |> mutate(Flowers = predict(meadowfoam_single, meadowfoam_grid)),
+    linewidth = 1
+  )
+
+meadowfoam_additive_plot <- meadowfoam_base +
+  geom_line(
+    data = meadowfoam_grid |> mutate(Flowers = predict(meadowfoam_additive, meadowfoam_grid)),
+    aes(color = Time, linetype = Time)
+  )
+
+meadowfoam_interaction_plot <- meadowfoam_base +
+  geom_line(
+    data = meadowfoam_grid |> mutate(Flowers = predict(meadowfoam_interaction, meadowfoam_grid)),
+    aes(color = Time, linetype = Time)
+  )
 ```
 :::
 
-```{r meadowfoam-figure}
+::: {.panel-tabset}
+#### Data
+```{r meadowfoam-data-plot}
 #| echo: false
-meadowfoam_plot
+meadowfoam_data_plot
 ```
+
+#### + Single line
+```{r meadowfoam-single-plot}
+#| echo: false
+meadowfoam_single_plot
+```
+
+#### + Additive
+```{r meadowfoam-additive-plot}
+#| echo: false
+meadowfoam_additive_plot
+```
+
+#### + Interaction
+```{r meadowfoam-interaction-plot}
+#| echo: false
+meadowfoam_interaction_plot
+```
+:::
+
+A single line, ignoring timing, is pulled between the two groups and fits
+neither well. The additive model gives each timing its own intercept but
+forces a common slope. The interaction model frees the slopes entirely — click
+through and notice how little that changes the fit here: the two slopes were
+already nearly identical without it.
+
+Now fit the interaction model explicitly and test whether it earns its extra
+parameter:
 
 ```{r meadowfoam-anova}
-anova(lm(Flowers ~ Intensity * Time, data = meadowfoam))
+meadowfoam_anova <- anova(meadowfoam_interaction)
+meadowfoam_anova
 ```
 
-The interaction gives $F = 0.013$ on $1$ and $20$ degrees of freedom, so
-$p = 0.91$. The separately fitted lines are about as close to parallel as noisy
-data allow, and the test agrees: no evidence that the slope on intensity depends
-on timing. Drop the interaction and report the additive model, in which timing
-shifts the intercept by a constant amount and "the effect of intensity" is a
-single number again.
+The interaction gives
+$F = `r round(meadowfoam_anova["Intensity:Time", "F value"], 3)`$ on
+$`r meadowfoam_anova["Intensity:Time", "Df"]`$ and
+$`r meadowfoam_anova["Residuals", "Df"]`$ degrees of freedom, so
+$p = `r round(meadowfoam_anova["Intensity:Time", "Pr(>F)"], 2)`$. The two
+slopes are about as close as noisy data allow, and the test agrees: no
+evidence that the slope on intensity depends on timing. Drop the interaction
+and report the additive model, in which timing shifts the intercept by a
+constant amount and "the effect of intensity" is a single number again.
 
 Dropping the *interaction* is fine. Dropping a main effect would not be.
 
@@ -218,48 +377,118 @@ Thirty-two subjects had their first-pass metabolism of alcohol measured along
 with the activity of gastric alcohol dehydrogenase, the enzyme that breaks
 alcohol down in the stomach.
 
+Before fitting anything, look at the relationship itself:
+
 ::: {.callout-note collapse="true"}
-### Code for the figure below
-```{r metabolism-plot}
+### Code for the plots below
+```{r metabolism-plot-setup}
 #| output: false
 noteworthy <- Sleuth3::case1101 |> filter(Subject %in% c(17, 31, 32))
 
-metabolism_plot <- ggplot(Sleuth3::case1101,
-                          aes(x = Gastric, y = Metabol,
-                              color = Sex, shape = Sex, linetype = Sex)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
+metabolism_single      <- lm(Metabol ~ Gastric,        data = Sleuth3::case1101)
+metabolism_additive    <- lm(Metabol ~ Gastric + Sex,  data = Sleuth3::case1101)
+metabolism_interaction <- lm(Metabol ~ Gastric * Sex,  data = Sleuth3::case1101)
+
+metabolism_grid <- expand_grid(
+  Gastric = seq(min(Sleuth3::case1101$Gastric), max(Sleuth3::case1101$Gastric), length.out = 100),
+  Sex = levels(Sleuth3::case1101$Sex)
+) |>
+  mutate(Sex = factor(Sex, levels = levels(Sleuth3::case1101$Sex)))
+
+# A shared base layer, so the four views below differ only in which line(s)
+# are layered on top of it -- the panel itself never changes size or shape.
+metabolism_base <- ggplot(Sleuth3::case1101, aes(x = Gastric, y = Metabol)) +
+  geom_point(aes(color = Sex, shape = Sex)) +
   geom_text(data = noteworthy, aes(label = Subject),
             hjust = -0.6, size = 3, show.legend = FALSE) +
-  expand_limits(x = 5.6) +
+  coord_cartesian(xlim = c(min(Sleuth3::case1101$Gastric), 5.6),
+                   ylim = range(Sleuth3::case1101$Metabol)) +
   labs(title = "Sleuth3::case1101",
        x = "Gastric alcohol dehydrogenase activity",
-       y = "First-pass metabolism")
+       y = "First-pass metabolism") +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.02, 0.98),
+        legend.justification = c(0, 1),
+        legend.background = element_rect(fill = alpha("white", 0.8), color = "grey70"))
+
+metabolism_data_plot <- metabolism_base
+
+metabolism_single_plot <- metabolism_base +
+  geom_line(
+    data = metabolism_grid |> mutate(Metabol = predict(metabolism_single, metabolism_grid)),
+    linewidth = 1
+  )
+
+metabolism_additive_plot <- metabolism_base +
+  geom_line(
+    data = metabolism_grid |> mutate(Metabol = predict(metabolism_additive, metabolism_grid)),
+    aes(color = Sex, linetype = Sex)
+  )
+
+metabolism_interaction_plot <- metabolism_base +
+  geom_line(
+    data = metabolism_grid |> mutate(Metabol = predict(metabolism_interaction, metabolism_grid)),
+    aes(color = Sex, linetype = Sex)
+  )
 ```
 :::
 
-```{r metabolism-figure}
+::: {.panel-tabset}
+#### Data
+```{r metabolism-data-plot}
 #| echo: false
-metabolism_plot
+metabolism_data_plot
 ```
+
+#### + Single line
+```{r metabolism-single-plot}
+#| echo: false
+metabolism_single_plot
+```
+
+#### + Additive
+```{r metabolism-additive-plot}
+#| echo: false
+metabolism_additive_plot
+```
+
+#### + Interaction
+```{r metabolism-interaction-plot}
+#| echo: false
+metabolism_interaction_plot
+```
+:::
+
+A single line, ignoring sex, cuts across both groups. The additive model gives
+each sex its own intercept but forces a common slope. The interaction model
+frees the slopes — and here, unlike meadowfoam, that visibly matters: the
+lines are far from parallel.
+
+Now fit the interaction model explicitly and test whether it earns its extra
+parameter:
 
 ```{r metabolism-fit}
-metabolism <- lm(Metabol ~ Gastric * Sex, data = Sleuth3::case1101)
-
-anova(metabolism)
-coef(metabolism)
+metabolism_anova <- anova(metabolism_interaction)
+metabolism_anova
+coef(metabolism_interaction)
 ```
 
-Here the interaction gives $F = 7.26$ on $1$ and $28$ degrees of freedom, so
-$p = 0.012$, and the lines are visibly non-parallel. The fitted slope is $0.84$
-for females and $0.84 + 1.51 = 2.34$ for males — nearly three times steeper.
+Here the interaction gives
+$F = `r round(metabolism_anova["Gastric:Sex", "F value"], 2)`$ on
+$`r metabolism_anova["Gastric:Sex", "Df"]`$ and
+$`r metabolism_anova["Residuals", "Df"]`$ degrees of freedom, so
+$p = `r round(metabolism_anova["Gastric:Sex", "Pr(>F)"], 3)`$, and the lines
+are visibly non-parallel. The fitted slope is
+$`r round(coef(metabolism_interaction)["Gastric"], 2)`$ for females and
+$`r round(coef(metabolism_interaction)["Gastric"], 2)` + `r round(coef(metabolism_interaction)["Gastric:SexMale"], 2)` = `r round(coef(metabolism_interaction)["Gastric"] + coef(metabolism_interaction)["Gastric:SexMale"], 2)`$
+for males — nearly three times steeper.
 
 In this model there is no such thing as "the effect of gastric activity." There
 are two of them, and you have to say which sex you mean.
 
 ::: {.callout-note collapse="true"}
 ### A preview of a problem
-Three observations are labelled by subject number in the figure. Subjects 31 and
+Three observations are labelled by subject number in each plot above. Subjects 31 and
 32 have gastric activity well beyond any other man's, and subject 17 is the most
 extreme of the women. These are high-leverage points: they sit far from the bulk
 of the feature values, so they do a disproportionate share of the work in

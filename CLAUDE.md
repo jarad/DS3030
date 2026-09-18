@@ -79,6 +79,10 @@ introduces a new package should add it to `Imports:`.
   `::: {.callout-note collapse="true"}` with a `### For example,` heading.
 - Short paragraphs, frequent `##` headings. These pages are read on the web and
   used live in class.
+- Worked examples follow **motivation → exploratory data analysis → model →
+  inference → conclusion**. Show the data before fitting anything to it: a plot
+  of the raw data comes before any model, so students see what a method is
+  responding to rather than taking the fit on faith.
 
 ## Code
 
@@ -86,6 +90,17 @@ introduces a new package should add it to `Imports:`.
 code produces** — the plot, the table, the resulting inference — rather than on
 the code itself, so favor chunks whose output carries the teaching point.
 
+**Never hard-code a value in prose that a chunk already computed.** When text
+discusses a number that came from a model or a table — an F-statistic, a
+degrees-of-freedom count, a coefficient, an $R^2$ — pull it with inline R
+(`` `r round(model_object$F[2], 2)` ``) from the object the chunk produced,
+rather than typing the number by hand. A hand-typed number silently drifts out
+of sync when the upstream code changes, which is exactly the failure mode
+`proof-reader`'s numbers-in-prose check exists to catch; inline R prevents the
+drift instead of relying on catching it after the fact. This also applies to
+values that look self-evident, like a sample size or a count of estimated
+parameters — compute them (`nrow(data)`, `length(coef(model))`) rather than
+counting by hand.
 **Name every chunk**: ```` ```{r galileo-models} ````, never a bare
 ```` ```{r} ````. Illustrative code that only demonstrates `lm()` formula syntax
 is still a named chunk carrying `#| eval: false`, not a plain ```` ```r ````
