@@ -512,6 +512,47 @@ inflated by factors of $\sqrt{`r round(max(raw_power_vif))`} \approx `r round(sq
 The orthogonal basis from `poly()` gives
 exactly $1$, $1$, and $1$.
 
+The VIFs are a symptom; the correlation between the columns themselves is the
+cause. Plotting the first two terms of each basis against each other makes it
+visible directly:
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r collinearity-compare}
+#| output: false
+poly_basis <- poly(Height, 3)
+
+raw_cor  <- cor(Height, Height^2)
+orth_cor <- cor(poly_basis[, 1], poly_basis[, 2])
+
+collinearity_compare <- bind_rows(
+  tibble(term1 = Height,          term2 = Height^2,
+         basis = sprintf("Raw powers: Height vs Height^2 (r = %.2f)", raw_cor)),
+  tibble(term1 = poly_basis[, 1], term2 = poly_basis[, 2],
+         basis = sprintf("Orthogonal basis: term 1 vs term 2 (r = %.2f)", orth_cor))
+) |>
+  mutate(basis = fct_inorder(basis))
+
+collinearity_plot <- ggplot(collinearity_compare, aes(x = term1, y = term2)) +
+  geom_point() +
+  facet_wrap(~ basis, scales = "free") +
+  labs(x = "First term in the basis", y = "Second term in the basis",
+       title = "Sleuth3::case1001")
+```
+:::
+
+```{r collinearity-compare-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4
+collinearity_plot
+```
+
+The raw powers trace a near-perfect curve — knowing `Height` tells you almost
+everything about `Height^2` — while the orthogonal terms scatter with no
+visible pattern at all. That is what a VIF of $1$ looks like: the two columns
+are exactly uncorrelated by construction.
+
 Both parameterizations produce **identical** fitted values, residuals, and
 $R^2$. Nothing about the quality of the fit changed. What changed is whether the
 individual coefficients can be interpreted and tested one at a time — and this
