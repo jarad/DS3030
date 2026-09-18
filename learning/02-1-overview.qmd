@@ -1,5 +1,21 @@
 # Overview
 
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **describe** the stages common to data science and ETL pipelines, and
+**locate** where statistical learning sits within them,
+- **distinguish** the roles of data analyst, data scientist, and data engineer,
+- **classify** a learning problem as supervised, unsupervised, or
+semi-supervised according to whether the response is observed,
+- **distinguish** regression from classification by the type of response, and
+**identify** the assessment measure used for each, and
+- **describe** the bias-variance tradeoff and **explain** how bias, variance,
+and irreducible error combine to determine expected test error as flexibility
+increases.
+:::
+
 ## Outline
 
 - Data Pipelines

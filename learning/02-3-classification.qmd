@@ -1,5 +1,22 @@
 # Classification
 
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **identify** a response variable as qualitative and **state** the
+classification problem in terms of the class probabilities
+$p_{ic} = P(Y_i = c|X_i)$,
+- **distinguish** prediction from understanding as the goal of a classification
+model,
+- **define** the training and test error rate and **explain** why the test error
+rate is the quantity of interest,
+- **compute** accuracy, log loss, sensitivity, specificity, and precision from a
+confusion matrix, and **interpret** what each one measures, and
+- **describe** how the test error rate of a classifier changes with model
+flexibility in terms of the bias-variance tradeoff.
+:::
+
 ## Response variables
 
 For classification models, our response variable is qualitative, categorical 

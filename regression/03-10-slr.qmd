@@ -1,5 +1,27 @@
 # Simple Linear Regression
 
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **write** the simple linear regression model and **interpret** $\beta_0$,
+$\beta_1$, and $\sigma^2$, including after a log transformation of the response,
+the explanatory variable, or both,
+- **derive** the least squares estimators as the minimizers of the residual sum
+of squares, and **explain** why $\hat\sigma^2 = RSS/(n-2)$ uses $n-2$ degrees of
+freedom,
+- **write** the likelihood under normal errors and **show** that the maximum
+likelihood estimators of $\beta_0$ and $\beta_1$ coincide with the least squares
+estimators,
+- **construct** and **interpret** t-tests and confidence intervals for the
+regression coefficients,
+- **distinguish** a confidence interval for the mean response at $x_0$ from a
+prediction interval for a new observation at $x_0$, and **explain** from their
+standard errors why the latter is wider, and
+- **evaluate** model fit using $R^2$ and **interpret** it as a proportion of
+variability explained.
+:::
+
 Recall our non-linear regression model:
 $$Y = f(X) + \epsilon$$
 

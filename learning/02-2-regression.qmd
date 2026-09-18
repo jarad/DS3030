@@ -1,5 +1,21 @@
 # Regression
 
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **identify** a regression problem by its response variable, and **write** the
+model $Y_i = f(X_i) + \epsilon_i$ with its assumptions on $\epsilon_i$,
+- **distinguish** prediction from understanding as the goal of an analysis, and
+**explain** what each goal is willing to sacrifice,
+- **define** training MSE and test MSE, and **explain** why the training MSE is
+the wrong quantity to minimize,
+- **interpret** the U-shaped relationship between model flexibility and test MSE,
+and
+- **state** the bias-variance decomposition of the expected test MSE and
+**identify** which of its three terms no model can reduce.
+:::
+
 ## Response variables
 
 For regression models, our response variable is quantitative, continuous values.
