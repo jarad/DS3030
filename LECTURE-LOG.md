@@ -38,10 +38,10 @@ shifted.
 | Date | Day | Planned topic | Notes |
 | ---- | --- | -------------- | ----- |
 | 2026-09-21 | Mon | Simple logistic regression: why not linear regression for a qualitative response, the logistic model, log-odds, MLE, coefficient interpretation via odds ratios | `04-classification/10-logistic-regression.qmd` (ISLR2 4.1-4.3 is the assigned reading for this week per `SCHEDULE.md`). Paced deliberately slower than SLR/MLR — logistic regression is not guaranteed prior knowledge the way SLR/MLR were (the DS program's categorical-analysis STAT course covers it but isn't a prereq for this course) |
-| 2026-09-23 | Wed | Multiple logistic regression, additive models only (no interactions yet) | Given more time than the simple case, deliberately |
+| 2026-09-23 | Wed | Multiple logistic regression, additive models only (no interactions yet) | `04-classification/20-multiple-logistic-regression.qmd`. Given more time than the simple case, deliberately |
 | 2026-09-25 | Fri | Interactions in logistic regression; briefly connect back to polynomials and step functions from the multiple-regression material | |
 | 2026-09-28 | Mon | Problems in logistic regression, including separation | Multinomial logistic regression is deliberately deferred until after Exam 1 — not scheduled yet |
-| 2026-09-30 | Wed | **Exam 1 review** | |
+| 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |
 | 2026-10-02 | Fri | **Exam 1** | |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |

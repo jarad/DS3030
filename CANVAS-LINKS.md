@@ -26,3 +26,4 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-09-19 | Rename | regression/03-30-feature-engineering.qmd | 03-regression/30-feature-engineering.qmd | x |
 | 2026-09-19 | Rename | regression/03-40-flexibility.qmd | 03-regression/40-flexibility.qmd | x |
 | 2026-09-19 | New | | 04-classification/10-logistic-regression.qmd | |
+| 2026-09-19 | New | | 04-classification/20-multiple-logistic-regression.qmd | |

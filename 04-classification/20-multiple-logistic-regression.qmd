@@ -1,0 +1,701 @@
+# Multiple Logistic Regression
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("ISLR2")
+theme_set(theme_bw())
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **write** the multiple logistic regression model in its probability and
+log-odds forms using the linear predictor $X_i\beta$,
+- **encode** a two-level categorical feature as an indicator and **interpret**
+its coefficient as an odds ratio relative to the reference level,
+- **interpret** $\beta_j$ as a change in log-odds and $e^{\beta_j}$ as an odds
+ratio *holding every other feature fixed*, and **distinguish** that from the
+interpretation of the same feature's coefficient fit alone,
+- **fit** an additive multiple logistic regression with `glm()` and **predict**
+$\hat p(x)$ for a specified combination of feature values,
+- **diagnose** a coefficient whose sign reverses between a one-feature and a
+multi-feature model as confounding, and **explain** the mechanism from
+descriptive summaries of the features, and
+- **test** $H_0: \beta_j = 0$ with a $z$-statistic and **interpret** a
+confidence interval for the odds ratio $e^{\beta_j}$ as a statement about
+feature $j$ after accounting for the other features.
+:::
+
+## More than one feature
+
+The previous lecture modeled the probability of default from a single feature,
+credit card balance. `ISLR2::Default` records two more variables on the same
+`r format(nrow(Default), big.mark = ",")` customers:
+
+- `student`: is the customer a student? A factor with levels
+`r paste(levels(Default$student), collapse = " and ")`.
+- `income`: the customer's income, in dollars. This one is set aside for this
+lecture; everything below uses `balance` and `student`.
+
+Having more than one feature raises a question that a one-feature model cannot
+answer: what does each feature tell us that the others do not? This lecture
+answers it for an **additive** model, in which each feature contributes its own
+term to the linear predictor.
+
+## Categorical features
+
+A categorical feature enters a logistic regression exactly as it enters a
+multiple linear regression: through dummy variables against a reference level.
+A feature with $k$ levels contributes $k-1$ indicators, and the level left
+without an indicator is the reference.
+
+`student` has two levels, so it contributes one indicator. Taking
+`r levels(Default$student)[1]` as the reference level,
+
+$$D_i = \mathrm{I}(\texttt{student}_i = \texttt{Yes}) = \begin{cases} 1 & \text{customer } i \text{ is a student} \\ 0 & \text{otherwise,}\end{cases}$$
+
+where
+
+- $D_i$ is the indicator for observation $i$, and
+- $\mathrm{I}(\cdot)$ is $1$ when its argument is true and $0$ otherwise.
+
+R builds this column automatically from a factor, using the first level as the
+reference, and names the coefficient after the level being indicated —
+`studentYes` below.
+
+## Example: student status and default
+
+**Question.** Are students more likely to default than non-students?
+
+**Data.** The same `r format(nrow(Default), big.mark = ",")` customers as in the
+previous lecture, now using `student` as the feature and `default` as the
+response, with $Y_i = 1$ when customer $i$ defaults.
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r student-eda}
+#| output: false
+Default <- Default |>
+  mutate(default01 = as.numeric(default == "Yes"))
+
+student_rates <- Default |>
+  group_by(student) |>
+  summarize(n = n(),
+            defaults = sum(default01),
+            rate = mean(default01),
+            .groups = "drop")
+
+student_rate_table <- student_rates |>
+  mutate(n = format(n, big.mark = ","),
+         rate = sprintf("%.2f%%", 100 * rate)) |>
+  knitr::kable(col.names = c("Student", "Customers", "Defaults",
+                             "Percent defaulting"),
+               align = "cccc")
+
+rate_of <- function(s) student_rates$rate[student_rates$student == s]
+```
+:::
+
+```{r student-eda-table}
+#| echo: false
+student_rate_table
+```
+
+Students default at `r sprintf("%.2f", 100 * rate_of("Yes"))`% versus
+`r sprintf("%.2f", 100 * rate_of("No"))`% for non-students, so the student
+default rate is `r sprintf("%.2f", rate_of("Yes") / rate_of("No"))` times the
+non-student rate. That is a ratio of *rates*, not of odds; the two are
+different quantities, and they happen to be close here only because both rates
+are small.
+
+Fitting the simple logistic regression with $D$ as the feature turns that
+comparison into a coefficient:
+
+```{r student-glm}
+student_glm <- glm(default ~ student, data = Default, family = "binomial")
+summary(student_glm)$coefficients
+```
+
+::: {.callout-note collapse="true"}
+### Code for the estimates quoted below
+```{r student-glm-extract}
+#| output: false
+bs <- coef(student_glm)
+or_student_alone <- unname(exp(bs["studentYes"]))
+ci_student_alone <- exp(confint.default(student_glm)["studentYes", ])
+```
+:::
+
+The estimated log-odds of default are
+
+$$\log\left(\frac{\hat p(D)}{1 - \hat p(D)}\right) = `r sprintf("%.2f", bs[1])` `r sprintf("%+.3f", bs[2])` \, D.$$
+
+With a single indicator feature, the two fitted values are the two observed
+log-odds: $\hat\beta_0$ is the log-odds of default among non-students, and
+$\hat\beta_0 + \hat\beta_1$ is the log-odds among students. The coefficient
+$\hat\beta_1 = `r sprintf("%.3f", bs[2])`$ is the difference between them, so
+$e^{\hat\beta_1} = `r sprintf("%.2f", or_student_alone)`$ is the odds of
+default for a student divided by the odds for a non-student. The confidence
+interval for that odds ratio runs from
+`r sprintf("%.2f", ci_student_alone[1])` to
+`r sprintf("%.2f", ci_student_alone[2])`, entirely above $1$.
+
+**Conclusion.** Taken by itself, student status is associated with a
+`r round(100 * (or_student_alone - 1))`% increase in the odds of default.
+
+## Two features at once
+
+The previous lecture found balance strongly associated with default; this
+lecture has now found student status associated with default as well. Before
+putting both in one model, start with the individual customers rather than a
+summary of them: the same jittered scatter of default against balance from
+the previous lecture, now split into two panels by student status.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r student-default-raw}
+#| output: false
+raw_plot <- ggplot(Default, aes(x = balance, y = default01)) +
+  geom_jitter(height = 0.03, width = 0, alpha = 0.08, size = 0.7) +
+  facet_wrap(~ student, labeller = label_both) +
+  scale_y_continuous(breaks = c(0, 1), labels = c("No (0)", "Yes (1)")) +
+  labs(x = "Credit card balance ($)", y = "Default",
+       title = "ISLR2::Default")
+```
+:::
+
+```{r student-default-raw-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+raw_plot
+```
+
+The student panel's points sit further right on average, a first hint of a
+balance difference between the two groups, but with
+`r format(sum(Default$student == "Yes"), big.mark = ",")` students against
+`r format(sum(Default$student == "No"), big.mark = ",")` non-students plotted
+at the same jitter and transparency, that shift is hard to read precisely by
+eye. Two descriptive summaries make it precise.
+
+The first compares the distribution of balance for students and non-students.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r balance-by-student}
+#| output: false
+balance_means <- Default |>
+  group_by(student) |>
+  summarize(mean_balance = mean(balance), .groups = "drop")
+
+balance_density_plot <- ggplot(Default,
+                               aes(x = balance,
+                                   color = student, linetype = student)) +
+  geom_density(linewidth = 0.9) +
+  geom_vline(data = balance_means,
+             aes(xintercept = mean_balance,
+                 color = student, linetype = student),
+             linewidth = 0.5, show.legend = FALSE) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Credit card balance ($)", y = "Density",
+       color = "Student", linetype = "Student",
+       title = "ISLR2::Default")
+
+mean_balance_of <- function(s) {
+  balance_means$mean_balance[balance_means$student == s]
+}
+```
+:::
+
+```{r balance-by-student-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+balance_density_plot
+```
+
+The two densities are shifted relative to one another, with the vertical lines
+marking the group means: students average
+\$`r format(round(mean_balance_of("Yes")), big.mark = ",")` versus
+\$`r format(round(mean_balance_of("No")), big.mark = ",")` for non-students, a
+difference of
+\$`r format(round(mean_balance_of("Yes") - mean_balance_of("No")), big.mark = ",")`.
+Students carry more balance.
+
+The second summary asks what happens to the default rate within a narrow range
+of balance. Splitting balance into \$400-wide bins and computing the observed
+default rate separately for students and non-students within each bin gives a
+model-free comparison of two customers who carry similar balances. Bins holding
+too few customers of a given student status to estimate a rate are dropped.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r binned-rates}
+#| output: false
+min_bin_n <- 100
+
+binned_rates <- Default |>
+  mutate(bin = cut(balance, breaks = seq(0, 2800, by = 400),
+                   include.lowest = TRUE)) |>
+  group_by(student, bin) |>
+  summarize(balance = mean(balance), rate = mean(default01), n = n(),
+            .groups = "drop") |>
+  filter(n >= min_bin_n)
+
+binned_plot <- ggplot(binned_rates,
+                      aes(x = balance, y = rate,
+                          color = student, shape = student,
+                          linetype = student)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Mean balance within bin ($)",
+       y = "Observed proportion defaulting",
+       color = "Student", shape = "Student", linetype = "Student",
+       title = "ISLR2::Default, $400-wide balance bins")
+```
+:::
+
+```{r binned-rates-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+binned_plot
+```
+
+Within every bin shown, the student curve sits at or below the non-student
+curve. Comparing customers who carry similar balances reverses the direction of
+the association that the aggregate rates showed. The curves stop near
+\$`r format(round(max(binned_rates$balance)), big.mark = ",")` because every
+bin beyond that holds fewer than `r min_bin_n` customers in at least one of the
+two groups.
+
+Neither summary used a model. Together they say that students carry higher
+balances, that higher balances default more, and that at a fixed balance
+students default less; a model with both features lets us separate those
+statements.
+
+## The multiple logistic regression model
+
+Let $X_{i1}, \ldots, X_{ip}$ be the $p$ features recorded on observation $i$.
+The **multiple logistic regression** model is
+
+$$p(X_i) = P(Y_i = 1|X_i) = \frac{e^{\beta_0 + \beta_1 X_{i1} + \cdots + \beta_p X_{ip}}}{1 + e^{\beta_0 + \beta_1 X_{i1} + \cdots + \beta_p X_{ip}}},$$
+
+where
+
+- $p(X_i)$ is the probability the event occurs for observation $i$,
+- $X_{ij}$ is the value of feature $j$ for observation $i$, and
+- $\beta_0, \beta_1, \ldots, \beta_p$ are the regression coefficients.
+
+The same algebra as in the previous lecture — form $1 - p(X_i)$, divide, take
+logarithms — puts the model in its log-odds form,
+
+$$\log\left(\frac{p(X)}{1 - p(X)}\right) = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p.$$
+
+The right side is exactly the linear predictor of the multiple linear
+regression lecture. Using that lecture's notation,
+
+- $X_i = (1, X_{i1}, \ldots, X_{ip})$ is the $i$th row of the $n \times (p+1)$
+model matrix $X$,
+- $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of coefficients, and
+- $\eta = X\beta$ is the $n$-vector of linear predictors, with $i$th element
+$\eta_i = X_i\beta$,
+
+the model is
+
+$$p(X_i) = \text{logistic}(X_i\beta) = \frac{e^{X_i\beta}}{1 + e^{X_i\beta}}.$$
+
+So multiple logistic regression is multiple linear regression's linear
+predictor passed through the logistic function. Everything the linear predictor
+can express — several quantitative features, dummy variables for categorical
+features, polynomial terms, step functions — is available here unchanged,
+because none of it touches the logistic function wrapped around it.
+
+The model above is **additive**: each feature contributes its own term
+$\beta_j X_{ij}$ to $\eta_i$, and no term involves two features at once.
+
+## Estimation
+
+The observations are still independent Bernoulli trials,
+$Y_i \stackrel{ind}{\sim} \text{Bernoulli}(p(x_i))$, so the log-likelihood
+derived in the previous lecture carries over with $\beta_0 + \beta_1 x_i$
+replaced by $x_i\beta$:
+
+$$\ell(\beta) = \ell(\beta_0, \beta_1, \ldots, \beta_p) = \sum_{i=1}^n \left\{ y_i \, x_i\beta - \log\left(1 + e^{x_i\beta}\right)\right\},$$
+
+where
+
+- $x_i = (1, x_{i1}, \ldots, x_{ip})$ is the observed feature row for
+observation $i$, and
+- $y_i \in \{0, 1\}$ is the observed response.
+
+Nothing structural changed. There are now $p+1$ parameters rather than $2$,
+still no $\sigma^2$, and still no closed-form maximizer, because $p(x_i)$
+remains a nonlinear function of the coefficients. The **maximum likelihood
+estimator** $\hat\beta$ is the maximizer of $\ell$, and `glm()` finds it
+numerically by the same iterative algorithm as before.
+
+Differentiating with respect to $\beta_j$ and setting the result to zero gives
+one score equation per coefficient,
+
+$$\sum_{i=1}^n x_{ij}\left[y_i - p(x_i)\right] = 0, \qquad j = 0, 1, \ldots, p,$$
+
+with $x_{i0} = 1$. As in the one-feature case, these say the residuals
+$y_i - p(x_i)$ sum to zero and are orthogonal to every feature — the same
+conditions the least squares normal equations impose, though here the
+equations are nonlinear in $\beta$.
+
+## Interpreting the coefficients
+
+Fix the values of all features other than $X_j$ and increase $X_j$ by one unit.
+On the log-odds scale, every term except the $j$th is identical on both sides,
+so the difference is
+
+$$\left[\beta_0 + \cdots + \beta_j(x_j + 1) + \cdots + \beta_p x_p\right] - \left[\beta_0 + \cdots + \beta_j x_j + \cdots + \beta_p x_p\right] = \beta_j.$$
+
+So $\beta_j$ is the change in the log-odds of the event per one-unit increase
+in $X_j$ **holding every other feature fixed**, and exponentiating,
+$e^{\beta_j}$ is the multiplicative change in the odds of the event per
+one-unit increase in $X_j$ **holding every other feature fixed**.
+
+The qualifier is the whole difference between this lecture and the last one,
+and it is the same qualifier that attaches to a multiple linear regression
+coefficient. The cancellation above is what licenses it: the comparison
+$\beta_j$ describes is between two observations that differ in $X_j$ and agree
+on everything else in the model.
+
+Two consequences follow.
+
+1. **$\beta_j$ from a multi-feature fit and from a one-feature fit answer
+different questions.** Fit alone, a feature's coefficient describes the
+comparison between observations that differ in that feature and in whatever
+else happens to vary with it. In an additive model, it describes the
+comparison holding the other included features fixed. The two can differ in
+magnitude, and they can differ in sign.
+
+2. **"Holding fixed" covers only features in the model.** A variable not in
+$X$ is not held fixed by including other features, so a coefficient never
+describes a comparison that adjusts for something the model never saw.
+
+For a dummy variable — a feature $X_j$ taking only the values $0$ and $1$ — a
+"one-unit increase" is the change from the reference level to the indicated
+level, so $e^{\beta_j}$ is the odds of the event at that level divided by the
+odds at the reference level, again holding the other features fixed.
+
+The intercept $\beta_0$ is the log-odds of the event when every feature is $0$
+— for a dummy variable, when the observation is at the reference level.
+
+## Fitting an additive model in R
+
+```{r additive-syntax}
+#| eval: false
+glm(default ~ balance + student, data = Default, family = "binomial")
+```
+
+The `+` makes the model additive: `balance` and `student` each contribute one
+term to the linear predictor. Terms joined by `*` or `:` would add products of
+features, which the additive model excludes.
+
+### Example: fitting the additive model
+
+```{r additive-glm}
+additive_glm <- glm(default ~ balance + student, data = Default,
+                    family = "binomial")
+summary(additive_glm)
+```
+
+::: {.callout-note collapse="true"}
+### Code for the estimates quoted below
+```{r additive-extract}
+#| output: false
+ba <- coef(additive_glm)
+or_balance_100 <- unname(exp(100 * ba["balance"]))
+or_student_adj <- unname(exp(ba["studentYes"]))
+ci_adj <- confint.default(additive_glm)
+ci_or_student_adj <- exp(ci_adj["studentYes", ])
+ci_or_balance_100 <- exp(100 * ci_adj["balance", ])
+```
+:::
+
+The fitted log-odds are
+
+$$\log\left(\frac{\hat p(X)}{1 - \hat p(X)}\right) = `r sprintf("%.2f", ba[1])` `r sprintf("%+.6f", ba[2])` \times \texttt{balance} `r sprintf("%+.3f", ba[3])` \times D,$$
+
+with $X_1 = \texttt{balance}$ the quantitative feature and $X_2 = D$ the
+student indicator, so $p = 2$.
+
+The `studentYes` coefficient is $`r sprintf("%.3f", ba[3])`$. Fit alone it was
+$`r sprintf("%.3f", bs[2])`$. The sign reversed.
+
+## Confounding: a coefficient that changes sign
+
+Nothing about the data changed between the one-feature and additive fits —
+only which features were held fixed when reading the `student` coefficient.
+The reversal has to be explained, not just reported.
+
+### Example: interpreting the additive coefficients
+
+```{r additive-odds-ratios}
+round(c("balance, per $100" = or_balance_100,
+        "student vs. non-student" = or_student_adj), 3)
+```
+
+Holding student status fixed, an additional \$100 of balance multiplies the
+estimated odds of default by `r sprintf("%.2f", or_balance_100)`.
+
+Holding balance fixed, a student's estimated odds of default are
+`r sprintf("%.2f", or_student_adj)` times a non-student's — a
+`r round(100 * (1 - or_student_adj))`% *reduction* in the odds. Fit alone,
+student status multiplied the odds by
+`r sprintf("%.2f", or_student_alone)`, a
+`r round(100 * (or_student_alone - 1))`% increase.
+
+The two estimates are not in conflict. They are estimates of different
+comparisons.
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r comparison-table}
+#| output: false
+comparison_table <- tibble(
+  Model = c("`default ~ student`", "`default ~ balance + student`"),
+  Compares = c("a student against a non-student, balances as they happen to be",
+               "a student against a non-student **at the same balance**"),
+  OR = sprintf("%.2f", c(or_student_alone, or_student_adj))
+) |>
+  knitr::kable(col.names = c("Model", "What the `student` coefficient compares",
+                              "Estimated odds ratio"),
+               align = "lll")
+```
+:::
+
+```{r comparison-table-display}
+#| echo: false
+comparison_table
+```
+
+The two descriptive summaries above supply the mechanism. Students carry
+\$`r format(round(mean_balance_of("Yes") - mean_balance_of("No")), big.mark = ",")`
+more balance on average, and balance raises the odds of default sharply. A
+comparison of students to non-students that does not hold balance fixed is
+therefore partly a comparison of higher balances to lower balances. Once
+balance is in the model and held fixed, that path is closed, and what remains
+is the within-balance comparison the binned plot already showed: at a given
+balance, students default less.
+
+This is **confounding**: a feature left out of the model is associated both
+with the feature being interpreted and with the response, so the included
+feature's coefficient reports the two associations combined rather than its
+own. In the one-feature model, `student` stood in for balance, and the
+absorbed part was large enough and of the opposite sign to flip the total.
+
+::: {.callout-note collapse="true"}
+### Which coefficient is the right one to report?
+Neither is wrong; they answer different questions, and the question decides.
+
+A credit card company deciding what a *new applicant's* student status implies
+about risk, knowing nothing else about them, wants the one-feature answer:
+among the customers we see, students default more. A company setting a credit
+limit for a customer whose balance it already knows wants the additive answer:
+at that balance, a student is the safer of the two.
+
+What is not defensible is reporting one number and describing it with the
+other's interpretation.
+:::
+
+## Inference
+
+Inference proceeds coefficient by coefficient with the same machinery as the
+previous lecture. Maximum likelihood estimators are approximately normal in
+large samples, so
+
+$$z = \frac{\hat\beta_j - \beta_j^0}{\text{SE}(\hat\beta_j)}$$
+
+is approximately standard normal under $H_0: \beta_j = \beta_j^0$, where
+
+- $\beta_j^0$ is the null value, almost always $0$, and
+- $\text{SE}(\hat\beta_j)$ is the standard error computed by `glm()` from the
+curvature of the log-likelihood at $\hat\beta$.
+
+An approximate $(1-\alpha)100\%$ confidence interval is
+$\hat\beta_j \pm z_{1-\alpha/2}\text{SE}(\hat\beta_j)$, and exponentiating both
+endpoints gives an interval for the odds ratio $e^{\beta_j}$.
+
+Every one of these statements is about $\beta_j$ with the other features in the
+model held fixed, so the test of $H_0: \beta_j = 0$ asks whether feature $j$ is
+associated with the response *after accounting for* the other features — not
+whether it is associated with the response at all.
+
+### Example: testing the additive coefficients
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r additive-inference}
+#| output: false
+inference_table <- tibble(
+  coefficient = c("balance (per $100)", "student (Yes vs. No)"),
+  estimate    = c(100 * ba["balance"], ba["studentYes"]),
+  z           = summary(additive_glm)$coefficients[c("balance", "studentYes"),
+                                                   "z value"],
+  odds_ratio  = c(or_balance_100, or_student_adj),
+  lower       = c(ci_or_balance_100[1], ci_or_student_adj[1]),
+  upper       = c(ci_or_balance_100[2], ci_or_student_adj[2])
+) |>
+  mutate(across(c(estimate, z, odds_ratio, lower, upper),
+                \(x) sprintf("%.3f", x))) |>
+  knitr::kable(col.names = c("Coefficient", "Estimate (log-odds)", "z",
+                             "Odds ratio", "95% CI lower", "95% CI upper"),
+               align = "lccccc")
+```
+:::
+
+```{r additive-inference-table}
+#| echo: false
+inference_table
+```
+
+Both $z$-statistics are far from zero. The interval for the balance odds ratio
+per \$100 lies entirely above $1$, and the interval for the student odds ratio
+lies entirely below $1$, running from
+`r sprintf("%.2f", ci_or_student_adj[1])` to
+`r sprintf("%.2f", ci_or_student_adj[2])`.
+
+The one-feature fit produced an interval for the student odds ratio entirely
+above $1$ (`r sprintf("%.2f", ci_student_alone[1])` to
+`r sprintf("%.2f", ci_student_alone[2])`), and the additive fit produces one
+entirely below $1$. The two intervals do not overlap, and that is not a
+contradiction: they are intervals for different quantities.
+
+## Prediction
+
+The fitted model returns a probability for any combination of feature values,
+
+$$\hat p(x) = \frac{e^{x\hat\beta}}{1 + e^{x\hat\beta}},$$
+
+where $x = (1, x_1, \ldots, x_p)$ is a row of feature values. In R,
+`predict()` with `type = "response"` applies the logistic function; the
+`newdata` argument takes a data frame with one column per feature, and a
+categorical feature must be supplied at one of its observed levels.
+
+### Example: comparing a student and a non-student at the same balance
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r additive-predictions}
+#| output: false
+pred_grid <- expand_grid(balance = c(1000, 1500, 2000),
+                         student = factor(c("No", "Yes"),
+                                          levels = levels(Default$student)))
+pred_grid$p_hat <- predict(additive_glm, newdata = pred_grid,
+                           type = "response")
+
+pred_table <- pred_grid |>
+  pivot_wider(names_from = student, values_from = p_hat,
+              names_prefix = "student_") |>
+  mutate(odds_ratio = (student_Yes / (1 - student_Yes)) /
+                      (student_No  / (1 - student_No))) |>
+  mutate(across(c(student_No, student_Yes), \(x) sprintf("%.3f", x)),
+         odds_ratio = sprintf("%.3f", odds_ratio),
+         balance = format(balance, big.mark = ",")) |>
+  knitr::kable(col.names = c("Balance ($)", "Non-student", "Student",
+                             "Odds ratio"),
+               align = "cccc")
+
+p_at <- function(b, s) {
+  pred_grid$p_hat[pred_grid$balance == b & pred_grid$student == s]
+}
+```
+:::
+
+```{r additive-predictions-table}
+#| echo: false
+pred_table
+```
+
+At a balance of \$1,500 the estimated probability of default is
+`r sprintf("%.1f", 100 * p_at(1500, "No"))`% for a non-student and
+`r sprintf("%.1f", 100 * p_at(1500, "Yes"))`% for a student. At \$2,000 the two
+estimates are `r sprintf("%.1f", 100 * p_at(2000, "No"))`% and
+`r sprintf("%.1f", 100 * p_at(2000, "Yes"))`%.
+
+The final column is constant down the table at `r round(or_student_adj, 3)`,
+which is $e^{\hat\beta_2}$: the model forces the student-versus-non-student
+odds ratio to be the same at every balance. The difference in *probabilities*
+is not constant — `r sprintf("%.3f", p_at(1000, "No") - p_at(1000, "Yes"))` at
+\$1,000 against `r sprintf("%.3f", p_at(2000, "No") - p_at(2000, "Yes"))` at
+\$2,000 — for the same reason a logistic curve's slope varies with $x$.
+
+Plotting $\hat p$ across the range of balance for each student status shows
+what a constant odds ratio looks like on the probability scale.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r additive-curves}
+#| output: false
+curve_grid <- expand_grid(
+  balance = seq(0, max(Default$balance), length.out = 400),
+  student = factor(c("No", "Yes"), levels = levels(Default$student)))
+curve_grid$p_hat <- predict(additive_glm, newdata = curve_grid,
+                            type = "response")
+
+curve_gap <- curve_grid |>
+  pivot_wider(names_from = student, values_from = p_hat) |>
+  mutate(gap = No - Yes)
+
+max_gap          <- max(curve_gap$gap)
+max_gap_balance  <- curve_gap$balance[which.max(curve_gap$gap)]
+
+curve_plot <- ggplot(curve_grid,
+                     aes(x = balance, y = p_hat,
+                         color = student, linetype = student)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(data = binned_rates,
+             aes(y = rate, shape = student), size = 2.5,
+             inherit.aes = TRUE) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Student", linetype = "Student", shape = "Student",
+       title = "Fitted additive model with binned observed rates")
+```
+:::
+
+```{r additive-curves-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+curve_plot
+```
+
+The two curves have the same shape, with the student curve shifted to the
+right. On the log-odds scale they are parallel lines separated by
+$\hat\beta_2$ at every balance; on the probability scale they never cross, and
+the gap between them closes at both ends. The gap is widest near a balance of
+\$`r format(round(max_gap_balance), big.mark = ",")`, where it reaches
+`r sprintf("%.3f", max_gap)` in estimated probability — not at the midpoint of
+the balance range, but where both curves are passing through the steep part of
+their climb. The binned observed rates from the exploratory plot are overlaid,
+and both sets of points track their own curve.
+
+## Conclusion
+
+Student status looked like a risk factor on its own, multiplying the odds of
+default by `r sprintf("%.2f", or_student_alone)`, and looked like a protective
+factor once balance was held fixed, multiplying the odds by
+`r sprintf("%.2f", or_student_adj)`. The reversal is confounding: students
+carry
+\$`r format(round(mean_balance_of("Yes") - mean_balance_of("No")), big.mark = ",")`
+more balance on average, so the one-feature coefficient was reporting balance's
+association with default alongside student status's own.
+
+The model that delivered this is the linear predictor from multiple linear
+regression, passed through the logistic function, estimated by the same
+Bernoulli maximum likelihood as the one-feature case, with each $\beta_j$
+interpreted as a change in log-odds holding the other features fixed.
+
+The additive model constrains the student-versus-non-student odds ratio to be
+identical at every balance; relaxing that constraint requires interactions
+between features.

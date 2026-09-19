@@ -209,6 +209,24 @@ $\hat p(x)$. Worked example: `ISLR2::Default`, predicting default from credit
 card balance. Only *one* feature is covered here — multiple logistic
 regression, interactions, and separation come in later chapters.
 
+### 10. Multiple Logistic Regression
+<https://jarad.github.io/DS3030/04-classification/20-multiple-logistic-regression.html>
+
+The additive multiple logistic regression model, with the log-odds equal to
+the same linear predictor $X_i\beta$ used in multiple linear regression;
+two-level categorical features encoded as a single indicator against a
+reference level; the Bernoulli log-likelihood as a function of
+$\beta_0,\ldots,\beta_p$, still with no closed-form maximizer, fit by
+`glm(y ~ x1 + x2, family = "binomial")`; interpreting $\beta_j$ as a change in
+log-odds and $e^{\beta_j}$ as an odds ratio *holding every other feature
+fixed*, and why that differs from the same feature's coefficient fit alone;
+$z$-tests and confidence intervals for each coefficient and its odds ratio;
+predicting $\hat p(x)$ at a stated combination of feature values.
+Worked example: `ISLR2::Default`, where the `student` coefficient is positive
+on its own but negative once `balance` is held fixed — a confounding reversal
+explained by students carrying higher balances. Additive models only;
+interactions are not covered in this chapter.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can

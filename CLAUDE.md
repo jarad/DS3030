@@ -182,6 +182,17 @@ shows how the object was built. This means a chapter's rendered page shows
 extensive setup code only when a reader deliberately expands a callout for
 it, and shows the polished result everywhere else.
 
+**Build a table with computed values via `knitr::kable()`, never as a
+hand-written markdown pipe table.** Pandoc sizes a hand-written pipe table's
+columns from the raw source line lengths in each column, not from how the
+rendered content actually looks — a short header paired with one long
+descriptive cell can produce a badly lopsided render (e.g. a code-formatted
+column squeezed to a sliver next to an oversized text column) that is easy to
+miss both when writing the source and when proofreading it, since the table
+does not look wrong as markdown text. `knitr::kable()` sizes columns from the actual
+content instead, and keeps the value computed rather than typed by hand.
+Build it in a collapsed callout per the pattern above.
+
 **Do not create a standalone `.R` script unless specifically asked.** In this
 course a standalone script is an in-class demonstration document: a script
 typically gets a full class day plus an accompanying student activity. Creating

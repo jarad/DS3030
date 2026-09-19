@@ -236,6 +236,16 @@ objectives block at the top; balanced `:::` blocks; and
 `::: {.callout-note collapse="true"}` spelled with the attribute, since
 `.collapse=TRUE` parses as a class and silently fails to collapse.
 
+**A hand-written markdown pipe table carrying a computed value is a finding,
+not just a style note.** `CLAUDE.md` requires `knitr::kable()` for any table
+with a computed value, because pandoc sizes a hand-written pipe table's
+columns from raw source line lengths rather than rendered content, which can
+render a badly lopsided table (a short header column squeezed to a sliver
+next to an oversized text column) that looks fine as markdown source. This is
+a rendering defect a text-only reading of the source will not catch — render
+the file, or at minimum inspect the table's `<colgroup>` widths in the built
+HTML, whenever a chapter contains a `|`-delimited table.
+
 **Homework and exams** (`../DS3030Private/`): the YAML header shape with
 `format: pdf`; a bold `**Purpose**:` statement; `## Question N - Title`;
 solutions inside `::: {.content-visible when-meta="show-solutions"}` with a
