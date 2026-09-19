@@ -13,8 +13,8 @@ After this lecture you should be able to
 
 - **construct** a step function model and **explain** why it is the
 dummy-variable machinery applied to a quantitative feature,
-- **describe** K-nearest neighbors regression and **identify** $K$ as its
-flexibility parameter,
+- **describe** K-nearest neighbors regression and **identify** $1/K$ as its
+flexibility,
 - **compare** a parametric fit against a nonparametric one and **state** the
 conditions under which each is preferable,
 - **diagnose** the potential problems of ISLR2 Section 3.3.3 from a residual
@@ -40,40 +40,60 @@ Then fit
 
 $$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_p C_p(X_i) + \epsilon_i,$$
 
-dropping the first bin as the baseline. This is **exactly** the dummy-variable
-machinery from multiple regression: we have turned a quantitative feature into a
-categorical one. The fitted value in a bin is the sample mean of $y$ in that
-bin, and $\beta_j$ is that bin's mean minus the baseline bin's mean.
+leaving the first bin, $[c_0, c_1)$, as the baseline. This is **exactly** the
+dummy-variable machinery from multiple regression — we have turned a
+quantitative feature into a categorical one — so the coefficients mean what
+they always mean for dummy variables:
+
+- $\beta_0$ is the mean of $Y$ in the baseline bin, and
+- $\beta_j$, for $j = 1, \ldots, p$, is the mean of $Y$ in the bin
+  $[c_j, c_{j+1})$ *minus* the mean of $Y$ in the baseline bin.
+
+Least squares makes the fitted value in every bin exactly that bin's sample
+mean of $y$, which is why these coefficients are differences between sample
+means.
 
 ```{r step-functions}
 #| eval: false
-lm(wage ~ cut(age, breaks = c(18, 30, 42, 54, 66, 80)))
+lm(wage ~ cut(age, breaks = c(18, 23, 30, 45, 65, 80),
+              right = FALSE, include.lowest = TRUE), data = Wage)
 ```
 
-We can see how a step function compares to a polynomial on real data: wages
-against age for the `r nrow(Wage)` workers in `ISLR2::Wage`.
+### Example: wages by age
+
+Suppose we are interested in the relationship between age and wage. We have
+data from `r nrow(Wage)` male workers in the Mid-Atlantic region
+(`ISLR2::Wage`), and we can compare how a step function fits that relationship
+against a straight line and a degree-5 polynomial.
 
 ::: {.callout-note collapse="true"}
 ### Code for the figure below
 ```{r flexibility-comparison}
 #| output: false
-age_cuts <- seq(min(Wage$age), max(Wage$age), length.out = 6)
-age_grid <- tibble(age = seq(min(Wage$age), max(Wage$age), length.out = 400))
+age_cuts   <- c(18, 23, 30, 45, 65, 80)
+age_labels <- c("18-23", "23-30", "30-45", "45-65", "65-80")
+
+Wage <- Wage |>
+  mutate(age_group = cut(age, age_cuts, right = FALSE, include.lowest = TRUE, labels = age_labels))
+
+step_fit <- lm(wage ~ age_group, data = Wage)
+
+age_grid <- tibble(age = seq(min(Wage$age), max(Wage$age), length.out = 400)) |>
+  mutate(age_group = cut(age, age_cuts, right = FALSE, include.lowest = TRUE, labels = age_labels))
 
 fit_grid <- function(model, label, binned = FALSE) {
   age_grid |>
     mutate(yhat = predict(model, age_grid),
            fit  = label,
-           bin  = if (binned) as.character(cut(age, age_cuts, include.lowest = TRUE))
-                  else "all")
+           bin  = if (binned) as.character(age_group) else "all")
 }
 
 wage_pred <- bind_rows(
-  fit_grid(lm(wage ~ age,                                       data = Wage), "Linear in age"),
-  fit_grid(lm(wage ~ poly(age, 5),                              data = Wage), "Polynomial (degree 5)"),
-  fit_grid(lm(wage ~ cut(age, age_cuts, include.lowest = TRUE), data = Wage), "Step function (5 bins)",
-           binned = TRUE)
-)
+  fit_grid(lm(wage ~ age,          data = Wage), "Linear in age"),
+  fit_grid(lm(wage ~ poly(age, 5), data = Wage), "Polynomial (degree 5)"),
+  fit_grid(step_fit,                             "Step function (5 bins)", binned = TRUE)
+) |>
+  mutate(fit = fct_inorder(fit))
 
 flexibility_plot <- ggplot(Wage, aes(x = age, y = wage)) +
   geom_point(alpha = 0.1) +
@@ -91,9 +111,63 @@ flexibility_plot <- ggplot(Wage, aes(x = age, y = wage)) +
 flexibility_plot
 ```
 
-The costs are visible on the right: the fit jumps at the cut points and ignores
-any trend within a bin. And *we* chose those cut points — nothing in the data
-told us where to put them.
+Wages are in thousands of dollars per year. The cut points above are not
+arbitrary — they follow a life-stage story anyone in this room can check
+against their own age: 18-23 is still finishing a degree, 23-30 is early
+career, 30-45 and 45-65 cover the years earnings typically build and peak, and
+65-80 is whoever in this dataset is still working past a typical retirement
+age. (This is a male-only story, since `Wage` samples only male workers.)
+
+The costs of the step function are visible on the right: the fit jumps at the
+cut points and ignores any trend within a bin. And *we* chose those cut
+points — nothing in the data told us where to put them.
+
+Now look at what R actually estimated for that step function. Fitting on a
+named factor column, rather than a bare `cut()` call inside the formula, is
+what keeps the output readable:
+
+```{r step-function-coef}
+coef(step_fit)
+```
+
+Four *interior* cut points — 23, 30, 45, and 65 — make **five** bins, but only
+**four** coefficients besides the intercept. The 18 and 80 in the code are not
+additional cut points; they just stand in for $c_0 = -\infty$ and $c_5 = \infty$,
+since no worker in the data falls outside them. The bin labeled
+`r age_labels[1]` (that's $(-\infty, c_1)$, which prints as `r age_labels[1]`
+only because 18 happens to be the youngest worker in the data) has no $C_j$ of
+its own. It is the baseline, and everything about it is already inside
+$\beta_0$:
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r step-function-interpretation}
+#| output: false
+b <- coef(step_fit)
+
+step_table <- tibble(
+  Bin                 = age_labels,
+  Expression          = c("$\\hat\\beta_0$", paste0("$\\hat\\beta_0 + \\hat\\beta_", 1:4, "$")),
+  `Value added`       = c("none", sprintf("%.1f", b[2:5])),
+  `Bin mean, fitted`  = sprintf("%.1f", c(b[1], b[1] + b[2:5]))
+) |>
+  knitr::kable(align = "lccc")
+```
+:::
+
+```{r step-function-table}
+#| echo: false
+step_table
+```
+
+Read this row by row: $\hat\beta_0 = `r round(b[1], 1)`$ is the mean wage of
+workers aged `r age_labels[1]`, the baseline, exactly per the rule above — and
+every other row adds its coefficient to that baseline. Workers aged
+`r age_labels[2]` earn on average
+$\hat\beta_0 + \hat\beta_1 = `r round(b[1],1)` + `r round(b[2],1)` =
+`r round(b[1]+b[2],1)`$. There is no coefficient at all for the baseline bin,
+because $X < c_1$ is exactly what happens when
+every $C_j(X)$ is zero.
 
 ::: {.callout-important collapse="true"}
 ### Where this is going
@@ -128,12 +202,19 @@ knn_reg <- function(x0, x, y, K) {
 
 $K$ is the flexibility dial, and it runs backwards:
 
-- $K = 1$ makes $\hat{f}$ interpolate the training data — zero training error
-and enormous variance.
+- $K = 1$ makes $\hat{f}$ follow a single observation at each point — zero
+training error when the feature values are all distinct, and enormous
+variance. (Here `age` is integer-valued and many workers share a value, so
+$K = 1$ actually picks one of them arbitrarily rather than interpolating —
+worth checking against data before trusting the idealization.)
 - $K = n$ makes $\hat{f}$ the overall mean $\bar{y}$, a flat line — maximum bias
 and minimum variance.
 
 So it is $1/K$ that plays the role of flexibility.
+
+### Example: wages by age
+
+The same age-and-wage data lets us see how $K$ actually controls flexibility:
 
 ::: {.callout-note collapse="true"}
 ### Code for the figure below
@@ -161,6 +242,10 @@ knn_plot <- ggplot(Wage, aes(x = age, y = wage)) +
 knn_plot
 ```
 
+At $K = 1$ the fit chases every tied observation and jumps around wildly; at
+$K = 50$ it has smoothed into a single broad hump, not unlike the polynomial
+fit from the previous example. $K = 10$ sits between the two.
+
 ### KNN with more than one feature
 
 Nothing about the method changes with $p > 1$ features — only what "closest"
@@ -174,8 +259,9 @@ should be standardized first, or a feature measured in thousands of dollars
 would dominate one measured in single digits regardless of which one actually
 predicts the response.
 
-`ISLR2::Boston` has two such features: the percentage of the neighborhood that
-is lower-status (`lstat`) and the average number of rooms per home (`rm`),
+Two of `ISLR2::Boston`'s features work well for this: the percentage of the
+neighborhood that is lower-status (`lstat`) and the average number of rooms
+per home (`rm`),
 both used to predict median home value (`medv`). Before fitting anything, look
 at the relationship itself:
 
@@ -328,6 +414,11 @@ $H = X(X^\top X)^{-1}X^\top$. It averages $(p+1)/n$, so values several times
 that deserve a look. Leverage depends only on the features — you can compute it
 before seeing a single response.
 
+**Studentized residuals** rescale each residual by its own estimated standard
+deviation, which shrinks as leverage grows, so residuals at very different
+points on the design become comparable on one scale. A rough rule of thumb
+flags $|{\text{value}}| > 3$ as an outlier worth a look.
+
 **Cook's distance** combines leverage with the size of the residual into a
 single number measuring how much the fitted values would move if an observation
 were deleted. Values near or above $1$ warrant attention. In R, `hatvalues()`,
@@ -394,7 +485,7 @@ response would be the usual response.
 
 ### Leverage and outliers are different things
 
-Last lecture we labelled three subjects on the metabolism plot — 17, 31, and
+Last lecture we labeled three subjects on the metabolism plot — 17, 31, and
 32. Now we can be precise about them. With
 $p + 1 = `r length(coef(metabol_fit))`$ coefficients and
 $n = `r nrow(Sleuth3::case1101)`$ observations, average leverage is
@@ -469,7 +560,7 @@ alone is harmless; the combination is not.
 
 The table makes the distinction concrete. Subject 17 has leverage
 $`r round(influence_of(17, "Leverage"), 3)`$, more than three times the average
-of $4/32 = `r round(length(coef(metabol_fit)) / nrow(Sleuth3::case1101), 3)`$,
+of $`r length(coef(metabol_fit))`/`r nrow(Sleuth3::case1101)` = `r round(length(coef(metabol_fit)) / nrow(Sleuth3::case1101), 3)`$,
 and yet Cook's distance is $`r round(influence_of(17, "CooksD"), 3)`$. It sits
 far from the other feature values and agrees completely with the trend, so
 deleting it would change essentially nothing. High leverage by itself is not a

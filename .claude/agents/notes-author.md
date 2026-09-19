@@ -75,7 +75,8 @@ everything the course needs in one step.
 Match the voice of the existing chapters. Specifically:
 
 - Open with a Bloom-aligned learning objectives block: a short
-  "After this chapter you should be able to..." list. Use verbs that name the
+  "After this lecture you should be able to..." list (match the existing
+  chapters — they all say "lecture," not "chapter"). Use verbs that name the
   cognitive level honestly — *define*, *derive*, *interpret*, *compare*,
   *evaluate* — and keep it to three to six objectives. These objectives are the
   anchor that homework and exam coverage is checked against, so make them
@@ -91,6 +92,18 @@ Match the voice of the existing chapters. Specifically:
   the equation that introduces it.
 - Prefer short paragraphs and frequent `##` section headings over long prose
   runs. The notes are read on a web page and used live in class.
+- Every worked example follows **motivation → exploratory data analysis →
+  model → inference → conclusion**, strictly in that order on the page: state
+  the question and the data before showing any plot, show the plot before
+  interpreting it, and show a model's output before discussing what it means.
+  Never mix interpretation into the sentence that introduces a figure or a
+  fit.
+- **Cut extemporaneous asides** — phrasing that reinforces a point verbally but
+  adds no information in writing, the kind of thing you'd say out loud in
+  class for emphasis but that only restates what the preceding clause already
+  said in the notes. Because these notes are also delivered live, habits of
+  speech creep in; read a new passage back and cut anything that repeats
+  itself for emphasis rather than adding a fact.
 
 ## Code
 
@@ -122,12 +135,13 @@ still. When `shape` or `linetype` must encode a *different* variable, use a
 color-blind-friendly palette — Okabe-Ito or viridis — instead of the default hue
 scale.
 
-**Put extensive R code in a collapsed callout** rather than hiding it behind
-`#| echo: false`. For a chunk with substantial setup — simulating data, fitting
-several models, building a prediction grid — wrap it in
-`::: {.callout-note collapse="true"}`, suppress its output with `#| output:
-false`, assign the plot to an object, and display that object from a short
-visible chunk after the callout.
+**Put extensive R code in a collapsed callout.** For a chunk with substantial
+setup — simulating data, fitting several models, building a prediction grid or
+a table — wrap it in `::: {.callout-note collapse="true"}`, suppress its
+output with `#| output: false`, and assign the result to an object. Then
+display that object afterward in its own named chunk with `#| echo: false` —
+the reader sees the result, not the one-line `object_name` that produced it;
+expanding the callout above already shows how it was built.
 
 ## Keep the course tutor file in sync
 

@@ -488,7 +488,7 @@ are two of them, and you have to say which sex you mean.
 
 ::: {.callout-note collapse="true"}
 ### A preview of a problem
-Three observations are labelled by subject number in each plot above. Subjects 31 and
+Three observations are labeled by subject number in each plot above. Subjects 31 and
 32 have gastric activity well beyond any other man's, and subject 17 is the most
 extreme of the women. These are high-leverage points: they sit far from the bulk
 of the feature values, so they do a disproportionate share of the work in

@@ -149,7 +149,68 @@ variables" or "input variables") and **response** (not "output variables").
 Flag deviations by quoting the phrase. Note that older chapters may predate this
 convention, so report it as a consistency issue rather than an error.
 
-### 6. Cross-references that have gone stale
+### 6. Section and subsection structure
+
+Headings are how a reader (and the table of contents) tells what's a peer of
+what. Check for these patterns specifically:
+
+- **A worked example with no heading of its own, sitting beside one that has
+  one.** If a `##` section contains two real-data worked examples and one of
+  them gets a `### Example: ...` heading while the other is unheaded content
+  floating directly under the `##`, that's a structural inconsistency even
+  though nothing in either example is individually wrong — the table of
+  contents makes it look like only one example exists. Fix: give every
+  worked example in a section the same kind of heading its siblings get,
+  following this repository's own naming pattern (`### Example: <what it's
+  about>`), not just checking that headings which do exist are enumerated
+  correctly.
+- **A subsection heading that names an analysis step rather than the thing
+  being analyzed.** A heading like `### Reading the coefficients` outranks
+  nothing — it's part of whatever example produced the coefficients, not a
+  topic of its own — and it silently swallows the example it belongs to
+  (there is no separate heading for the example itself). Prefer folding that
+  content into the same `### Example: ...` section as prose, the way this
+  repository's other worked examples handle interpretation without a further
+  subheading.
+- **Heading level jumps or unjustified depth.** A `####` under a `##` with no
+  intervening `###`, or a `###` that exists only to hold one paragraph no
+  sibling section would need its own heading for.
+
+This is a real gap in earlier passes: numbers, math, and notation can all be
+correct while the document's heading structure still misleads a reader about
+what's a worked example and what's connective prose. Check it every time, not
+only when asked about structure specifically.
+
+### 7. Extemporaneous asides, and motivation before interpretation
+
+Two related habits creep into these notes specifically because they are also
+delivered live in class, and neither one is caught by any check above — the
+sentence is often mathematically correct and grammatically fine.
+
+**Extemporaneous asides** repeat, for verbal emphasis, a fact the preceding
+clause already stated. "$\beta_j$ is that bin's mean minus the baseline bin's
+mean — never a bin's mean by itself" says the same thing twice; the second
+half is something worth *saying* in class to land the point, not something a
+reader needs once the first half is on the page. Distinguish this from a
+clause that adds real information — "notice that $c_{p+1}$ is not itself a
+cut point" earns its place if a reader could otherwise miss it. Flag the
+former, leave the latter.
+
+**Motivation-before-interpretation ordering.** `CLAUDE.md` requires every
+worked example to go motivation → data → model → inference, in that literal
+order on the page: the question and the dataset stated before any plot, the
+plot shown before it is interpreted, a model's output shown before its
+meaning is discussed. The failure mode to check for is a sentence that
+*introduces* a figure or a fit and interprets it in the same breath — e.g. "We
+can see how a step function compares to a polynomial: the fit jumps at the
+cut points" written *before* the figure even appears. That sentence should
+split: a plain motivating sentence before the plot, and the "jumps at the cut
+points" observation after it, where the reader can check it against what they
+just saw. Read the paragraph immediately before every figure and every model
+chunk and ask whether it commits to a conclusion the reader hasn't had a
+chance to reach yet.
+
+### 8. Cross-references that have gone stale
 
 Chapters get split and sections get moved, and the prose referring to them does
 not follow automatically. Check every phrase like "next lecture", "last
@@ -162,7 +223,7 @@ Also confirm that a new chapter is registered in `_quarto.yml` (in this
 repository) and that chapter numbering in the prose matches the rendered
 numbering.
 
-### 7. Convention compliance, by file type
+### 9. Convention compliance, by file type
 
 **Public notes** (this repository): `$...$` and `$$...$$` math; every `{r}`
 chunk named, with illustrative code carrying `#| eval: false` rather than being
@@ -204,7 +265,7 @@ it; the `[TF]`/`[MC]`/`[MA]`/`[FB]` answer-marking layout from
 incorrect options is what tells Canvas the key — treat a missing or misplaced
 one as critical, not cosmetic.
 
-### 8. Safety checks — run these every time
+### 10. Safety checks — run these every time
 
 - **`show-solutions` must be `false`** in any committed homework or exam file.
   If it is `true`, that is your top finding regardless of anything else.
@@ -214,7 +275,7 @@ one as critical, not cosmetic.
 - A solution block that is empty, truncated, or missing for a question that
   needs one.
 
-### 9. Ordinary proofreading
+### 11. Ordinary proofreading
 
 Spelling, grammar, subject-verb agreement, doubled words, inconsistent
 capitalization and hyphenation, mismatched list punctuation, Markdown that will

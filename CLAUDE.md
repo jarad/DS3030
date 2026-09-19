@@ -67,8 +67,9 @@ introduces a new package should add it to `Imports:`.
 ## Authoring conventions
 
 - Open each chapter with a Bloom-aligned learning objectives block — a short
-  "After this chapter you should be able to..." list, three to six items, using
-  verbs that name the cognitive level honestly (*define*, *derive*,
+  "After this lecture you should be able to..." list (all eight existing
+  chapters use "lecture," not "chapter" — match them), three to six items,
+  using verbs that name the cognitive level honestly (*define*, *derive*,
   *interpret*, *compare*, *evaluate*). These objectives anchor homework and exam
   coverage, so make them specific enough to assess against.
 - Math: `$...$` inline, `$$...$$` display. (The quiz files in the private
@@ -86,9 +87,12 @@ introduces a new package should add it to `Imports:`.
 - Short paragraphs, frequent `##` headings. These pages are read on the web and
   used live in class.
 - Worked examples follow **motivation → exploratory data analysis → model →
-  inference → conclusion**. Show the data before fitting anything to it: a plot
-  of the raw data comes before any model, so students see what a method is
-  responding to rather than taking the fit on faith.
+  inference → conclusion**, strictly in that order on the page. State the
+  question and the data before showing any plot, show the plot before
+  interpreting it, and show a model's output before discussing what it means —
+  never mix interpretation into the sentence that introduces a figure or a
+  fit. A plot of the raw data comes before any model, so students see what a
+  method is responding to rather than taking the fit on faith.
 - **Never cite ISLR2 as the evidence for a claim** — e.g. "ISLR2 shows KNN
   losing to linear regression at $p=20$." These notes must be self-contained:
   if a point needs evidence, generate it here (a derivation, a simulation, a
@@ -103,6 +107,17 @@ introduces a new package should add it to `Imports:`.
   on realistic data teaches the method better with data students could
   actually encounter. `ISLR2::Wage` (age vs. wage) and `ISLR2::Boston`
   (housing) are already in use for exactly this reason.
+- **Cut extemporaneous asides — phrasing that reinforces a point verbally but
+  adds no information in writing.** "$\beta_j$ is a difference, not a bin's
+  mean by itself" says the same thing twice; the second half is something an
+  instructor says out loud for emphasis while lecturing, not something a
+  reader needs once the first half is on the page. State each fact once,
+  precisely, and let it stand. This is a real risk specifically because these
+  notes are also delivered live in class — habits of speech creep into the
+  prose. A rhetorical question, a "notice that," or a reminder clause is fine
+  when it points at something the reader could otherwise miss; it is
+  extemporaneous when it only restates what the preceding clause already
+  said.
 
 ## Code
 
@@ -144,13 +159,19 @@ Where a facet can replace the grouping entirely, prefer that. When `shape` or
 unavailable, so use a color-blind-friendly palette — Okabe-Ito or viridis —
 rather than ggplot2's default hue scale.
 
-**Put extensive R code in a collapsed callout**, rather than hiding it with
-`#| echo: false`. When a chunk carries a lot of setup — simulating data, fitting
-several models, assembling a prediction grid — wrap it in
-`::: {.callout-note collapse="true"}`, suppress its output with `#| output:
-false`, assign the plot to an object, and display that object from a short
-visible chunk after the callout. The code stays reachable for students reading
-later without occupying the page or class time.
+**Put extensive R code in a collapsed callout.** When a chunk carries a lot of
+setup — simulating data, fitting several models, assembling a prediction grid,
+building a table — wrap it in `::: {.callout-note collapse="true"}`, suppress
+its output with `#| output: false`, and assign the result (a plot, a table) to
+an object. The code stays reachable for students reading later without
+occupying the page or class time.
+
+Display that object afterward in its own named chunk with `#| echo: false` —
+the reader sees the plot or table, not the one-line `object_name` that
+produced it; the line is trivial and expanding the callout above it already
+shows how the object was built. This means a chapter's rendered page shows
+extensive setup code only when a reader deliberately expands a callout for
+it, and shows the polished result everywhere else.
 
 **Do not create a standalone `.R` script unless specifically asked.** In this
 course a standalone script is an in-class demonstration document: a script
@@ -210,9 +231,19 @@ and are only available when Claude Code is launched from there.
 `proof-reader` works on any course file — here or in `DS3030Private` — and
 reports, without editing, typos, notation collisions, stale cross-references,
 convention violations, and statements that are incorrect. It verifies numbers
-quoted in prose by actually running the chunks, which is worth doing after any
-change to a chapter's code. Because it works on both repositories, this copy is
-canonical; `DS3030Private/.claude/agents/proof-reader.md` is a symlink to it.
+quoted in prose by actually running the chunks. Because it works on both
+repositories, this copy is canonical;
+`DS3030Private/.claude/agents/proof-reader.md` is a symlink to it.
+
+**Run `proof-reader` on a chapter after any substantive edit to it, before
+treating the change as finished** — not only when asked to proofread. A
+direct content edit (added or reordered material, changed math, changed data
+or code) gets this pass unprompted; a small mechanical fix (a typo, a
+one-line notation correction, a rename) does not need it every time. This
+applies whether the edit came from a human, from `notes-author`, or from
+Claude editing a chapter directly in conversation — the point is that new or
+changed content gets checked before it is presented as done, not that any
+particular agent must be the one to run the check.
 
 `semester-refresh` checks whether the course still works before it is taught
 again: it runs `install-packages.R` to install anything `DESCRIPTION` lists
