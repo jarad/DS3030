@@ -227,6 +227,41 @@ on its own but negative once `balance` is held fixed — a confounding reversal
 explained by students carrying higher balances. Additive models only;
 interactions are not covered in this chapter.
 
+### 11. Flexible Logistic Regression
+<https://jarad.github.io/DS3030/04-classification/30-flexible-logistic-regression.html>
+
+Interactions in logistic regression: the linear predictor
+$\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$ for a quantitative
+feature $X$ and an indicator $D$, giving group-specific log-odds slopes
+$\beta_1$ and $\beta_1 + \beta_3$ and group-specific odds ratios $e^{\beta_1}$
+and $e^{\beta_1+\beta_3}$, with $e^{\beta_3}$ the ratio of those two odds
+ratios; why no single odds ratio describes $X$ once an interaction is present;
+`glm(y ~ x * d, family = "binomial")` and hierarchy; the two-scale diagnostic
+— on the linear-predictor (log-odds) scale the additive model forces two
+*parallel* lines separated by $\beta_2$, while an interaction makes the slopes
+differ by $\beta_3$, and on the probability scale those become S-curves that
+never cross (additive) or can cross (interaction); `predict()` with the default
+`type = "link"` versus `type = "response"`; the **decision boundary** defined
+by $\hat p(x) = 0.5$, equivalently $\hat\eta(x) = 0$, solved as a threshold on
+the quantitative feature separately within each level of the categorical
+feature; the Wald $z$-test of $H_0: \beta_3 = 0$.
+
+Two worked examples, deliberately paired to show opposite verdicts. (1)
+`ISLR2::Default`, `balance * student`, continuing the previous chapter: the
+interaction is *not* significant ($z \approx -0.46$, $p \approx 0.65$), the
+two models' fitted lines are indistinguishable on both scales, and the
+additive model is the one to report. (2) `ISLR2::OJ` ($n = 1{,}070$ orange
+juice purchases), `SalePriceCH * Store7` after `relevel()`-ing `Purchase` so
+the model targets $P(\texttt{CH})$: the interaction is strongly significant
+($z \approx -4.7$), the two stores' fitted price slopes have opposite signs, and
+their break-even prices differ — with an explicit, unresolved note that the
+non-store-7 slope runs backwards from a price effect and that these data cannot
+say why. AIC comparisons appear only inside "Beyond this course" callouts.
+Closes with a short section noting that polynomial and step-function features
+carry over to logistic regression unchanged, since they are just columns of the
+model matrix $\mathbf{X}$. Multinomial (multi-class) logistic regression and
+separation are *not* covered here.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can

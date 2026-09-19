@@ -1,0 +1,1013 @@
+# Flexible Logistic Regression
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("ISLR2")
+theme_set(theme_bw())
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **write** a logistic regression model with an interaction between a
+quantitative feature and an indicator, and **derive** the two group-specific
+log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$,
+- **interpret** $e^{\beta_1}$ and $e^{\beta_1 + \beta_3}$ as group-specific
+odds ratios, and **explain** why no single odds ratio describes the
+quantitative feature once an interaction is present,
+- **compare** an additive fit against an interaction fit on the
+linear-predictor scale, where the additive model forces two *parallel* lines,
+and **translate** that comparison onto the probability scale,
+- **define** the decision boundary as the feature value at which
+$\hat p(x) = 0.5$ and **compute** it separately within each level of a
+categorical feature,
+- **test** $H_0: \beta_3 = 0$ with a $z$-statistic and **evaluate** whether an
+interaction is supported, **recognizing** that a plausible interaction often
+turns out not to be, and
+- **explain** why polynomial and step-function features transfer from linear
+regression to logistic regression unchanged.
+:::
+
+## What the additive model assumes
+
+The previous lecture's model was **additive**: each feature contributed its own
+term $\beta_j X_{ij}$ to the linear predictor, and no term involved two
+features at once. That structure is what licensed the interpretation "a
+one-unit increase in $X_j$ multiplies the odds by $e^{\beta_j}$, holding every
+other feature fixed" — the same $e^{\beta_j}$ at every value of every other
+feature.
+
+That is an assumption, not a convenience. The fitted curves of the previous
+lecture showed it directly: two curves of identical shape, separated by a
+constant $\hat\beta_2$ on the log-odds scale at every balance.
+
+There is no reason a real process has to work that way. Whether it does is a
+question about the data, and it can be asked and answered with a model that
+does not impose it.
+
+## The interaction model
+
+The fix is the one from the feature engineering lecture, applied to the linear
+predictor instead of to the mean response. With a quantitative feature $X$ and
+an indicator $D$, that lecture wrote
+
+$$Y_i = \beta_0 + \beta_1 X_i + \beta_2 D_i + \beta_3 X_i D_i + \epsilon_i,$$
+
+giving group A (where $D = 0$) intercept $\beta_0$ and slope $\beta_1$, and
+group B (where $D = 1$) intercept $\beta_0 + \beta_2$ and slope
+$\beta_1 + \beta_3$. Logistic regression uses that same linear predictor and
+passes it through the logistic function,
+
+$$p(X, D) = P(Y = 1 | X, D) = \text{logistic}(\eta) = \frac{e^{\eta}}{1 + e^{\eta}}, \qquad \eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 X D,$$
+
+where
+
+- $X$ is the quantitative feature,
+- $D$ is the indicator for the non-reference level of the categorical feature,
+- $\eta$ is the linear predictor, the log-odds of the event, and
+- $\beta_3$ is the coefficient on the product $XD$, the **interaction**.
+
+Equivalently, on the log-odds scale,
+
+$$\log\left(\frac{p(X,D)}{1 - p(X,D)}\right) = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 X D.$$
+
+The product $XD$ is just another column of the model matrix — written
+$\mathbf{X}$ here, to keep it distinct from the scalar feature $X$ — built from
+two columns already in it. Estimation is unchanged: $\hat\beta$ still maximizes
+the Bernoulli log-likelihood
+
+$$\ell(\beta) = \sum_{i=1}^n \left\{ y_i \, x_i\beta - \log\left(1 + e^{x_i\beta}\right)\right\},$$
+
+with $x_i$ the $i$th row of $\mathbf{X}$, so it still has no closed-form
+maximizer and is still found numerically by `glm()`.
+
+Hierarchy applies here as it did in linear regression: keep $X$ and $D$ in the
+model whenever $XD$ is present.
+
+## Interpreting the coefficients
+
+Collect the terms involving $X$:
+
+$$\log\left(\frac{p(X,D)}{1 - p(X,D)}\right) = \underbrace{(\beta_0 + \beta_2 D)}_{\text{log-odds intercept}} + \underbrace{(\beta_1 + \beta_3 D)}_{\text{log-odds slope on } X} X.$$
+
+The slope on $X$ is a function of $D$, which is the whole point of the
+interaction. Writing out the two levels:
+
+- **Reference level ($D = 0$):** log-odds $= \beta_0 + \beta_1 X$. A one-unit
+increase in $X$ adds $\beta_1$ to the log-odds and multiplies the odds by
+$e^{\beta_1}$.
+- **Indicated level ($D = 1$):** log-odds
+$= (\beta_0 + \beta_2) + (\beta_1 + \beta_3) X$. A one-unit increase in $X$
+adds $\beta_1 + \beta_3$ to the log-odds and multiplies the odds by
+$e^{\beta_1 + \beta_3}$.
+
+So there is no single odds ratio for $X$. There are two, one per group, and
+their ratio is
+
+$$\frac{e^{\beta_1 + \beta_3}}{e^{\beta_1}} = e^{\beta_3}.$$
+
+$e^{\beta_3}$ is a ratio of odds ratios: the factor by which one group's
+per-unit odds ratio for $X$ differs from the other's. $\beta_3 = 0$ makes that
+factor $1$ and returns the additive model.
+
+One caution carries over from the feature engineering lecture, and has a
+partner here: $\beta_1$ is the log-odds slope **when $D = 0$**, not an average
+across groups, and $\beta_2$ is the difference in log-odds between the groups
+**at $X = 0$**, which may be a value $X$ never takes.
+
+## Two scales, two pictures
+
+The two models are easiest to tell apart on the scale where both are linear.
+Written as functions of $X$, the fitted log-odds are two straight lines:
+
+$$\hat\eta(X, 0) = \hat\beta_0 + \hat\beta_1 X, \qquad \hat\eta(X, 1) = (\hat\beta_0 + \hat\beta_2) + (\hat\beta_1 + \hat\beta_3) X.$$
+
+Under the additive model $\hat\beta_3 = 0$, both lines have slope
+$\hat\beta_1$: they are **parallel**, separated by exactly $\hat\beta_2$ at
+every $X$. Under the interaction model the slopes differ by $\hat\beta_3$, so
+the lines are not parallel and, extended far enough, must cross. Parallel
+versus non-parallel on the linear-predictor scale is the visual signature that
+separates the two models.
+
+The probability scale is what a decision actually uses, and it is a distorted
+view of the same two lines. Passing each line through
+$\text{logistic}(\cdot)$ compresses it toward $0$ and $1$, so two parallel
+lines become two S-curves of identical shape that never cross, while two
+non-parallel lines become two S-curves of different steepness that can cross
+within the range of the data.
+
+In R, `predict()` on a `glm` object returns these two scales:
+
+```{r predict-scales}
+#| eval: false
+predict(fit, newdata = grid)                    # eta-hat, the linear predictor
+predict(fit, newdata = grid, type = "response") # p-hat, the probability
+```
+
+The examples below plot both for each model: the linear predictor first, to
+diagnose whether the fitted slopes differ, and the probability scale after, to
+see what that difference is worth.
+
+## Decision boundaries
+
+A fitted probability is often turned into a predicted class by comparing it to
+a threshold, most commonly $0.5$. The **decision boundary** is the set of
+feature values at which the model estimates the two classes as equally likely,
+
+$$\hat p(x) = 0.5 \iff \frac{\hat p(x)}{1 - \hat p(x)} = 1 \iff \hat\eta(x) = 0,$$
+
+where
+
+- $\hat p(x)$ is the estimated probability of the event at feature values $x$,
+and
+- $\hat\eta(x) = x\hat\beta$ is the estimated linear predictor.
+
+Because the logistic function is strictly increasing, $\hat p(x) > 0.5$ exactly
+when $\hat\eta(x) > 0$. The boundary is therefore where the *linear* predictor
+crosses zero, which is why it is a simple set — here, with one quantitative
+feature, a single threshold value of that feature computed separately within
+each level of the categorical feature.
+
+Solving $\hat\eta = 0$ in the interaction model gives
+
+$$x^{*}_{D=0} = -\frac{\hat\beta_0}{\hat\beta_1}, \qquad x^{*}_{D=1} = -\frac{\hat\beta_0 + \hat\beta_2}{\hat\beta_1 + \hat\beta_3},$$
+
+where $x^{*}_{D=d}$ is the value of $X$ at which $\hat p = 0.5$ for group $d$.
+Dropping the interaction sets $\hat\beta_3 = 0$, so the two thresholds share a
+denominator:
+
+$$x^{*}_{D=0} = -\frac{\hat\beta_0}{\hat\beta_1}, \qquad x^{*}_{D=1} = -\frac{\hat\beta_0 + \hat\beta_2}{\hat\beta_1} = x^{*}_{D=0} - \frac{\hat\beta_2}{\hat\beta_1}.$$
+
+The additive model still gives the two groups different thresholds; what it
+cannot give them is different *steepness*, since both groups cross the boundary
+at the common rate $\hat\beta_1$ per unit of $X$.
+
+## Fitting an interaction model in R
+
+```{r interaction-syntax}
+#| eval: false
+glm(default ~ balance * student, data = Default, family = "binomial")
+```
+
+The `*` expands to `balance + student + balance:student`, so the fitted model
+contains both main effects and the product, satisfying hierarchy
+automatically. Writing `balance:student` alone would drop the main effects,
+violating hierarchy: R responds by giving each group its own balance slope
+while forcing both to share a single intercept.
+
+## Example: does balance's effect on default depend on student status?
+
+**Question.** The previous lecture fit `default ~ balance + student`
+additively, which forces the student-versus-non-student odds ratio to be
+identical at every balance and the balance odds ratio to be identical for
+students and non-students. Is that additive assumption right, or does balance
+act differently on the two groups?
+
+**Data.** The same `r format(nrow(Default), big.mark = ",")` simulated credit
+card customers as in the previous two lectures, with `balance` as the
+quantitative feature $X$, the student indicator
+$D = \mathrm{I}(\texttt{student} = \texttt{Yes})$, and $Y_i = 1$ when customer
+$i$ defaults.
+
+### Fitting both models
+
+```{r default-fits}
+default_additive    <- glm(default ~ balance + student,
+                           data = Default, family = "binomial")
+default_interaction <- glm(default ~ balance * student,
+                           data = Default, family = "binomial")
+summary(default_interaction)$coefficients
+```
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r default-coef-setup}
+#| output: false
+Default <- Default |>
+  mutate(default01 = as.numeric(default == "Yes"))
+
+bda <- coef(default_additive)
+bdi <- coef(default_interaction)
+
+default_coef_table <- tibble(
+  term        = names(bdi),
+  additive    = c(bda, NA),
+  interaction = bdi
+) |>
+  mutate(across(c(additive, interaction),
+                \(x) ifelse(is.na(x), "", sprintf("%.6f", x)))) |>
+  knitr::kable(col.names = c("Coefficient", "Additive fit",
+                             "Interaction fit"),
+               align = "lcc")
+```
+:::
+
+```{r default-coef-table}
+#| echo: false
+default_coef_table
+```
+
+The two fits agree closely on the intercept and on the `balance` slope, and the
+estimated interaction is $\hat\beta_3 = `r signif(bdi[4], 3)`$ —
+`r sprintf("%.0f", abs(bdi[2] / bdi[4]))` times smaller than the `balance`
+main effect it modifies.
+
+### Comparing the fits on the log-odds scale
+
+Plotting $\hat\eta$ against balance for each model shows the two straight lines
+each one produces.
+
+::: {.callout-note collapse="true"}
+### Code for the plots below
+```{r default-link-setup}
+#| output: false
+default_grid <- expand_grid(
+  balance = seq(0, max(Default$balance), length.out = 300),
+  student = factor(c("No", "Yes"), levels = levels(Default$student)))
+
+default_link <- bind_rows(
+  default_grid |> mutate(Model = "Additive",
+                         eta = predict(default_additive, newdata = default_grid)),
+  default_grid |> mutate(Model = "Interaction",
+                         eta = predict(default_interaction, newdata = default_grid)))
+
+# A shared base layer, so the two tabs below differ only in which model's
+# lines are drawn on it -- the panel itself never changes size or shape.
+default_link_base <- ggplot(mapping = aes(x = balance, y = eta,
+                                          color = student, linetype = student)) +
+  geom_hline(yintercept = 0, color = "grey60", linewidth = 0.3) +
+  coord_cartesian(xlim = range(default_grid$balance),
+                  ylim = range(default_link$eta)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Credit card balance ($)", y = expression(hat(eta)),
+       color = "Student", linetype = "Student", title = "ISLR2::Default")
+
+default_link_additive <- default_link_base +
+  geom_line(data = filter(default_link, Model == "Additive"), linewidth = 0.9)
+
+default_link_interaction <- default_link_base +
+  geom_line(data = filter(default_link, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Additive
+```{r default-link-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_link_additive
+```
+
+#### Interaction
+```{r default-link-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_link_interaction
+```
+:::
+
+The additive tab's two lines are exactly parallel, both with slope
+$`r signif(bda[2], 4)`$ log-odds per dollar and separated by
+$\hat\beta_2 = `r sprintf("%.3f", bda[3])`$ at every balance. The interaction
+tab's two lines have slopes $`r signif(bdi[2], 4)`$ and
+$`r signif(bdi[2] + bdi[4], 4)`$, a difference too small to see: switching
+between the tabs barely moves the picture.
+
+### Comparing the fits on the probability scale
+
+Building the same comparison up from the raw data puts both fitted models on
+the scale a lending decision would use.
+
+::: {.callout-note collapse="true"}
+### Code for the plots below
+```{r default-prob-setup}
+#| output: false
+default_prob <- bind_rows(
+  default_grid |>
+    mutate(Model = "Additive",
+           p_hat = predict(default_additive, newdata = default_grid,
+                           type = "response")),
+  default_grid |>
+    mutate(Model = "Interaction",
+           p_hat = predict(default_interaction, newdata = default_grid,
+                           type = "response")))
+
+# The jitter is computed once, here, and stored as a column rather than left
+# to geom_jitter() -- geom_jitter() re-randomizes every time a plot is drawn,
+# and each tab below is drawn separately, so leaving it to geom_jitter() would
+# put the points in slightly different places from one tab to the next and
+# make it look like the data had changed. Seeded so re-rendering the chapter
+# does not also churn the committed figure for no reason.
+set.seed(20260925)
+default_jittered <- Default |>
+  mutate(default01_jittered = default01 + runif(n(), -0.03, 0.03))
+
+# The same shared-base idea, with the raw data as the layer every tab keeps.
+# The legend is kept on every tab (with more visible swatches than the
+# points themselves) rather than suppressed on this one layer, so the panel
+# is the same width in all three tabs -- an unequal panel width across tabs
+# is the same "the data looks different" problem the jitter fix above solves.
+default_prob_base <- ggplot(mapping = aes(x = balance, y = p_hat,
+                                          color = student, linetype = student)) +
+  geom_point(data = default_jittered,
+             aes(y = default01_jittered, shape = student),
+             alpha = 0.08, size = 0.7) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  coord_cartesian(xlim = range(default_grid$balance), ylim = c(-0.05, 1.05)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Student", linetype = "Student", shape = "Student",
+       title = "ISLR2::Default")
+
+default_prob_data <- default_prob_base
+
+default_prob_additive <- default_prob_base +
+  geom_line(data = filter(default_prob, Model == "Additive"), linewidth = 0.9)
+
+default_prob_interaction <- default_prob_base +
+  geom_line(data = filter(default_prob, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r default-prob-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_prob_data
+```
+
+#### + Additive
+```{r default-prob-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_prob_additive
+```
+
+#### + Interaction
+```{r default-prob-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_prob_interaction
+```
+:::
+
+The data tab replots the previous lecture's jittered scatter in a single
+panel, with students and non-students distinguished by color and shape. The
+two model tabs are nearly the same picture: two S-curves of all but identical
+shape, the student curve shifted right, whether or not
+the interaction is in the model.
+
+### Testing the interaction
+
+::: {.callout-note collapse="true"}
+### Code for the values quoted below
+```{r default-inference}
+#| output: false
+dcoef   <- summary(default_interaction)$coefficients
+z_d     <- dcoef["balance:studentYes", "z value"]
+p_d     <- dcoef["balance:studentYes", "Pr(>|z|)"]
+ci_d    <- confint.default(default_interaction)["balance:studentYes", ]
+
+or_d <- tibble(
+  student = c("No (reference)", "Yes"),
+  slope   = c(bdi[2], bdi[2] + bdi[4]),
+  or100   = exp(100 * c(bdi[2], bdi[2] + bdi[4]))
+)
+
+or_d_table <- or_d |>
+  mutate(slope = sprintf("%.6f", slope),
+         or100 = sprintf("%.3f", or100)) |>
+  knitr::kable(col.names = c("Student", "Slope (log-odds per \\$1)",
+                             "Odds ratio per \\$100"),
+               align = "lcc")
+
+aic_d_table <- tibble(
+  Model = c("`default ~ balance + student`", "`default ~ balance * student`"),
+  k     = c(length(bda), length(bdi)),
+  AIC   = sprintf("%.2f", c(AIC(default_additive), AIC(default_interaction)))
+) |>
+  knitr::kable(col.names = c("Model", "Parameters", "AIC"), align = "lcc")
+```
+:::
+
+```{r default-or-table}
+#| echo: false
+or_d_table
+```
+
+The two per-\$100 odds ratios differ by
+`r sprintf("%.2f", abs(diff(or_d$or100)))`, which is the difference the
+interaction was added to capture. The $z$-test asks whether that difference is
+larger than sampling error can explain:
+$z = `r sprintf("%.2f", z_d)`$ with a $p$-value of
+$`r sprintf("%.3f", p_d)`$, and the 95% confidence interval for $\beta_3$
+runs from $`r sprintf("%.5f", ci_d[1])`$ to $`r sprintf("%.5f", ci_d[2])`$,
+comfortably containing $0$.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The **Akaike information criterion**, $\text{AIC} = -2\ell(\hat\beta) + 2k$ for
+a model with $k$ estimated parameters, scores a fit by its log-likelihood with
+a penalty for the number of parameters it used; lower is better. It gives a
+second, test-free reading of whether a term earns its place.
+
+```{r default-aic-table}
+#| echo: false
+aic_d_table
+```
+
+Adding the interaction makes AIC *worse* here: the extra parameter buys less
+log-likelihood than it costs.
+:::
+
+**Conclusion.** Balance's effect on the odds of default does not depend on
+student status in these data. The estimated interaction is tiny, the two
+fitted models are visually indistinguishable on both scales, and the $z$-test
+gives no reason to prefer the more complicated one. The additive model of the
+previous lecture is the one to report. The decision boundaries move
+correspondingly little: the balance at which $\hat p = 0.5$ shifts from
+\$`r format(round(-bda[1] / bda[2]), big.mark = ",")` to
+\$`r format(round(-bdi[1] / bdi[2]), big.mark = ",")` for non-students and from
+\$`r format(round(-(bda[1] + bda[3]) / bda[2]), big.mark = ",")` to
+\$`r format(round(-(bdi[1] + bdi[3]) / (bdi[2] + bdi[4])), big.mark = ",")` for
+students.
+
+Not every plausible interaction is a real one. Fitting it was still the right
+move: the additive assumption was checked rather than assumed.
+
+## Example: does a store's price effect depend on the store?
+
+**Question.** Citrus Hill and Minute Maid are competing orange juice brands. If
+a store raises the price of Citrus Hill, fewer customers should buy it — but
+does price act the same way in every store, or does the size of its effect
+depend on where the purchase happens?
+
+**Data.** `ISLR2::OJ` records `r format(nrow(OJ), big.mark = ",")` individual
+orange juice purchases. These are observed purchases, not simulated ones. Three
+of its `r ncol(OJ)` variables are used here:
+
+- `Purchase`: which brand the customer bought, a factor with levels
+`r paste(levels(OJ$Purchase), collapse = " and ")` (Citrus Hill and Minute
+Maid). This is the response.
+- `SalePriceCH`: the price actually paid for Citrus Hill, in dollars, ranging
+from \$`r sprintf("%.2f", min(OJ$SalePriceCH))` to
+\$`r sprintf("%.2f", max(OJ$SalePriceCH))`. This is the quantitative feature
+$X$.
+- `Store7`: whether the purchase happened at store 7, a factor with
+`r sum(OJ$Store7 == "No")` `No` and `r sum(OJ$Store7 == "Yes")` `Yes`
+purchases. This supplies the indicator
+$D = \mathrm{I}(\texttt{Store7} = \texttt{Yes})$.
+
+Buying Citrus Hill is the event of interest, so $Y_i = 1$ when purchase $i$ is
+a Citrus Hill purchase. `glm()` models the probability of a factor's *second*
+level, and `r levels(OJ$Purchase)[2]` is second, so the event has to be set
+explicitly with `relevel()`:
+
+```{r oj-relevel}
+OJ <- OJ |> mutate(Purchase = relevel(Purchase, ref = "MM"))
+levels(OJ$Purchase)
+```
+
+With `MM` as the reference level, every model below estimates
+$P(\texttt{Purchase} = \texttt{CH})$.
+
+### Exploring the data
+
+Before fitting anything, plot each purchase against the price paid for
+Citrus Hill, split by whether the store was store 7:
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r oj-eda}
+#| output: false
+OJ <- OJ |> mutate(ch01 = as.numeric(Purchase == "CH"))
+
+oj_rates <- OJ |>
+  group_by(Store7, SalePriceCH) |>
+  summarize(n = n(), rate = mean(ch01), .groups = "drop")
+
+oj_eda_plot <- ggplot(OJ, aes(x = SalePriceCH, y = ch01)) +
+  geom_jitter(height = 0.05, width = 0.008, alpha = 0.15, size = 0.8) +
+  geom_point(data = oj_rates, aes(y = rate, size = n),
+             shape = 1, color = "#D55E00") +
+  facet_wrap(~ Store7, labeller = label_both) +
+  scale_y_continuous(breaks = c(0, 0.5, 1),
+                     labels = c("MM (0)", "0.5", "CH (1)")) +
+  scale_size_area(max_size = 5) +
+  labs(x = "Citrus Hill sale price ($)", y = "Purchase",
+       size = "Purchases\nat that price", title = "ISLR2::OJ")
+
+cheap_max     <- 1.70
+expensive_min <- 1.90
+
+oj_ends <- OJ |>
+  filter(SalePriceCH <= cheap_max | SalePriceCH >= expensive_min) |>
+  mutate(band = ifelse(SalePriceCH <= cheap_max, "cheap", "expensive")) |>
+  group_by(Store7, band) |>
+  summarize(n = n(), rate = mean(ch01), .groups = "drop")
+
+end_of <- function(store, band, column) {
+  oj_ends[[column]][oj_ends$Store7 == store & oj_ends$band == band]
+}
+```
+:::
+
+```{r oj-eda-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 3.4
+oj_eda_plot
+```
+
+The open circles are the observed proportion of Citrus Hill purchases at each
+distinct price, sized by how many purchases were made at that price. Citrus
+Hill takes `r sprintf("%.0f", 100 * mean(OJ$ch01[OJ$Store7 == "Yes"]))`% of
+purchases at store 7 against
+`r sprintf("%.0f", 100 * mean(OJ$ch01[OJ$Store7 == "No"]))`% elsewhere.
+
+Within each panel the proportions move with price, and they move in opposite
+directions. Comparing the two ends of the price range, at store 7 Citrus Hill's
+share falls from
+`r sprintf("%.0f", 100 * end_of("Yes", "cheap", "rate"))`% of the
+`r end_of("Yes", "cheap", "n")` purchases priced at or below
+\$`r sprintf("%.2f", cheap_max)` to
+`r sprintf("%.0f", 100 * end_of("Yes", "expensive", "rate"))`% of the
+`r end_of("Yes", "expensive", "n")` purchases at or above
+\$`r sprintf("%.2f", expensive_min)`. Elsewhere it *rises* across the same two
+bands, from `r sprintf("%.0f", 100 * end_of("No", "cheap", "rate"))`% of
+`r end_of("No", "cheap", "n")` purchases to
+`r sprintf("%.0f", 100 * end_of("No", "expensive", "rate"))`% of
+`r end_of("No", "expensive", "n")`.
+
+### Fitting both models
+
+```{r oj-fits}
+oj_additive    <- glm(Purchase ~ SalePriceCH + Store7,
+                      data = OJ, family = "binomial")
+oj_interaction <- glm(Purchase ~ SalePriceCH * Store7,
+                      data = OJ, family = "binomial")
+summary(oj_interaction)$coefficients
+```
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r oj-coef-setup}
+#| output: false
+boa <- coef(oj_additive)
+boi <- coef(oj_interaction)
+
+oj_coef_table <- tibble(
+  term        = names(boi),
+  additive    = c(boa, NA),
+  interaction = boi
+) |>
+  mutate(across(c(additive, interaction),
+                \(x) ifelse(is.na(x), "", sprintf("%.3f", x)))) |>
+  knitr::kable(col.names = c("Coefficient", "Additive fit",
+                             "Interaction fit"),
+               align = "lcc")
+```
+:::
+
+```{r oj-coef-table}
+#| echo: false
+oj_coef_table
+```
+
+The additive fit puts a single `SalePriceCH` coefficient of
+$`r sprintf("%.3f", boa[2])`$ on both stores. The interaction fit replaces it
+with $`r sprintf("%.3f", boi[2])`$ and
+$`r sprintf("%.3f", boi[2] + boi[4])`$, which have opposite signs.
+
+### Comparing the fits on the log-odds scale
+
+Plotting $\hat\eta$ against price for each store shows what those two signs
+mean for the fitted lines:
+
+::: {.callout-note collapse="true"}
+### Code for the plots below
+```{r oj-link-setup}
+#| output: false
+oj_grid <- expand_grid(
+  SalePriceCH = seq(min(OJ$SalePriceCH), max(OJ$SalePriceCH), length.out = 300),
+  Store7 = factor(c("No", "Yes"), levels = levels(OJ$Store7)))
+
+oj_link <- bind_rows(
+  oj_grid |> mutate(Model = "Additive",
+                    eta = predict(oj_additive, newdata = oj_grid)),
+  oj_grid |> mutate(Model = "Interaction",
+                    eta = predict(oj_interaction, newdata = oj_grid)))
+
+# A shared base layer, so the two tabs below differ only in which model's
+# lines are drawn on it.
+oj_link_base <- ggplot(mapping = aes(x = SalePriceCH, y = eta,
+                                     color = Store7, linetype = Store7)) +
+  geom_hline(yintercept = 0, color = "grey60", linewidth = 0.3) +
+  coord_cartesian(xlim = range(oj_grid$SalePriceCH),
+                  ylim = range(oj_link$eta)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Citrus Hill sale price ($)", y = expression(hat(eta)),
+       color = "Store 7", linetype = "Store 7", title = "ISLR2::OJ")
+
+oj_link_additive <- oj_link_base +
+  geom_line(data = filter(oj_link, Model == "Additive"), linewidth = 0.9)
+
+oj_link_interaction <- oj_link_base +
+  geom_line(data = filter(oj_link, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Additive
+```{r oj-link-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+oj_link_additive
+```
+
+#### Interaction
+```{r oj-link-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+oj_link_interaction
+```
+:::
+
+The additive tab shows the parallel lines the additive model requires, both
+sloping down at $`r sprintf("%.3f", boa[2])`$ log-odds per dollar. The
+interaction tab shows lines of opposite sign: the store 7 line falls steeply
+while the other rises, and they cross at
+\$`r sprintf("%.2f", -boi[3] / boi[4])`, inside the observed price range.
+Switching between these two tabs changes the picture substantially, which is
+what the `Default` example did not do.
+
+### Comparing the fits on the probability scale
+
+The same two model fits, now on the scale a purchase decision actually uses,
+with the observed proportions overlaid:
+
+::: {.callout-note collapse="true"}
+### Code for the plots below
+```{r oj-prob-setup}
+#| output: false
+oj_prob <- bind_rows(
+  oj_grid |> mutate(Model = "Additive",
+                    p_hat = predict(oj_additive, newdata = oj_grid,
+                                    type = "response")),
+  oj_grid |> mutate(Model = "Interaction",
+                    p_hat = predict(oj_interaction, newdata = oj_grid,
+                                    type = "response")))
+
+# The same shared-base idea, with the observed proportions as the layer every
+# tab keeps.
+oj_prob_base <- ggplot(mapping = aes(x = SalePriceCH, y = p_hat,
+                                     color = Store7, linetype = Store7)) +
+  geom_hline(yintercept = 0.5, color = "grey60", linewidth = 0.3) +
+  geom_point(data = oj_rates, aes(y = rate, size = n, shape = Store7),
+             alpha = 0.8) +
+  coord_cartesian(xlim = range(oj_grid$SalePriceCH), ylim = c(0, 1)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_size_area(max_size = 5) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Citrus Hill sale price ($)", y = "P(Purchase = CH)",
+       color = "Store 7", linetype = "Store 7", shape = "Store 7",
+       size = "Purchases\nat that price", title = "ISLR2::OJ")
+
+oj_prob_data <- oj_prob_base
+
+oj_prob_additive <- oj_prob_base +
+  geom_line(data = filter(oj_prob, Model == "Additive"), linewidth = 0.9)
+
+oj_prob_interaction <- oj_prob_base +
+  geom_line(data = filter(oj_prob, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r oj-prob-data-plot}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 3.2
+oj_prob_data
+```
+
+#### + Additive
+```{r oj-prob-additive-plot}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 3.2
+oj_prob_additive
+```
+
+#### + Interaction
+```{r oj-prob-interaction-plot}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 3.2
+oj_prob_interaction
+```
+:::
+
+The data tab shows the observed proportion of Citrus Hill purchases at each
+price, by store. The additive tab fits them with two curves of identical shape
+that never cross, both drifting down with price; the store 7 curve sits above
+the other but is forced to decline at the same log-odds rate. The interaction
+tab lets store 7's curve fall steeply while the other edges upward, and the two
+meet near the top of the observed price range.
+
+### Interpreting the two price slopes
+
+Reading the two group-specific slopes off the interaction fit, and converting
+each to an odds ratio, makes the reversal concrete:
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r oj-slope-setup}
+#| output: false
+slope_no   <- unname(boi[2])
+slope_yes  <- unname(boi[2] + boi[4])
+
+oj_slope_table <- tibble(
+  store = c("Not store 7 (reference)", "Store 7"),
+  param = c("$\\beta_1$", "$\\beta_1 + \\beta_3$"),
+  slope = c(slope_no, slope_yes),
+  or10  = exp(0.10 * c(slope_no, slope_yes))
+) |>
+  mutate(slope = sprintf("%.3f", slope),
+         or10  = sprintf("%.3f", or10)) |>
+  knitr::kable(col.names = c("Store", "Slope parameter",
+                             "Estimate (log-odds per \\$1)",
+                             "Odds ratio per \\$0.10"),
+               align = "llcc")
+
+or10_no  <- exp(0.10 * slope_no)
+or10_yes <- exp(0.10 * slope_yes)
+```
+:::
+
+```{r oj-slope-table}
+#| echo: false
+oj_slope_table
+```
+
+At store 7, each additional \$0.10 on the Citrus Hill price multiplies the
+estimated odds of a Citrus Hill purchase by
+`r sprintf("%.3f", or10_yes)` — a
+`r round(100 * (1 - or10_yes))`% drop in the odds, the direction a price
+increase is expected to push demand. Everywhere else the same \$0.10 multiplies
+the odds by `r sprintf("%.3f", or10_no)`, a
+`r round(100 * (or10_no - 1))`% *increase*.
+
+That second estimate runs backwards from what price alone would predict, and
+the observed proportions in the exploratory plot show the same thing without
+any model: outside store 7, Citrus Hill's share does not fall as its price
+rises. What these data cannot say is why — `SalePriceCH` records what was
+paid, not what else varied alongside it across stores and weeks, so the association it
+carries need not be the effect of price by itself. The honest report is the
+pattern and its limits, not a mechanism the data cannot supply.
+
+### Break-even prices
+
+The decision boundary here is the Citrus Hill price at which the model puts the
+two brands at 50/50, computed separately for each store.
+
+::: {.callout-note collapse="true"}
+### Code for the table below
+```{r oj-boundaries}
+#| output: false
+oj_boundary <- function(b, interaction = TRUE) {
+  b3 <- if (interaction) b[4] else 0
+  c(`Not store 7` = unname(-b[1] / b[2]),
+    `Store 7`     = unname(-(b[1] + b[3]) / (b[2] + b3)))
+}
+
+oj_boundaries <- bind_rows(
+  tibble(Model = "Additive",
+         Store = c("Not store 7", "Store 7"),
+         price = oj_boundary(boa, interaction = FALSE)),
+  tibble(Model = "Interaction",
+         Store = c("Not store 7", "Store 7"),
+         price = oj_boundary(boi)))
+
+oj_boundary_table <- oj_boundaries |>
+  mutate(observed = ifelse(price >= min(OJ$SalePriceCH) &
+                           price <= max(OJ$SalePriceCH), "yes", "no"),
+         price = sprintf("\\$%.2f", price)) |>
+  relocate(observed, .after = price) |>
+  knitr::kable(col.names = c("Model", "Store", "Price where $\\hat p = 0.5$",
+                             "In observed range?"),
+               align = "llcc")
+
+boundary_at <- function(m, s) {
+  oj_boundaries$price[oj_boundaries$Model == m & oj_boundaries$Store == s]
+}
+```
+:::
+
+```{r oj-boundary-table}
+#| echo: false
+oj_boundary_table
+```
+
+Under the additive model, store 7's break-even price is
+\$`r sprintf("%.2f", boundary_at("Additive", "Store 7"))`, well beyond the
+\$`r sprintf("%.2f", max(OJ$SalePriceCH))` maximum any customer in the data
+actually paid: a single shared slope can only explain store 7's high Citrus
+Hill share by pushing its break-even point outside the observed prices
+entirely. The interaction model brings it back to
+\$`r sprintf("%.2f", boundary_at("Interaction", "Store 7"))`, inside the price
+range, and moves the other stores' break-even point from
+\$`r sprintf("%.2f", boundary_at("Additive", "Not store 7"))` to
+\$`r sprintf("%.2f", boundary_at("Interaction", "Not store 7"))`. All four
+thresholds differ, and only the interaction model places both of its own
+within the prices customers actually paid.
+
+### Testing the interaction
+
+::: {.callout-note collapse="true"}
+### Code for the values quoted below
+```{r oj-inference}
+#| output: false
+ocoef <- summary(oj_interaction)$coefficients
+z_o   <- ocoef["SalePriceCH:Store7Yes", "z value"]
+p_o   <- ocoef["SalePriceCH:Store7Yes", "Pr(>|z|)"]
+ci_o  <- confint.default(oj_interaction)["SalePriceCH:Store7Yes", ]
+
+aic_o_table <- tibble(
+  Model = c("`Purchase ~ SalePriceCH + Store7`",
+            "`Purchase ~ SalePriceCH * Store7`"),
+  k     = c(length(boa), length(boi)),
+  AIC   = sprintf("%.2f", c(AIC(oj_additive), AIC(oj_interaction)))
+) |>
+  knitr::kable(col.names = c("Model", "Parameters", "AIC"), align = "lcc")
+```
+:::
+
+The interaction coefficient is $\hat\beta_3 = `r sprintf("%.3f", boi[4])`$ with
+$z = `r sprintf("%.2f", z_o)`$ and a $p$-value of $`r signif(p_o, 2)`$. The 95% confidence
+interval for $\beta_3$ runs from $`r sprintf("%.2f", ci_o[1])`$ to
+$`r sprintf("%.2f", ci_o[2])`$, entirely below $0$, so the interval for
+$e^{\beta_3}$ lies entirely below $1$: store 7's per-dollar odds ratio is
+firmly smaller than the other stores'.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The same AIC comparison used in the previous example, applied here:
+
+```{r oj-aic-table}
+#| echo: false
+aic_o_table
+```
+
+The interaction lowers AIC by
+`r sprintf("%.1f", AIC(oj_additive) - AIC(oj_interaction))`, so the extra
+parameter earns more log-likelihood than it costs — the opposite of the verdict
+in the `Default` example.
+:::
+
+**Conclusion.** The association between Citrus Hill's price and the chance a
+customer buys it differs sharply between store 7 and the rest. At store 7 the
+estimated odds fall `r round(100 * (1 - or10_yes))`% per \$0.10; elsewhere they
+do not fall at all. The $z$-test rejects $H_0: \beta_3 = 0$ decisively
+($z = `r sprintf("%.2f", z_o)`$), the two models' fitted lines diverge visibly
+on both scales, and the interaction model is the one to report — while noting
+that the non-store-7 slope points the wrong way for a price effect and that
+these data cannot say why.
+
+## Two examples, two verdicts
+
+Both examples asked the same question with the same syntax, the same estimator,
+and the same test. `Default` answered no: the fitted slopes differed by almost
+nothing, the curves were indistinguishable, and the $p$-value was
+$`r sprintf("%.3f", p_d)`$. `OJ` answered yes: the fitted slopes had opposite
+signs and the $p$-value was $`r signif(p_o, 2)`$.
+
+Nothing about either pair of features announced which answer was coming. The
+additive assumption is checkable, and checking it is the only way to find out —
+which is a reason to fit the interaction even when you expect the additive
+model to survive.
+
+## Polynomials and step functions carry over
+
+Interactions are not the only flexibility available. Everything built in the
+feature engineering and flexibility lectures for linear regression transfers to
+logistic regression without modification, because those lectures worked on the
+linear predictor and the linear predictor is unchanged here.
+
+Recall the structure. The log-odds form is
+
+$$\log\left(\frac{p(X_i)}{1 - p(X_i)}\right) = x_i\beta,$$
+
+so anything that can be a column of the model matrix $\mathbf{X}$ is available:
+a squared feature, a step-function indicator
+$C_j(X) = \mathrm{I}(c_j \le X < c_{j+1})$ built from cut points
+$c_1 < c_2 < \cdots$ exactly as in the flexibility lecture, a log-transformed
+feature, a product of two features. The logistic function wrapped around
+$x_i\beta$ never inspects what those columns contain.
+
+In R this means the same formula syntax:
+
+```{r flexible-syntax}
+#| eval: false
+glm(y ~ poly(x, 3),       data = d, family = "binomial")  # cubic in x
+glm(y ~ cut(x, breaks),   data = d, family = "binomial")  # step function in x
+glm(y ~ poly(x, 2) * sex, data = d, family = "binomial")  # separate quadratics by group
+```
+
+Three things do change, and all three are consequences of the logistic form
+rather than of the features:
+
+1. **The fitted curve is flexible on the log-odds scale**, and the logistic
+function then bends it toward $0$ and $1$. A cubic in the log-odds is not a
+cubic in $p(X)$.
+2. **Coefficients are read as changes in log-odds and odds ratios**, exactly as
+in the simple logistic regression lecture. For a step function, $\beta_j$ is
+the log-odds difference between bin $j$ and the baseline bin, so
+$e^{\beta_j}$ is the odds ratio between those two bins — where in linear
+regression $\beta_j$ was a difference between bin means.
+3. **Estimation is maximum likelihood, not least squares.** The extra columns
+add parameters to the same Bernoulli log-likelihood, which `glm()` maximizes
+numerically.
+
+The costs are also unchanged. More flexible features fit the training data
+better and estimate more parameters from the same $n$, which is the
+bias-variance tradeoff of the flexibility lecture; a high-degree polynomial
+extrapolates just as badly in the log-odds as it does in a mean response.
+
+## Conclusion
+
+An interaction lets a feature's effect on the log-odds depend on another
+feature's value. With a quantitative feature and an indicator, it gives each
+group its own log-odds slope — $\beta_1$ and $\beta_1 + \beta_3$ — and so its
+own odds ratio for that feature, with $e^{\beta_3}$ the ratio between the two.
+That is the same interaction structure used in linear regression, evaluated on
+the log-odds scale instead of the mean-response scale, and fit by the same
+maximum likelihood machinery as every other logistic regression.
+
+The diagnostic is a picture on the linear-predictor scale: parallel lines mean
+the additive model is adequate, non-parallel lines mean it is not.
+`ISLR2::Default` produced lines that were parallel to the eye and an
+interaction the $z$-test could not distinguish from zero. `ISLR2::OJ` produced
+lines with opposite slopes, an interaction
+$\hat\beta_3 = `r sprintf("%.2f", boi[4])`$ that the same test rejected
+decisively, and two stores whose break-even prices sit
+\$`r sprintf("%.2f", abs(diff(oj_boundaries$price[oj_boundaries$Model == "Interaction"])))`
+apart.
+
+Polynomials, step functions, and interactions all enter logistic regression as
+columns of the same model matrix, so the model can be made as flexible as the
+data support. Adding columns to a binary-response model can also break the
+estimation itself in a way that least squares never breaks, a failure that goes
+by the name separation.

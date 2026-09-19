@@ -168,6 +168,18 @@ Where a facet can replace the grouping entirely, prefer that. When `shape` or
 unavailable, so use a color-blind-friendly palette — Okabe-Ito or viridis —
 rather than ggplot2's default hue scale.
 
+**Pre-compute jitter as a data column, never `geom_jitter()`, when the same
+jittered points appear in more than one rendered plot** — most often a
+`.panel-tabset` build-up, where a shared base plot carrying the raw data gets
+one more layer added per tab. `geom_jitter()` redraws its random offsets every
+time a plot is rendered, and each tab is rendered in its own chunk, so the
+points would land in slightly different places from one tab to the next —
+looking, to a reader clicking between tabs, like the underlying data changed.
+Compute the jittered coordinate once (`mutate(y_jit = y + runif(n(), -h, h))`)
+and plot that column with `geom_point()` instead, so every tab shows the exact
+same points in the exact same places. A single jittered figure that never
+appears alongside a variant of itself can still use `geom_jitter()` directly.
+
 **Put extensive R code in a collapsed callout.** When a chunk carries a lot of
 setup — simulating data, fitting several models, assembling a prediction grid,
 building a table — wrap it in `::: {.callout-note collapse="true"}`, suppress

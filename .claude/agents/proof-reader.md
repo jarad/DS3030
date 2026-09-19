@@ -54,6 +54,19 @@ more nested models it estimates $\sigma^2$ from the **largest** model, so every
 F-statistic in the table uses that model's residual degrees of freedom in the
 denominator, not each intermediate model's. This is easy to get wrong.
 
+**Also actually render the file with `quarto render` at least once per pass on
+a public-notes chapter, and read the full console output, never a truncated
+tail of it.** Extracting chunks and re-running them with `Rscript` verifies
+*numbers*, but it will not surface an R warning that only appears when the
+plot is actually drawn — e.g. a `ggplot2` "Duplicated `override.aes` is
+ignored" warning from a `guides()` call. That warning is printed to the
+console during rendering and never appears in the frozen markdown or the
+built HTML, so reading those artifacts instead of rendering is not a
+substitute, and "the committed `_freeze/` already matches the source hash" is
+not a reason to skip this — the render that produced that frozen output may
+itself have had its own warnings missed the same way. Treat any R warning or
+error in the render output as a finding, not background noise.
+
 ### 2. Mathematical correctness — read the mathematics as a mathematician
 
 You are expected to be expert in the mathematics of this course: linear algebra,
