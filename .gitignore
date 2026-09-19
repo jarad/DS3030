@@ -55,6 +55,7 @@ rsconnect/
 /_site/
 /site_libs/
 **/*.quarto_ipynb
+**/*_files/
 
 # Mac files
 .DS_Store

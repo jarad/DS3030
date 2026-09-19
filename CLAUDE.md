@@ -28,25 +28,34 @@ comment, not in a commit message.
 
 ## File layout
 
-Chapters live in topic folders, named `NN-MM-slug.qmd`. `NN` is the ISLR2
-chapter number (loosely — it just matches the folder). `MM` is the order the
+Chapters live in topic folders named `NN-topicname/`, where `NN` is the ISLR2
+chapter number the folder covers — this makes folders sort in ISLR2/teaching
+order in a plain directory listing, rather than alphabetically by topic name.
+A chapter not covered this semester (7, 10, 11, 13) simply has no folder;
+gaps in the numbering are expected and fine.
+
+Files inside a chapter folder are named `MM-slug.qmd`. `MM` is the order the
 material is actually covered in class, **not** the ISLR2 section number —
 those don't map cleanly onto lecture days, since one section can span several
 class days and several sections can be covered in one. `MM` is spaced by tens
 (`10`, `20`, `30`, ...) so a lecture discovered later to belong between two
 existing ones can take an unused number (e.g. `15`) without renumbering every
 file after it — and without touching the Canvas links that point at the
-already-published ones.
+already-published ones. The chapter number is not repeated in the filename;
+the folder already carries it.
 
 ```
-regression/03-10-slr.qmd
-regression/03-20-mlr.qmd
-regression/03-30-feature-engineering.qmd
-regression/03-40-flexibility.qmd
+03-regression/10-slr.qmd
+03-regression/15-capm.qmd
+03-regression/20-mlr.qmd
+03-regression/30-feature-engineering.qmd
+03-regression/40-flexibility.qmd
 ```
 
-`learning/` still uses the old `02-1`, `02-2`, `02-3` numbering pending
-migration to this scheme — don't take it as a model for new chapters.
+Both `02-learning/` and `03-regression/` were migrated to this scheme
+2026-09-19 (from a bare `learning/`/`regression/` folder with the chapter
+number repeated in every filename); every renamed file is logged in
+`CANVAS-LINKS.md`.
 
 The actual calendar date each file was used in class is **not** encoded in the
 filename — it lives in `LECTURE-LOG.md` instead, since this book is reused

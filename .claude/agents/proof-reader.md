@@ -116,7 +116,7 @@ example computes against the chapter order in `_quarto.yml`: a chapter may
 only use techniques taught in itself or an earlier chapter, full stop.
 
 The case this section exists to catch: an example in
-`regression/03-40-flexibility.qmd` used k-fold cross-validation to compare two
+`03-regression/40-flexibility.qmd` used k-fold cross-validation to compare two
 models' RMSE, in a chapter that comes well before the course teaches
 cross-validation. The RMSE values were correct, the code executed without
 error, and nothing about it looked wrong on a normal read — a student

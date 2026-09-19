@@ -56,7 +56,7 @@ A chapter can fail in layers — note which:
   model's coefficients moving because a package changed a default.
 - **External data dependencies**: flag every chunk that reaches out to a live
   service — `quantmod::getSymbols()` (Yahoo Finance) is the known case in
-  `regression/03-15-capm.qmd`, ISLR2/Sleuth3 datasets are not, since those ship
+  `03-regression/15-capm.qmd`, ISLR2/Sleuth3 datasets are not, since those ship
   with the package. A live-data chunk can fail for reasons that have nothing to
   do with this repository (the service is down, rate-limited, or changed its
   API), so verify failures here by retrying once before reporting, and say

@@ -115,7 +115,7 @@ calibrated the same way the course's own objectives are:
 ## Course content (as of this file's generation)
 
 ### 1. Overview
-<https://jarad.github.io/DS3030/learning/02-1-overview.html>
+<https://jarad.github.io/DS3030/02-learning/10-overview.html>
 
 Data science/ETL pipelines and where statistical learning fits; the analyst
 vs. scientist vs. engineer distinction; supervised/unsupervised/semi-supervised
@@ -123,7 +123,7 @@ learning by whether the response is observed; regression vs. classification by
 response type; a first look at the bias-variance tradeoff.
 
 ### 2. Regression
-<https://jarad.github.io/DS3030/learning/02-2-regression.html>
+<https://jarad.github.io/DS3030/02-learning/20-regression.html>
 
 The model $Y_i = f(X_i) + \epsilon_i$; prediction vs. understanding as goals;
 training MSE vs. test MSE and why training MSE is the wrong thing to minimize;
@@ -131,7 +131,7 @@ the U-shaped flexibility/test-MSE curve; the bias-variance decomposition of
 expected test MSE and its three terms.
 
 ### 3. Classification
-<https://jarad.github.io/DS3030/learning/02-3-classification.html>
+<https://jarad.github.io/DS3030/02-learning/30-classification.html>
 
 Qualitative responses and class probabilities $p_{ic} = P(Y_i = c \mid X_i)$;
 prediction vs. understanding for classifiers; training/test error rate;
@@ -140,7 +140,7 @@ log loss from predicted probabilities; the bias-variance tradeoff restated for
 classification.
 
 ### 4. Simple Linear Regression
-<https://jarad.github.io/DS3030/regression/03-10-slr.html>
+<https://jarad.github.io/DS3030/03-regression/10-slr.html>
 
 The SLR model and coefficient interpretation, including after log
 transformations; least-squares derivation and why $\hat\sigma^2 = RSS/(n-2)$;
@@ -149,7 +149,7 @@ intervals for coefficients; confidence interval for the mean response at
 $x_0$ vs. prediction interval for a new observation; $R^2$.
 
 ### 5. Capital Asset Pricing Model
-<https://jarad.github.io/DS3030/regression/03-15-capm.html>
+<https://jarad.github.io/DS3030/03-regression/15-capm.html>
 
 CAPM as a worked SLR example: deriving the regression form from the CAPM
 formula (and why it implies $\beta_0 = 0$), fitting it in R to real stock data
@@ -157,7 +157,7 @@ downloaded from Yahoo Finance, and interpreting $\beta_0$ (alpha) and
 $\beta_1$ (beta) financially.
 
 ### 6. Multiple (Linear) Regression
-<https://jarad.github.io/DS3030/regression/03-20-mlr.html>
+<https://jarad.github.io/DS3030/03-regression/20-mlr.html>
 
 The MLR model in matrix form, $\hat\beta = (X^\top X)^{-1}X^\top y$;
 categorical features via dummy variables and the baseline level; coefficient
@@ -167,7 +167,7 @@ vs. PI for a new observation; F-tests comparing nested models via reduced vs.
 full residual sums of squares.
 
 ### 7. Feature Engineering
-<https://jarad.github.io/DS3030/regression/03-30-feature-engineering.html>
+<https://jarad.github.io/DS3030/03-regression/30-feature-engineering.html>
 
 Polynomials and interactions as still-linear models; why a single coefficient
 stops summarizing "the effect of $X$" once curvature or interactions are
@@ -177,7 +177,7 @@ the data actually support. Worked examples: Galileo's falling-body data
 not needed), and alcohol-metabolism data (interaction needed).
 
 ### 8. Flexibility and Its Costs
-<https://jarad.github.io/DS3030/regression/03-40-flexibility.html>
+<https://jarad.github.io/DS3030/03-regression/40-flexibility.html>
 
 Step functions as dummy-variable machinery applied to a quantitative feature;
 K-nearest neighbors regression, with $K$ (or $1/K$) as its flexibility dial,

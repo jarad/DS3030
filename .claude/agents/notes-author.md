@@ -46,21 +46,25 @@ deciding what a chapter should contain and how much ground it covers.
 
 ## File and project conventions
 
-Chapters live in topic folders named for the subject area, with files named
-`NN-MM-slug.qmd`. `NN` is the ISLR2 chapter number (matches the folder). `MM`
-is the order the material is covered in class — not the ISLR2 section number,
+Chapters live in folders named `NN-topicname/`, where `NN` is the ISLR2
+chapter number the folder covers — this makes folders sort in ISLR2/teaching
+order in a plain directory listing. A chapter not covered this semester
+simply has no folder; gaps in the numbering are fine.
+
+Files inside a chapter folder are named `MM-slug.qmd` — the chapter number is
+not repeated in the filename, since the folder already carries it. `MM` is
+the order the material is covered in class — not the ISLR2 section number,
 since sections don't map cleanly onto lecture days — spaced by tens (`10`,
 `20`, `30`, ...) so a lecture inserted later doesn't force renumbering (and
 Canvas relinking) of every file after it:
 
 ```
-regression/03-10-slr.qmd
-regression/03-20-mlr.qmd
+03-regression/10-slr.qmd
+03-regression/20-mlr.qmd
 ```
 
-(`learning/` still uses the old `02-1`, `02-2` numbering pending migration —
-don't model new chapters on it.) The calendar date each file was used in class
-goes in `LECTURE-LOG.md`, not the filename.
+The calendar date each file was used in class goes in `LECTURE-LOG.md`, not
+the filename.
 
 When you add a chapter, add it to the `chapters:` list in `_quarto.yml` under
 the appropriate `part:`, in the correct order. A chapter that is not

@@ -45,14 +45,16 @@ between Dimension Reduction and Exam 2; this revision removes both and goes
 straight from Dimension Reduction (week 10) to Exam 2 (week 11). Treat Ch 7
 as dropped from the course unless told otherwise.
 
-**`hw04`'s actual content does not match this table's week-5 topic.** The
-table schedules "Logistic Regression, Ch 4.1-4.3" for week 5, but
-`LECTURE-LOG.md` shows the class is still on multiple-regression extensions
-(feature engineering, flexibility/KNN) as of week 4, and the already-written
-`hw04` covers exactly that — polynomials, interactions, diagnostics, and KNN —
-not logistic regression. The syllabus's topic column has not caught up to the
-actual pace. This needs to be resolved before scheduling week 5 onward with
-any confidence; see Open questions.
+**Week 5's topic and the actual pace now line up.** `LECTURE-LOG.md`'s planned
+section has the class finishing multiple-regression extensions (feature
+engineering, flexibility/KNN) by Sep 18, then starting logistic regression on
+Sep 21 — exactly matching this table's week-5 "Logistic Regression, Ch
+4.1-4.3." The earlier note here worried that `hw04` (which covers
+polynomials, interactions, diagnostics, and KNN, not logistic regression)
+contradicted the week-5 topic; it does not, once homework is understood to
+test the *previous* week's material rather than the current week's — `hw04`,
+due during week 5, correctly tests what was taught by the end of week 4. See
+`LECTURE-LOG.md` for the day-by-day plan through Exam 1.
 
 ## Chapters not covered
 
@@ -79,13 +81,7 @@ Grade thresholds: 93 A, 90 A-, 87 B+, 83 B, 80 B-, 77 C+, 73 C, 70 C-, 60 D,
 
 ## Open questions to resolve
 
-1. **Week 5 topic vs. actual pace (new, unresolved).** The table schedules
-   "Logistic Regression, Ch 4.1-4.3" for week 5, but the class is still on
-   multiple-regression extensions as of week 4 (see the note under the weekly
-   schedule above). Resolve this before treating week 5 onward as settled —
-   either the topic column needs updating to reflect the real pace, or a plan
-   is needed for catching up.
-2. **Homework numbering (mostly resolved, one residual mismatch).** The
+1. **Homework numbering (mostly resolved, one residual mismatch).** The
    syllabus now runs HW01-HW12, matching the repository's `hw01`-onward
    numbering with no offset — this was previously HW00-HW13 against `hw01`,
    an offset of one, now fixed. One mismatch remains: `hw01`'s actual content

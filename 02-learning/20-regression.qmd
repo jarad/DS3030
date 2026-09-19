@@ -90,12 +90,12 @@ and we refer to this simply as the *test MSE*.
 
 ## Bias-variance Tradeoff
 
-Using this [Regression script](02-2-regression.R),
+Using this [Regression script](20-regression.R),
 we create this plot that has the model flexibility on the x-axis and the test
 MSE on the y-axis.
 
 
-![](02-2-regression-bias-variance-tradeoff.jpg)
+![](20-regression-bias-variance-tradeoff.jpg)
 
 
 ## Bias-variance Tradeoff (Mathematically)

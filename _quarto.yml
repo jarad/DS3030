@@ -10,16 +10,16 @@ book:
     - index.qmd
     - part: "Statistical Learning"
       chapters:
-      - learning/02-1-overview.qmd
-      - learning/02-2-regression.qmd
-      - learning/02-3-classification.qmd
+      - 02-learning/10-overview.qmd
+      - 02-learning/20-regression.qmd
+      - 02-learning/30-classification.qmd
     - part: "Regression"
       chapters:
-      - regression/03-10-slr.qmd
-      - regression/03-15-capm.qmd
-      - regression/03-20-mlr.qmd
-      - regression/03-30-feature-engineering.qmd
-      - regression/03-40-flexibility.qmd
+      - 03-regression/10-slr.qmd
+      - 03-regression/15-capm.qmd
+      - 03-regression/20-mlr.qmd
+      - 03-regression/30-feature-engineering.qmd
+      - 03-regression/40-flexibility.qmd
 
 format:
   html:

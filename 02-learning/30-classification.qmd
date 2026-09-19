@@ -152,9 +152,9 @@ For $C$ classes, the confusion matrix is a $C \times C$ table:
 
 ## Bias-variance Tradeoff
 
-Using this [classification script](02-3-classification.R),
+Using this [classification script](30-classification.R),
 we create this plot that has the model flexibility on the x-axis and the test 
 error rate on the y-axis.
 
-![](02-3-classification-bias-variance-tradeoff.jpg)
+![](30-classification-bias-variance-tradeoff.jpg)
 
