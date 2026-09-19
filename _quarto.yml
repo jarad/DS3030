@@ -20,6 +20,9 @@ book:
       - 03-regression/20-mlr.qmd
       - 03-regression/30-feature-engineering.qmd
       - 03-regression/40-flexibility.qmd
+    - part: "Classification"
+      chapters:
+      - 04-classification/10-logistic-regression.qmd
 
 format:
   html:

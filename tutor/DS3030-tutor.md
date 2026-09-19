@@ -189,6 +189,26 @@ outliers, high-leverage points, collinearity), including leverage vs. Cook's
 distance and the variance inflation factor; the bias-variance tradeoff as the
 throughline for all of the above.
 
+### 9. Simple Logistic Regression
+<https://jarad.github.io/DS3030/04-classification/10-logistic-regression.html>
+
+Why least squares is a poor model for a binary response (fitted probabilities
+outside $[0,1]$, a constant additive effect that a bounded probability cannot
+absorb, non-constant Bernoulli variance); the logistic model
+$p(X) = e^{\beta_0+\beta_1X}/(1+e^{\beta_0+\beta_1X})$, the odds
+$p/(1-p)$, and the logit (log-odds) form that is linear in $X$; the Bernoulli
+likelihood and log-likelihood, the score equations, and why there is no
+closed-form MLE, so `glm(..., family = "binomial")` solves it numerically;
+interpreting $\beta_1$ as an additive change in log-odds and $e^{\beta_1}$ as
+an odds ratio, contrasted with the additive mean-response interpretation of
+the SLR slope, together with
+$d\,p(x)/dx = \beta_1 p(x)[1-p(x)]$; testing $H_0: \beta_1 = 0$ with a
+$z$-statistic and confidence intervals for $\beta_1$ and for
+$e^{\beta_1}$; predicting
+$\hat p(x)$. Worked example: `ISLR2::Default`, predicting default from credit
+card balance. Only *one* feature is covered here — multiple logistic
+regression, interactions, and separation come in later chapters.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can
