@@ -168,6 +168,38 @@ This means local rendering is part of the normal workflow. After changing a
 chapter's R code, re-render and commit the updated `_freeze/` content, or the
 published site will show stale results.
 
+## Course tutor
+
+`tutor/DS3030-tutor.md` is a system-prompt file students upload to an AI
+chatbot of their choice to get a tutor for this course. It is built entirely
+from public content — chapter titles, URLs, and learning objectives from this
+repository, plus topic-only tags (no question text, no answers) for what has
+already been assessed in `../DS3030Private/`. It must never contain homework,
+quiz, or exam question text or solutions, only thematic tags of what a past
+item covered.
+
+**This file goes stale and must be kept in sync**, on both sides:
+
+- Whenever a chapter's learning objectives change, or a new chapter is added
+  or removed, update `tutor/DS3030-tutor.md`'s "Course content" section to
+  match (title, URL, and a short digest of what the chapter now covers).
+  `notes-author` does this as part of writing or revising a chapter, not as a
+  separate afterthought.
+- Whenever homework or a quiz is added or substantively changed in
+  `../DS3030Private/`, update this file's "What has already been assessed"
+  section with new or revised topic tags — thematic only, never the question
+  text or the answer key. `homework-author` does this for homework, as part of
+  writing or revising an assignment. Quizzes are authored by the teaching
+  assistant rather than an agent, so `quiz-reviewer` instead flags a missing or
+  stale tag as a finding in its report — its own instructions cover the exact
+  check. `../DS3030Private/AGENTS.md`'s "Keeping the course tutor file in
+  sync" section has the full rule, including which agents hold edit access to
+  this one file from that repository.
+
+If you are proofreading or otherwise reviewing this repository after either
+kind of change and notice the tutor file was not updated, treat that as a
+convention violation worth reporting.
+
 ## Agents
 
 Project agents for this repository live in `.claude/agents/`: `notes-author`,

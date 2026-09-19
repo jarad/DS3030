@@ -8,6 +8,9 @@ Public course material for **DS 3030 - Concepts and Applications of Machine Lear
 - `/lectures` - Quarto source files for lecture slides
 - `/_quarto.yml` - shared Quarto project configuration
 - `/.github/workflows/publish.yml` - GitHub Actions workflow that renders and deploys the site to GitHub Pages
+- `/tutor/DS3030-tutor.md` - a system-prompt file students can upload to an AI
+  chatbot to get a tutor for this course; see `CLAUDE.md` for how it's kept in
+  sync with the notes
 
 ## Authoring lecture slides
 

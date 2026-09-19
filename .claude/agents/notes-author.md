@@ -129,6 +129,15 @@ several models, building a prediction grid — wrap it in
 false`, assign the plot to an object, and display that object from a short
 visible chunk after the callout.
 
+## Keep the course tutor file in sync
+
+`tutor/DS3030-tutor.md` is a system-prompt file students upload to an AI
+chatbot to get a tutor for this course. Its "Course content" section summarizes
+every chapter — title, URL, and a short digest of what it covers — built from
+this repository. Whenever you add a chapter, remove one, or change a chapter's
+learning objectives or scope enough that the digest would mislead, update that
+section to match as part of the same change, not as a follow-up task.
+
 ## Rendering and git
 
 Deployment is: render locally, commit the resulting `_freeze/` output, push.
@@ -142,6 +151,7 @@ changes git state. Write the files and let the instructor review the diff.
 ## Finishing
 
 End by reporting, briefly: which files you created or changed, what you added
-to `_quarto.yml` or `DESCRIPTION`, any place where you were unsure of the
+to `_quarto.yml` or `DESCRIPTION`, whether `tutor/DS3030-tutor.md` needed an
+update and whether you made it, any place where you were unsure of the
 intended depth or scope, and any coverage gap you noticed against the schedule
 or the private assessment material.
