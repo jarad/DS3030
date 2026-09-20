@@ -54,18 +54,29 @@ more nested models it estimates $\sigma^2$ from the **largest** model, so every
 F-statistic in the table uses that model's residual degrees of freedom in the
 denominator, not each intermediate model's. This is easy to get wrong.
 
-**Also actually render the file with `quarto render` at least once per pass on
-a public-notes chapter, and read the full console output, never a truncated
-tail of it.** Extracting chunks and re-running them with `Rscript` verifies
-*numbers*, but it will not surface an R warning that only appears when the
-plot is actually drawn — e.g. a `ggplot2` "Duplicated `override.aes` is
-ignored" warning from a `guides()` call. That warning is printed to the
-console during rendering and never appears in the frozen markdown or the
-built HTML, so reading those artifacts instead of rendering is not a
-substitute, and "the committed `_freeze/` already matches the source hash" is
-not a reason to skip this — the render that produced that frozen output may
-itself have had its own warnings missed the same way. Treat any R warning or
-error in the render output as a finding, not background noise.
+**Also actually search for R warnings, not just verify numbers.** Extracting
+chunks and re-running them with `Rscript` verifies numbers, but a warning
+that only fires when a chunk is knit — e.g. a `ggplot2` "Duplicated
+`override.aes` is ignored" warning from a `guides()` call — will not appear
+in a standalone `Rscript` re-run of the extracted code the same way it does
+inside a real knit. Knitr normally captures a warning raised during a
+chunk's evaluation and renders it as visible "Warning:" text inside that
+chunk's output, so **it does end up in the built HTML and the frozen
+markdown** — but only if you actually look for it there: grep the whole
+rendered page for `Warning`, don't just eyeball the specific figures, tables,
+or numbers you already expect to check. A pass that reads the built HTML but
+only inspects the things it was asked about can walk right past a warning
+sitting in plain text elsewhere on the same page. Rendering the file fresh
+(`quarto render`) rather than trusting a possibly-stale `_freeze/` is still
+good practice — a stale frozen output can predate a fix — but the habit that
+actually catches this class of bug is searching for `Warning` in whatever
+output you end up reading, live console or already-built page, every pass.
+Treat any unexpected R warning or error you find as a finding, not
+background noise — except where a chapter's own prose says a specific
+warning is intentional pedagogical content (e.g. a chapter demonstrating
+`glm.fit: fitted probabilities numerically 0 or 1 occurred` for separation);
+in that case, verify the warning is the correct expected one in the correct
+chunk and still visible, rather than flagging it.
 
 ### 2. Mathematical correctness — read the mathematics as a mathematician
 

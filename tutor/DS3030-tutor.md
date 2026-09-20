@@ -262,6 +262,63 @@ carry over to logistic regression unchanged, since they are just columns of the
 model matrix $\mathbf{X}$. Multinomial (multi-class) logistic regression and
 separation are *not* covered here.
 
+### 12. Problems in Logistic Regression
+<https://jarad.github.io/DS3030/04-classification/40-problems-in-logistic-regression.html>
+
+Separation, the one way maximum likelihood for logistic regression fails that
+has no least-squares counterpart. **Complete (perfect) separation** is defined
+as the existence of a coefficient vector $b$ with $x_i b > 0$ for every
+$y_i = 1$ and $x_i b < 0$ for every $y_i = 0$; **quasi-complete separation**
+weakens those to $\ge$ and $\le$ with equality for at least one observation.
+Derivation of why it breaks estimation: restricting the Bernoulli
+log-likelihood to a one-parameter family whose boundary is fixed gives
+$d\ell/d\beta_1 = \sum_i (x_i - c)(y_i - p_i) > 0$ for every finite $\beta_1$,
+so $\ell$ has a supremum of $0$ that it attains only in the limit and no finite
+maximizer exists. What `glm()` prints in that case is an arbitrary point along
+a divergent path, with standard errors from a curvature that is flattening to
+zero.
+
+Diagnostics demonstrated: the warnings `glm.fit: algorithm did not converge`
+and `glm.fit: fitted probabilities numerically 0 or 1 occurred`; a coefficient
+absurd on its feature's scale; a standard error far larger than the coefficient
+itself, so a perfectly predictive feature returns $z \approx 0$ and a $p$-value
+near $1$; a near-zero residual deviance; fitted probabilities numerically
+indistinguishable from $0$ or $1$ (never *exactly* $0$ or $1$ — `glm()` clamps
+them into $[\varepsilon, 1-\varepsilon]$ for
+$\varepsilon =$ `.Machine$double.eps` $\approx 2.2\times10^{-16}$);
+`fit$converged`. Responses within this course: collect more data, simplify the
+model (drop or merge the offending feature or level), or use the fit only for
+what it still supports — the decision boundary may be fine even when the
+coefficient is meaningless. Penalized estimation (Firth, ridge/lasso, Bayesian
+priors) appears only inside a "Beyond this course" callout.
+
+Worked examples: (1) a constructed $n = 10$ dataset, `x <- 1:10` and
+`y <- as.numeric(x > 5)`, which fails to converge and returns
+$\hat\beta_1 \approx 44.7$ with a standard error of about $61{,}000$; a
+collapsed callout adds a tied-observation dataset showing quasi-complete
+separation that *does* report convergence while still being unusable. (2)
+`Sleuth3::ex2012`, 120 women screened for Duchenne muscular dystrophy carrier
+status from serum creatine kinase (`CK`) — a real example that raises the
+`fitted probabilities` warning but is **not** separated: the groups overlap
+heavily, the fit converges, and $\hat\beta_1 \approx 0.051$ (SE $\approx
+0.011$) is entirely usable; the warning comes from one woman with `CK` = 925
+whose fitted probability is clamped to $1-\varepsilon$. The lesson is that
+the warning starts an investigation rather than settling one.
+
+Closes with a short comparison against the six potential problems of the
+flexibility chapter: correlated errors transfer unchanged; non-constant
+variance is *not* a separate assumption to check, since
+$Var[Y_i|X_i] = p(X_i)[1-p(X_i)]$ follows from the Bernoulli model;
+non-linearity of the log-odds is what the flexible logistic regression chapter
+already addressed; collinearity, leverage, and outliers carry over in substance
+but their GLM-specific diagnostics are flagged "Beyond this course." That
+callout works one instructive case: the `CK` = 925 woman has the *largest*
+leverage under the least squares hat matrix but the *smallest* leverage and
+Cook's distance in the logistic fit, because GLM leverage is weighted by
+$\hat p_i(1-\hat p_i)$, which is about $2\times10^{-19}$ where the curve has
+saturated — a saturated observation cannot pull the fit. Multinomial
+(multi-class) logistic regression is still not covered.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can
@@ -304,6 +361,23 @@ illustrating the curse of dimensionality; a true/false conceptual review
 touching nested-model RSS, interaction degrees of freedom, leverage vs.
 influence, KNN vs. step-function flexibility, VIF vs. relevance to the
 response, and the hierarchy principle.
+
+**Homework 5** (logistic regression): fitting a least squares line to a binary
+response and diagnosing the fitted values it produces, against a logistic fit
+of the same data; reading a coefficient as a log-odds change and an odds ratio
+over a chosen unit, with a confidence interval, and why equal feature steps
+move the probability unequally; decision boundaries where $\hat p = 0.5$;
+confounding between a quantitative feature and a categorical one, including a
+coefficient that reverses sign, and critiquing an odds-versus-probability
+misstatement; comparing an additive against an interaction fit on the
+linear-predictor and probability scales, with group-specific slopes, and
+checking a fit against binned observed proportions; deriving the Bernoulli
+score equations, solving them in closed form for a single-indicator model, and
+hand-maximizing the log-likelihood with `optim()`; a true/false conceptual
+review touching the scale on which logistic coefficients live, what an
+interaction coefficient does and does not measure, a property of the fitted
+probabilities implied by the score equations, and the consequence of swapping
+which class is the event.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable
