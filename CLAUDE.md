@@ -95,13 +95,47 @@ introduces a new package should add it to `Imports:`.
   out of scope for assessment, not its length or polish.
 - Short paragraphs, frequent `##` headings. These pages are read on the web and
   used live in class.
+- **Section and subsection titles are short noun phrases**: no questions
+  ("Why not linear regression?" → "Linear regression fails"), no prepositions
+  ("Estimation by maximum likelihood" → "Maximum likelihood estimation";
+  "Fitting a logistic regression in R" → "Fitting"), and no articles
+  ("The logistic model" → "Logistic model", "A binary response" → "Binary
+  response"). A title that can't shed a preposition without becoming unnatural
+  can usually shed the words around it instead — lean on the parent heading
+  and the surrounding code to carry context a shorter child title doesn't need
+  to repeat.
+- **Prefer nesting to a flat run of sections.** A chapter with many `##`
+  sections that each hold zero or one `###` is a sign the sections should be
+  subsections of a smaller number of parents instead — group by what a reader
+  is doing (motivating, defining the model, fitting it, interpreting it) and
+  let each of those become one `##` with several `###` children, rather than
+  giving each small step its own top-level section.
 - Worked examples follow **motivation → exploratory data analysis → model →
   inference → conclusion**, strictly in that order on the page. State the
   question and the data before showing any plot, show the plot before
   interpreting it, and show a model's output before discussing what it means —
   never mix interpretation into the sentence that introduces a figure or a
   fit. A plot of the raw data comes before any model, so students see what a
-  method is responding to rather than taking the fit on faith.
+  method is responding to rather than taking the fit on faith. A single
+  running example does not need a heading everywhere it is touched — give a
+  section or subsection its own heading only where the example is the whole
+  point of it; a passing illustration inside a theory subsection can stay
+  unheaded prose. When a section or subsection is a worked example, name the
+  heading after what the example actually is (`## Credit card default
+  probability`, `### Student status and default`), never with an `Example:`
+  prefix — the content of the heading is what marks it as an example, the
+  same way every other heading in the book is named for its content rather
+  than its function. (This does not apply to the `### For example,` callout
+  heading below, a different, fixed idiom for a short illustrative aside
+  inside a collapsed note.) When a chapter's example is substantial, give it
+  one standalone worked-example section late in the chapter (after the theory
+  subsections, before the conclusion) that walks the whole analysis start to
+  finish, rather than scattering every numeric result across the theory
+  subsections that introduce each piece of the method.
+- **Interpret $\beta_0$ before any other coefficient**, every time a fitted
+  model's coefficients are read off in order — the intercept sets the
+  baseline the other coefficients are differences or ratios from, so reading
+  it first gives the reader something to compare against.
 - **Never cite ISLR2 as the evidence for a claim** — e.g. "ISLR2 shows KNN
   losing to linear regression at $p=20$." These notes must be self-contained:
   if a point needs evidence, generate it here (a derivation, a simulation, a

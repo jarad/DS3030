@@ -30,7 +30,14 @@ turns out not to be, and
 regression to logistic regression unchanged.
 :::
 
-## What the additive model assumes
+## Interaction model
+
+An interaction lets one feature's effect on the log-odds depend on the value of
+another feature. Adding one turns the additive structure of the previous
+lecture — the structure that let a single odds ratio describe each feature —
+into a claim the data can be asked about.
+
+### Additive assumption
 
 The previous lecture's model was **additive**: each feature contributed its own
 term $\beta_j X_{ij}$ to the linear predictor, and no term involved two
@@ -47,7 +54,7 @@ There is no reason a real process has to work that way. Whether it does is a
 question about the data, and it can be asked and answered with a model that
 does not impose it.
 
-## The interaction model
+### Model form
 
 The fix is the one from the feature engineering lecture, applied to the linear
 predictor instead of to the mean response. With a quantitative feature $X$ and
@@ -86,11 +93,16 @@ maximizer and is still found numerically by `glm()`.
 Hierarchy applies here as it did in linear regression: keep $X$ and $D$ in the
 model whenever $XD$ is present.
 
-## Interpreting the coefficients
+### Interpreting coefficients
 
 Collect the terms involving $X$:
 
 $$\log\left(\frac{p(X,D)}{1 - p(X,D)}\right) = \underbrace{(\beta_0 + \beta_2 D)}_{\text{log-odds intercept}} + \underbrace{(\beta_1 + \beta_3 D)}_{\text{log-odds slope on } X} X.$$
+
+Setting $X = 0$ and $D = 0$ leaves $\beta_0$, the log-odds of the event in the
+reference group at $X = 0$, so $e^{\beta_0}$ are the odds and
+$\text{logistic}(\beta_0)$ the probability there. Adding $\beta_2$ shifts that
+baseline to the indicated group, still at $X = 0$.
 
 The slope on $X$ is a function of $D$, which is the whole point of the
 interaction. Writing out the two levels:
@@ -112,12 +124,32 @@ $e^{\beta_3}$ is a ratio of odds ratios: the factor by which one group's
 per-unit odds ratio for $X$ differs from the other's. $\beta_3 = 0$ makes that
 factor $1$ and returns the additive model.
 
-One caution carries over from the feature engineering lecture, and has a
-partner here: $\beta_1$ is the log-odds slope **when $D = 0$**, not an average
-across groups, and $\beta_2$ is the difference in log-odds between the groups
-**at $X = 0$**, which may be a value $X$ never takes.
+One caution carries over from the feature engineering lecture: $\beta_1$ is the
+log-odds slope **when $D = 0$**, not an average across the two groups. A second
+is that the $X = 0$ at which $\beta_0$ and $\beta_2$ are defined may be a value
+$X$ never takes.
 
-## Two scales, two pictures
+### Fitting
+
+```{r interaction-syntax}
+#| eval: false
+glm(default ~ balance * student, data = Default, family = "binomial")
+```
+
+The `*` expands to `balance + student + balance:student`, so the fitted model
+contains both main effects and the product, satisfying hierarchy
+automatically. Writing `balance:student` alone would drop the main effects,
+violating hierarchy: R responds by giving each group its own balance slope
+while forcing both to share a single intercept.
+
+## Fitted model geometry
+
+A fitted interaction differs from a fitted additive model in two visible ways:
+the shape of the two groups' fitted curves, and the feature value at which each
+group's predicted class flips. Both are read off the linear predictor, where
+each group's fit is a straight line.
+
+### Two scales, two pictures
 
 The two models are easiest to tell apart on the scale where both are linear.
 Written as functions of $X$, the fitted log-odds are two straight lines:
@@ -150,7 +182,7 @@ The examples below plot both for each model: the linear predictor first, to
 diagnose whether the fitted slopes differ, and the probability scale after, to
 see what that difference is worth.
 
-## Decision boundaries
+### Decision boundaries
 
 A fitted probability is often turned into a predicted class by comparing it to
 a threshold, most commonly $0.5$. The **decision boundary** is the set of
@@ -184,20 +216,7 @@ The additive model still gives the two groups different thresholds; what it
 cannot give them is different *steepness*, since both groups cross the boundary
 at the common rate $\hat\beta_1$ per unit of $X$.
 
-## Fitting an interaction model in R
-
-```{r interaction-syntax}
-#| eval: false
-glm(default ~ balance * student, data = Default, family = "binomial")
-```
-
-The `*` expands to `balance + student + balance:student`, so the fitted model
-contains both main effects and the product, satisfying hierarchy
-automatically. Writing `balance:student` alone would drop the main effects,
-violating hierarchy: R responds by giving each group its own balance slope
-while forcing both to share a single intercept.
-
-## Example: does balance's effect on default depend on student status?
+## Student-specific balance effects
 
 **Question.** The previous lecture fit `default ~ balance + student`
 additively, which forces the student-versus-non-student odds ratio to be
@@ -254,7 +273,7 @@ estimated interaction is $\hat\beta_3 = `r signif(bdi[4], 3)`$ —
 `r sprintf("%.0f", abs(bdi[2] / bdi[4]))` times smaller than the `balance`
 main effect it modifies.
 
-### Comparing the fits on the log-odds scale
+### Fitted log-odds
 
 Plotting $\hat\eta$ against balance for each model shows the two straight lines
 each one produces.
@@ -317,7 +336,7 @@ tab's two lines have slopes $`r signif(bdi[2], 4)`$ and
 $`r signif(bdi[2] + bdi[4], 4)`$, a difference too small to see: switching
 between the tabs barely moves the picture.
 
-### Comparing the fits on the probability scale
+### Fitted probabilities
 
 Building the same comparison up from the raw data puts both fitted models on
 the scale a lending decision would use.
@@ -406,7 +425,7 @@ two model tabs are nearly the same picture: two S-curves of all but identical
 shape, the student curve shifted right, whether or not
 the interaction is in the model.
 
-### Testing the interaction
+### Interaction test
 
 ::: {.callout-note collapse="true"}
 ### Code for the values quoted below
@@ -484,7 +503,7 @@ students.
 Not every plausible interaction is a real one. Fitting it was still the right
 move: the additive assumption was checked rather than assumed.
 
-## Example: does a store's price effect depend on the store?
+## Store-specific price effects
 
 **Question.** Citrus Hill and Minute Maid are competing orange juice brands. If
 a store raises the price of Citrus Hill, fewer customers should buy it — but
@@ -520,7 +539,7 @@ levels(OJ$Purchase)
 With `MM` as the reference level, every model below estimates
 $P(\texttt{Purchase} = \texttt{CH})$.
 
-### Exploring the data
+### Exploratory analysis
 
 Before fitting anything, plot each purchase against the price paid for
 Citrus Hill, split by whether the store was store 7:
@@ -623,12 +642,18 @@ oj_coef_table <- tibble(
 oj_coef_table
 ```
 
+The intercept is the log-odds of a Citrus Hill purchase outside store 7 at a
+Citrus Hill price of \$0, an extrapolation well below the
+\$`r sprintf("%.2f", min(OJ$SalePriceCH))` minimum in the data:
+$`r sprintf("%.3f", boa[1])`$ in the additive fit and
+$`r sprintf("%.3f", boi[1])`$ in the interaction fit, since each fit carries
+its own reference-group slope back to \$0 and those slopes have opposite signs.
 The additive fit puts a single `SalePriceCH` coefficient of
 $`r sprintf("%.3f", boa[2])`$ on both stores. The interaction fit replaces it
 with $`r sprintf("%.3f", boi[2])`$ and
 $`r sprintf("%.3f", boi[2] + boi[4])`$, which have opposite signs.
 
-### Comparing the fits on the log-odds scale
+### Fitted log-odds
 
 Plotting $\hat\eta$ against price for each store shows what those two signs
 mean for the fitted lines:
@@ -692,7 +717,7 @@ while the other rises, and they cross at
 Switching between these two tabs changes the picture substantially, which is
 what the `Default` example did not do.
 
-### Comparing the fits on the probability scale
+### Fitted probabilities
 
 The same two model fits, now on the scale a purchase decision actually uses,
 with the observed proportions overlaid:
@@ -767,7 +792,7 @@ the other but is forced to decline at the same log-odds rate. The interaction
 tab lets store 7's curve fall steeply while the other edges upward, and the two
 meet near the top of the observed price range.
 
-### Interpreting the two price slopes
+### Interpreting price slopes
 
 Reading the two group-specific slopes off the interaction fit, and converting
 each to an odds ratio, makes the reversal concrete:
@@ -874,7 +899,7 @@ range, and moves the other stores' break-even point from
 thresholds differ, and only the interaction model places both of its own
 within the prices customers actually paid.
 
-### Testing the interaction
+### Interaction test
 
 ::: {.callout-note collapse="true"}
 ### Code for the values quoted below
@@ -939,7 +964,7 @@ additive assumption is checkable, and checking it is the only way to find out �
 which is a reason to fit the interaction even when you expect the additive
 model to survive.
 
-## Polynomials and step functions carry over
+## Polynomials and step functions
 
 Interactions are not the only flexibility available. Everything built in the
 feature engineering and flexibility lectures for linear regression transfers to

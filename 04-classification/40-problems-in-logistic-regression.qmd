@@ -34,7 +34,7 @@ extreme observation caused, and
 logistic regression counterparts and **identify** which do not transfer.
 :::
 
-## A fit that should not work
+## Separation
 
 Every logistic regression in the previous three lectures converged, returned
 standard errors of a believable size, and produced $z$-statistics that could be
@@ -49,7 +49,7 @@ the maximizer of $\ell(\beta)$, and a function need not have one.
 So ask what happens at the opposite extreme from a useless feature: one that
 predicts the response perfectly.
 
-### Example: fitting a feature that predicts the outcome perfectly
+### Perfectly predictive feature
 
 **Question.** Suppose a single feature sorts the two classes without a single
 mistake. What does `glm()` estimate?
@@ -148,13 +148,12 @@ at the reported estimates is zero to within rounding, meaning the model
 reproduces all `r nrow(toy)` observed responses exactly.
 
 A model that fits the training data perfectly and reports no significant
-coefficient is not a contradiction. It is the signature of the problem this
-lecture is about.
+coefficient is not a contradiction. It is the signature of separation.
 
-## Separation
+### Complete and quasi-complete separation
 
-The arrangement in that example has a name, and a definition in terms of the
-linear predictor rather than in terms of a picture.
+Separation is defined through the linear predictor rather than through a
+picture.
 
 Write $x_i$ for the $i$th row of the model matrix and $b$ for a candidate
 coefficient vector, so $x_i b$ is the linear predictor that $b$ assigns to
@@ -233,7 +232,7 @@ $-2 \times 2 \log(0.5) = `r sprintf("%.2f", -4 * log(0.5))`$ no matter how large
 $\beta_1$ grows.
 :::
 
-## Why maximum likelihood fails
+### Maximum likelihood failure
 
 The simple logistic regression lecture derived the Bernoulli log-likelihood
 
@@ -408,14 +407,12 @@ room, which is also the mechanism behind the `fitted probabilities numerically
 both.
 :::
 
-## Separation in real data
+## Muscular dystrophy carrier screening
 
 Constructed data makes the mechanism visible, and it also makes separation look
 unmistakable. It is not always. Real data can trigger the same warning without
 being separated at all, and telling the two cases apart takes one more step
 after the warning appears.
-
-### Example: screening for muscular dystrophy carriers
 
 **Question.** Duchenne muscular dystrophy is inherited through female
 carriers, who show no symptoms themselves. Can a blood test identify likely
@@ -587,7 +584,7 @@ iteration converged, so the warning here is a report about one extreme
 observation rather than about the estimator. The same warning in the toy
 example meant the estimate did not exist.
 
-## Recognizing and responding to separation
+## Separation diagnosis and response
 
 The two examples give the same warning for different reasons, so the warning is
 where an investigation starts rather than where it ends. What settles the
@@ -621,7 +618,7 @@ what a separated observation returns.
 Checking `fit$converged` and comparing each $|\hat\beta_j|$ against its
 standard error takes one line and distinguishes the two situations.
 
-### Responding to separation
+### Available responses
 
 Within the methods this course has covered, there are three responses.
 
@@ -669,7 +666,7 @@ Name the fix if you meet separation before then; do not try to implement it
 from this callout.
 :::
 
-## Problems carried over from linear regression
+## Linear regression problems revisited
 
 The flexibility lecture listed six potential problems for a linear regression:
 non-linearity, correlated errors, non-constant variance, outliers,
@@ -689,7 +686,7 @@ same reason and in the same direction as in linear regression: positively
 correlated observations carry less information than their count suggests, and
 the reported standard errors come out too small.
 
-### Non-constant variance is not a separate assumption
+### Non-constant variance requires no assumption
 
 Linear regression assumes $Var[\epsilon_i] = \sigma^2$ and needs that
 assumption checked, usually by looking for a fan shape in a plot of residuals
@@ -706,7 +703,7 @@ determined once $p(X_i)$ is, which is also why the model has no $\sigma^2$
 parameter. A residual plot that fanned out would not be evidence against this
 model.
 
-### Non-linearity of the log-odds
+### Log-odds non-linearity
 
 What logistic regression does assume is that the *log-odds* are linear in the
 features,

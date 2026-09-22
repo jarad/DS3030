@@ -199,9 +199,8 @@ $p(X) = e^{\beta_0+\beta_1X}/(1+e^{\beta_0+\beta_1X})$, the odds
 $p/(1-p)$, and the logit (log-odds) form that is linear in $X$; the Bernoulli
 likelihood and log-likelihood, the score equations, and why there is no
 closed-form MLE, so `glm(..., family = "binomial")` solves it numerically;
-interpreting $\beta_1$ as an additive change in log-odds and $e^{\beta_1}$ as
-an odds ratio, contrasted with the additive mean-response interpretation of
-the SLR slope, together with
+interpreting $\beta_0$ as the log-odds of the event at $X = 0$ and $\beta_1$ as
+an additive change in log-odds, with $e^{\beta_1}$ an odds ratio, together with
 $d\,p(x)/dx = \beta_1 p(x)[1-p(x)]$; testing $H_0: \beta_1 = 0$ with a
 $z$-statistic and confidence intervals for $\beta_1$ and for
 $e^{\beta_1}$; predicting
@@ -221,6 +220,11 @@ $\beta_0,\ldots,\beta_p$, still with no closed-form maximizer, fit by
 log-odds and $e^{\beta_j}$ as an odds ratio *holding every other feature
 fixed*, and why that differs from the same feature's coefficient fit alone;
 $z$-tests and confidence intervals for each coefficient and its odds ratio;
+the drop-in-deviance (likelihood-ratio) test comparing two nested logistic
+regression models, with residual deviance (for a binary response)
+$D = -2\ell(\hat\beta)$,
+$G^2 = D_r - D_f$ approximately $\chi^2_k$, `anova(reduced, full, test =
+"Chisq")`, and its parallel with the F-test for nested linear models;
 predicting $\hat p(x)$ at a stated combination of feature values.
 Worked example: `ISLR2::Default`, where the `student` coefficient is positive
 on its own but negative once `balance` is held fixed — a confounding reversal

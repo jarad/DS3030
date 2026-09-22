@@ -19,14 +19,13 @@ log-odds forms, and **define** the odds of an event,
 **explain** why, unlike least squares, it has no closed-form maximizer,
 - **fit** a simple logistic regression with `glm()` and **predict** the
 probability of the event at a given feature value,
-- **interpret** $\hat\beta_1$ as a change in log-odds and $e^{\hat\beta_1}$ as
-an odds ratio, and **contrast** both with the additive interpretation of the
-simple linear regression slope, and
+- **interpret** $\hat\beta_0$ as a log-odds and $\hat\beta_1$ as a change in
+log-odds, with $e^{\hat\beta_1}$ an odds ratio, and
 - **test** $H_0: \beta_1 = 0$ with a $z$-statistic and **construct** a
 confidence interval for $\beta_1$ and for the odds ratio $e^{\beta_1}$.
 :::
 
-## A binary response
+## Binary response
 
 Every model we have *fit* so far has had a quantitative response. Now take the
 classification setup from the classification lecture, with $C = 2$ classes, and
@@ -57,7 +56,7 @@ occurs.
 So modeling the mean of a binary response *is* modeling a probability, and any
 model for $p(X)$ has to respect $0 \le p(X) \le 1$ for every $X$.
 
-## Example: credit card default
+### Credit card default
 
 **Question.** Does a customer's credit card balance tell us whether that
 customer will default?
@@ -110,22 +109,21 @@ proportions cannot be read off jittered points, but the shape can: whatever
 curve describes $p(\text{balance})$ sits near $0$ on the left, rises through
 the middle, and has to stay below $1$ on the right.
 
-## Why not linear regression?
-
-The obvious thing to try is the model we already have,
-
-$$Y_i = \beta_0 + \beta_1 X_i + \epsilon_i,$$
-
-fit by least squares to the $0/1$ response. Since $E[Y_i|X_i] = p(X_i)$, this
-model says the probability of default is a straight line in balance.
-
-### Example: fitting a line to default
-
-Least squares will happily fit that line to the default data, so the fastest
-way to see what goes wrong is to draw it:
+The obvious next step is to fit the model we already have, by least squares,
+to this $0/1$ response — expand the note below to see why that does not work.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Linear regression fails
+
+Applying the linear regression model of the earlier lectures to this $0/1$
+response gives
+
+$$Y_i = \beta_0 + \beta_1 X_i + \epsilon_i.$$
+
+Since $E[Y_i|X_i] = p(X_i)$, this model says the probability of default is a
+straight line in balance. Least squares will happily fit that line to the
+default data, so the fastest way to see what goes wrong is to draw it:
+
 ```{r default-lm}
 #| output: false
 default_lm <- lm(default01 ~ balance, data = Default)
@@ -144,7 +142,6 @@ lm_plot <- ggplot(Default, aes(x = balance, y = default01)) +
 zero_crossing <- -coef(default_lm)[1] / coef(default_lm)[2]
 percent_negative <- 100 * mean(fitted(default_lm) < 0)
 ```
-:::
 
 ```{r default-lm-figure}
 #| echo: false
@@ -159,7 +156,7 @@ than that — `r round(percent_negative)`% of the sample — is assigned a
 *negative* estimated probability of default. A negative probability is not a
 poor estimate; it is not a probability.
 
-### Three objections
+Three objections:
 
 1. **Fitted values leave $[0,1]$.** A line is unbounded, and $p(X)$ is not.
 Truncating at $0$ and $1$ after the fact fixes the printed number without
@@ -181,10 +178,11 @@ depends on $X_i$ through $p(X_i)$. Constant variance is impossible unless
 $p(X)$ is constant. Every standard error, t-test, and interval from `lm()`
 rests on assumptions the response itself contradicts.
 
-What we need is a model that is flexible in the middle and bends toward $0$ and
-$1$ at the ends — the shape the data already showed us.
+What we need is a model that is flexible in the middle and bends toward $0$
+and $1$ at the ends — the shape the data already showed us.
+:::
 
-## The logistic model
+## Logistic regression model
 
 The **simple logistic regression** model is
 
@@ -204,8 +202,19 @@ is the **logistic function**, available in R as `plogis()`. It maps the whole
 real line into $(0,1)$: $e^{\eta} > 0$ makes $\text{logistic}(\eta) > 0$, and
 $e^\eta < 1 + e^\eta$ makes $\text{logistic}(\eta) < 1$. As
 $\eta \to -\infty$, $\text{logistic}(\eta) \to 0$; as $\eta \to \infty$,
-$\text{logistic}(\eta) \to 1$. Objection 1 is gone no matter what values
-$\beta_0$, $\beta_1$, and $X$ take.
+$\text{logistic}(\eta) \to 1$. The boundary problem raised above is gone no
+matter what values $\beta_0$, $\beta_1$, and $X$ take.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The logistic function is not the only function that maps the real line onto
+$(0,1)$. Replacing it with the standard normal CDF gives **probit
+regression**, and the whole family — logistic, probit, Poisson regression, and
+others — travels under the name **generalized linear models**; the inverse
+map, which takes a probability back to the linear predictor, is called the
+*link function*. `glm()` is named for the family, not for logistic regression
+specifically.
+:::
 
 Plotting the curve at a few parameter values shows what $\beta_0$ and $\beta_1$
 each control:
@@ -248,7 +257,7 @@ horizontally without changing its shape. $\beta_1 = 0$ would give a horizontal
 line at $\text{logistic}(\beta_0)$: no relationship between $X$ and the
 probability.
 
-### Odds and the logit
+### Odds and logit
 
 The **odds** of an event with probability $p$ are
 
@@ -278,7 +287,38 @@ parameters and in the feature — once the response is expressed on the log-odds
 scale, so the entire linear-model vocabulary transfers over. Only the scale on
 which linearity holds has changed.
 
-## Estimation by maximum likelihood
+### Interpreting coefficients
+
+Setting $X = 0$ in the log-odds form gives $\beta_0$ as the log-odds of the
+event when $X = 0$, so $e^{\beta_0}$ is the odds and
+$\text{logistic}(\beta_0) = e^{\beta_0}/(1 + e^{\beta_0})$ the probability, at
+$X = 0$.
+
+Now increase the feature by one unit from an arbitrary $x$:
+
+$$\log\left(\frac{p(x+1)}{1-p(x+1)}\right) - \log\left(\frac{p(x)}{1-p(x)}\right) = \left[\beta_0 + \beta_1 (x+1)\right] - \left[\beta_0 + \beta_1 x\right] = \beta_1.$$
+
+So $\beta_1$ is the change in the log-odds of the event per one-unit increase
+in $X$. Exponentiating turns the difference into a ratio,
+
+$$\frac{p(x+1)/[1-p(x+1)]}{p(x)/[1-p(x)]} = e^{\beta_1},$$
+
+so $e^{\beta_1}$ is the **odds ratio**: the multiplicative factor by which the
+odds of the event change per one-unit increase in $X$. An odds ratio of $1$
+($\beta_1 = 0$) means the odds do not change.
+
+What no coefficient reports is a constant change in the probability, because
+there isn't one. Differentiating $p(x) = \text{logistic}(\beta_0 + \beta_1 x)$,
+
+$$\frac{d\, p(x)}{dx} = \beta_1\, p(x)\left[1 - p(x)\right],$$
+
+which depends on $x$ through $p(x)$. It is largest in magnitude,
+$|\beta_1|/4$, where $p(x) = 0.5$, and it vanishes as $p(x)$ approaches $0$ or
+$1$ — the flattening a bounded probability needs and a line could never
+provide. A single number is no more "the effect of $X$ on $p$" here than a
+single coefficient was the effect of $X$ in a polynomial regression.
+
+### Maximum likelihood estimation
 
 Under the model, the observations are independent Bernoulli trials whose
 success probability depends on the feature,
@@ -301,8 +341,8 @@ There is no $\sigma^2$ anywhere: once $p(x_i)$ is specified, the variance
 $p(x_i)[1-p(x_i)]$ is determined, so the model has exactly two unknown
 parameters.
 
-Take logarithms, and use the odds identity from the previous section to
-simplify:
+Take logarithms, and use the odds identity
+$p(x_i)/[1 - p(x_i)] = e^{\beta_0 + \beta_1 x_i}$ to simplify:
 
 $$\begin{array}{rl}
 \ell(\beta_0, \beta_1) &= \displaystyle\sum_{i=1}^n \left\{ y_i \log p(x_i) + (1 - y_i)\log\left[1 - p(x_i)\right] \right\} \\[2mm]
@@ -340,17 +380,10 @@ least squares problem whose weights $p(x_i)[1 - p(x_i)]$ are recomputed from
 the current estimate. Convergence usually takes a handful of iterations, which
 is why `glm()` returns nearly as fast as `lm()` despite having no formula to
 evaluate.
-
-The logit is also not the only function that maps $(0,1)$ onto the real line.
-Replacing it with the standard normal quantile function gives **probit
-regression**, and the whole family — logistic, probit, Poisson regression, and
-others — travels under the name **generalized linear models**, with the
-transformation called the *link function*. `glm()` is named for the family, not
-for logistic regression specifically.
 :::
 
 ::: {.callout-note collapse="true"}
-### The log-likelihood is the log loss
+### Log-likelihood and log loss
 Divide the negative log-likelihood by $n$:
 
 $$-\frac{1}{n}\ell(\beta_0,\beta_1) = -\frac{1}{n}\sum_{i=1}^n \left\{ y_i \log p(x_i) + (1 - y_i)\log\left[1 - p(x_i)\right]\right\}.$$
@@ -361,7 +394,7 @@ the likelihood and minimizing training log loss are the same optimization
 problem.
 :::
 
-## Fitting a logistic regression in R
+### Fitting
 
 ```{r glm-syntax}
 #| eval: false
@@ -458,26 +491,12 @@ or logical column first.
 :::
 :::
 
-### Example: fitting the logistic model
+Fitting it to the credit card data,
 
 ```{r default-glm}
 default_glm <- glm(default ~ balance, data = Default, family = "binomial")
-summary(default_glm)
+coef(default_glm)
 ```
-
-The coefficient table has the same layout as `lm()`'s, with one visible change:
-`z value` and `Pr(>|z|)` in place of `t value` and `Pr(>|t|)`, for the reason
-given in the inference section below.
-
-::: {.callout-note collapse="true"}
-### Beyond this course
-The two deviance lines are the likelihood's answer to RSS and TSS. For a
-binary response, the **residual deviance** is $-2\ell$ evaluated at
-$\hat\beta_0, \hat\beta_1$, and the **null deviance** is $-2\ell$ for the
-intercept-only model. Differences between deviances of nested models play the
-role that differences in RSS play for an F-test, and `AIC` penalizes the
-residual deviance by twice the number of estimated parameters.
-:::
 
 Putting the fitted curve back on the data checks the shape against what the
 plot suggested. Alongside it, the observed proportion defaulting within
@@ -520,153 +539,82 @@ The fitted curve stays inside $[0,1]$ over the full range of balances, sits
 near zero out to roughly \$1,000, and passes through the binned proportions
 where those bins contain enough customers to be worth reading.
 
-## Interpreting the coefficients
-
-Start from the log-odds form and increase the feature by one unit:
-
-$$\log\left(\frac{p(x+1)}{1-p(x+1)}\right) - \log\left(\frac{p(x)}{1-p(x)}\right) = \left[\beta_0 + \beta_1 (x+1)\right] - \left[\beta_0 + \beta_1 x\right] = \beta_1.$$
-
-So $\beta_1$ is the change in the log-odds of the event per one-unit increase
-in $X$. Exponentiating turns the difference into a ratio,
-
-$$\frac{p(x+1)/[1-p(x+1)]}{p(x)/[1-p(x)]} = e^{\beta_1},$$
-
-so $e^{\beta_1}$ is the **odds ratio**: the multiplicative factor by which the
-odds of the event change per one-unit increase in $X$. An odds ratio of $1$
-($\beta_1 = 0$) means the odds do not change.
-
-Setting $X = 0$ in the log-odds form gives $\beta_0$ as the log-odds of the
-event when $X = 0$, so $e^{\beta_0}$ is the odds and
-$\text{logistic}(\beta_0) = e^{\beta_0}/(1 + e^{\beta_0})$ the probability, at $X = 0$.
-
-### Contrast with simple linear regression
-
-In simple linear regression, $\beta_1 = E[Y|X = x+1] - E[Y|X = x]$: a one-unit
-increase in $X$ *adds* $\beta_1$ to the mean response, the same amount at every
-$x$. That is the interpretation from the simple linear regression lecture, and
-it does not survive here.
-
-| Quantity | Simple linear regression | Simple logistic regression |
-| -------- | ------------------------ | -------------------------- |
-| $\beta_0$ | mean response at $X = 0$ | log-odds of the event at $X = 0$ |
-| $\beta_1$ | additive change in the mean response per unit of $X$ | additive change in the **log-odds** per unit of $X$ |
-| $e^{\beta_1}$ | — | multiplicative change in the **odds** per unit of $X$ |
-
-The pattern — additive on one scale, multiplicative on another — is the same
-one that appeared when the *response* was logged in the simple linear
-regression lecture, where $e^{\beta_1}$ became a multiplicative change in the
-median response. The
-difference is that here the transformation is not something we chose to apply
-to the data; it is built into the model.
-
-What no coefficient reports is a constant change in the probability, because
-there isn't one. Differentiating $p(x) = \text{logistic}(\beta_0 + \beta_1 x)$,
-
-$$\frac{d\, p(x)}{dx} = \beta_1\, p(x)\left[1 - p(x)\right],$$
-
-which depends on $x$ through $p(x)$. It is largest in magnitude,
-$|\beta_1|/4$, where $p(x) = 0.5$, and it vanishes as $p(x)$ approaches $0$ or
-$1$ — the flattening
-that objection 2 demanded. A single number is no more "the effect of $X$ on
-$p$" here than a single coefficient was the effect of $X$ in a polynomial
-regression.
-
-### Example: interpreting the default coefficients
-
-```{r default-coefficients}
-b         <- coef(default_glm)
-or_dollar <- unname(exp(b["balance"]))
-or_100    <- unname(exp(100 * b["balance"]))
-
-round(c("odds ratio per $1" = or_dollar, "odds ratio per $100" = or_100), 4)
-```
-
-The estimated log-odds of default are
-
-$$\log\left(\frac{\hat p(X)}{1 - \hat p(X)}\right) = `r round(b[1], 2)` + `r signif(b[2], 4)` \times \texttt{balance}.$$
-
-The slope $\hat\beta_1 = `r signif(b[2], 4)`$ is positive, so every additional
-dollar of balance raises the log-odds of default by
-$`r signif(b[2], 4)`$ — equivalently, multiplies the odds of default by
-$e^{\hat\beta_1} = `r round(or_dollar, 5)`$.
-
-A dollar is too small a unit to read comfortably, and nothing forces us to use
-it. Scaling up by $100$, an additional \$100 of balance multiplies the odds of
-default by
-
-$$e^{100\hat\beta_1} = `r round(or_100, 2)`,$$
-
-a `r round(100 * (or_100 - 1))`% increase in the **odds** of default per \$100.
-It is not a `r round(100 * (or_100 - 1))`% increase in the probability of
-default; the change in probability depends on the balance you started from.
-
-The intercept $\hat\beta_0 = `r round(b[1], 2)`$ is the estimated log-odds of
-default for a customer carrying no balance, which corresponds to estimated odds
-of $e^{`r round(b[1], 2)`} = `r format(exp(b[1]), digits = 3, scientific = FALSE)`$
-and an estimated probability of
-$`r format(plogis(b[1]), digits = 3, scientific = FALSE)`$ — odds and
-probability agree to three significant digits here because $p/(1-p) \approx p$ whenever $p$ is
-small. Unlike many intercepts, this one describes customers who actually exist:
-`r sum(Default$balance == 0)` customers in this sample carry a zero balance,
-and `r sum(Default$balance == 0 & Default$default == "Yes")` of them defaulted.
-
-## Inference for $\beta_1$
+### Coefficient inference
 
 The maximum likelihood estimators are approximately normal in large samples,
 which gives the test statistic
 
-$$z = \frac{\hat\beta_1 - \beta_1^0}{\text{SE}(\hat\beta_1)},$$
+$$z = \frac{\hat\beta_j - \beta_j^0}{\text{SE}(\hat\beta_j)},$$
 
 where
 
-- $\beta_1^0$ is the value of $\beta_1$ under the null hypothesis, almost
+- $\beta_j^0$ is the value of $\beta_j$ under the null hypothesis, almost
 always $0$, and
-- $\text{SE}(\hat\beta_1)$ is the standard error of $\hat\beta_1$, computed by
+- $\text{SE}(\hat\beta_j)$ is the standard error of $\hat\beta_j$, computed by
 `glm()` from the curvature of the log-likelihood at its maximum.
 
-Under $H_0: \beta_1 = \beta_1^0$, $z$ is approximately standard normal. The
+Under $H_0: \beta_j = \beta_j^0$, $z$ is approximately standard normal. The
 statistic is the same ratio as the t-statistic of the linear regression
 lectures; the reference distribution is normal rather than $t$ because no
 separate error variance is estimated and because the normality is asymptotic
-rather than exact. This is
-why the `summary()` output above says `z value` and `Pr(>|z|)`.
+rather than exact.
 
-An approximate $(1-\alpha)100\%$ confidence interval for $\beta_1$ follows:
+`glm()` reports this test for every coefficient at once:
 
-$$\hat\beta_1 \pm z_{1-\alpha/2}\,\text{SE}(\hat\beta_1),$$
+```{r default-summary}
+summary(default_glm)
+```
+
+The coefficient table has the same layout as `lm()`'s, with one visible
+change: `z value` and `Pr(>|z|)` in place of `t value` and `Pr(>|t|)`, for the
+reason just given.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The two deviance lines are the likelihood's answer to RSS and TSS. For a
+binary response, the **residual deviance** is $-2\ell$ evaluated at
+$\hat\beta_0, \hat\beta_1$, and the **null deviance** is $-2\ell$ for the
+intercept-only model. Differences between deviances of nested models play the
+role that differences in RSS play for an F-test, and `AIC` penalizes the
+residual deviance by twice the number of estimated parameters.
+:::
+
+An approximate $(1-\alpha)100\%$ confidence interval for $\beta_j$ follows:
+
+$$\hat\beta_j \pm z_{1-\alpha/2}\,\text{SE}(\hat\beta_j),$$
 
 with $z_{1-\alpha/2}$ the $(1-\alpha/2)$ quantile of the standard normal
-distribution. Exponentiating both endpoints gives an interval for the odds
-ratio $e^{\beta_1}$, because $e^x$ is increasing and therefore preserves the
-order of the endpoints.
+distribution. In R, `confint.default()` on a fitted `glm` returns exactly this
+interval for $\beta_j$. Exponentiating both endpoints gives an interval for
+the odds ratio $e^{\beta_j}$, because $e^x$ is increasing and therefore
+preserves the order of the endpoints.
 
-### Example: testing and estimating the default slope
+::: {.callout-note collapse="true"}
+### Beyond this course
+Plain `confint()` on a `glm` object returns a different, *profile likelihood*
+interval instead, built from the log-likelihood directly rather than from
+$\hat\beta_j \pm z_{1-\alpha/2}\text{SE}(\hat\beta_j)$, so it will not match
+`confint.default()`'s numbers.
+:::
+
+For `balance`,
 
 ```{r default-inference}
 z_balance <- summary(default_glm)$coefficients["balance", "z value"]
 ci_beta1  <- confint.default(default_glm)["balance", ]
-ci_or_100 <- exp(100 * ci_beta1)
 
-round(ci_beta1,  5)   # 95% CI for beta_1, per dollar
-round(ci_or_100, 2)   # 95% CI for the odds ratio, per $100
+round(z_balance, 2)  # z-statistic for beta_1
+round(ci_beta1,  5)  # 95% CI for beta_1, per dollar
 ```
 
-`confint.default()` is the interval derived above,
-$\hat\beta_1 \pm z_{1-\alpha/2}\text{SE}(\hat\beta_1)$. Plain `confint()`
-on a `glm` object returns a *profile likelihood* interval instead, which is
-built from the log-likelihood directly and will not match this formula.
+$z = `r round(z_balance, 2)`$ is far beyond any conventional critical value,
+so the data are overwhelmingly inconsistent with $\beta_1 = 0$. The confidence
+interval for $\beta_1$ runs from $`r signif(ci_beta1[1], 4)`$ to
+$`r signif(ci_beta1[2], 4)`$ log-odds per dollar, and exponentiating both
+endpoints gives an interval for the odds ratio per dollar, entirely above $1$,
+the odds ratio corresponding to no association.
 
-The `summary()` output above reports $z = `r round(z_balance, 2)`$ for
-`balance`, far beyond any conventional critical value, so the data are
-overwhelmingly inconsistent with $\beta_1 = 0$.
-
-The confidence interval for $\beta_1$ runs from $`r signif(ci_beta1[1], 4)`$ to
-$`r signif(ci_beta1[2], 4)`$ log-odds per dollar. Multiplying both endpoints by
-$100$ and exponentiating puts it on the odds-ratio scale per \$100:
-$(`r round(ci_or_100[1], 2)`, `r round(ci_or_100[2], 2)`)$. Every value in that
-interval is well above $1$, the odds ratio corresponding to no association.
-
-## Prediction
+### Prediction
 
 The fitted model returns a probability at any feature value,
 
@@ -675,8 +623,6 @@ $$\hat p(x) = \frac{e^{\hat\beta_0 + \hat\beta_1 x}}{1 + e^{\hat\beta_0 + \hat\b
 In R, `predict()` on a `glm` object returns the linear predictor
 $\hat\beta_0 + \hat\beta_1 x$ by default; `type = "response"` applies
 $\text{logistic}(\cdot)$ and returns $\hat p(x)$.
-
-### Example: predicting default probabilities
 
 Evaluating $\hat p(x)$ at a few balances spread across the range of the data
 shows how the three scales — log-odds, odds, and probability — move against
@@ -718,6 +664,59 @@ estimated probability by `r round(p_at(2000) - p_at(1500), 3)`, while the
 identical \$500 step from \$500 to \$1,000 raises it by only
 `r round(p_at(1000) - p_at(500), 3)`, because down there the curve is still
 pressed against $0$.
+
+## Credit card default probability
+
+Putting the pieces together for `balance` and `default`:
+
+```{r default-coefficients}
+b         <- coef(default_glm)
+or_dollar <- unname(exp(b["balance"]))
+or_100    <- unname(exp(100 * b["balance"]))
+ci_or_100 <- exp(100 * ci_beta1)
+
+round(c("odds ratio per $1" = or_dollar, "odds ratio per $100" = or_100), 4)
+```
+
+The estimated log-odds of default are
+
+$$\log\left(\frac{\hat p(X)}{1 - \hat p(X)}\right) = `r round(b[1], 2)` + `r signif(b[2], 4)` \times \texttt{balance}.$$
+
+The intercept $\hat\beta_0 = `r round(b[1], 2)`$ is the estimated log-odds of
+default for a customer carrying no balance, which corresponds to estimated odds
+of $e^{`r round(b[1], 2)`} = `r format(exp(b[1]), digits = 3, scientific = FALSE)`$
+and an estimated probability of
+$`r format(plogis(b[1]), digits = 3, scientific = FALSE)`$ — odds and
+probability agree to three significant digits here because $p/(1-p) \approx p$ whenever $p$ is
+small. Unlike many intercepts, this one describes customers who actually exist:
+`r sum(Default$balance == 0)` customers in this sample carry a zero balance,
+and `r sum(Default$balance == 0 & Default$default == "Yes")` of them defaulted.
+
+The slope $\hat\beta_1 = `r signif(b[2], 4)`$ is positive, so every additional
+dollar of balance raises the log-odds of default by
+$`r signif(b[2], 4)`$ — equivalently, multiplies the odds of default by
+$e^{\hat\beta_1} = `r round(or_dollar, 5)`$.
+
+A dollar is too small a unit to read comfortably, and nothing forces us to use
+it: `balance` can be rescaled by any positive constant without changing the
+model, since $\beta_1 X = (100\beta_1)(X/100)$ — measuring balance in hundreds
+of dollars instead of dollars multiplies the slope by $100$ and leaves the
+fitted probabilities untouched. Scaling up this way, an additional \$100 of
+balance multiplies the odds of default by
+
+$$e^{100\hat\beta_1} = `r round(or_100, 2)`,$$
+
+a `r round(100 * (or_100 - 1))`% increase in the **odds** of default per \$100.
+It is not a `r round(100 * (or_100 - 1))`% increase in the probability of
+default; the change in probability depends on the balance you started from.
+\$100 is simply the increment a person managing a credit line can picture
+without doing arithmetic first.
+
+The same rescaling applies to the confidence interval: from the coefficient
+inference above, multiplying the endpoints of the interval for $\beta_1$ by
+$100$ and exponentiating gives $(`r round(ci_or_100[1], 2)`,
+`r round(ci_or_100[2], 2)`)$ on the per-\$100 odds-ratio scale, every value of
+it well above $1$.
 
 ## Conclusion
 
