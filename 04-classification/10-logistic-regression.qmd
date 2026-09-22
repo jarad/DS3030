@@ -17,8 +17,10 @@ response,
 log-odds forms, and **define** the odds of an event,
 - **derive** the Bernoulli log-likelihood for $\beta_0$ and $\beta_1$ and
 **explain** why, unlike least squares, it has no closed-form maximizer,
-- **fit** a simple logistic regression with `glm()` and **predict** the
-probability of the event at a given feature value,
+- **fit** a simple logistic regression with `glm()`, **predict** the
+probability of the event at a given feature value, and **construct** a
+confidence interval for that probability by transforming a log-odds interval
+through the logistic function,
 - **interpret** $\hat\beta_0$ as a log-odds and $\hat\beta_1$ as a change in
 log-odds, with $e^{\hat\beta_1}$ an odds ratio, and
 - **test** $H_0: \beta_1 = 0$ with a $z$-statistic and **construct** a
@@ -664,6 +666,63 @@ estimated probability by `r round(p_at(2000) - p_at(1500), 3)`, while the
 identical \$500 step from \$500 to \$1,000 raises it by only
 `r round(p_at(1000) - p_at(500), 3)`, because down there the curve is still
 pressed against $0$.
+
+$\hat p(x)$ is itself an estimate, with uncertainty inherited from
+$\hat\beta_0$ and $\hat\beta_1$. A confidence interval for $\eta(x)$ on the
+log-odds scale, built the same way as the interval for $\beta_1$ above,
+becomes a confidence interval for the mean $p(x)$ once both endpoints pass
+through $\text{logistic}(\cdot)$ — a valid move because the logistic function
+is increasing and so preserves the order of the endpoints, exactly as
+exponentiating did for the odds-ratio interval. This is a *pointwise*
+interval: each vertical slice is a separate 95% interval for $p(x)$ at that
+one balance, not a region covering the whole curve at once.
+
+::: {.callout-note collapse="true"}
+### Code for the figure below
+```{r default-confidence-band}
+#| output: false
+band_grid <- tibble(balance = seq(0, max(Default$balance), length.out = 400))
+
+band_link <- predict(default_glm, newdata = band_grid,
+                     type = "link", se.fit = TRUE)
+
+band_grid <- band_grid |>
+  mutate(eta   = band_link$fit,
+         se    = band_link$se.fit,
+         p_hat = plogis(eta),
+         lower = plogis(eta - qnorm(0.975) * se),
+         upper = plogis(eta + qnorm(0.975) * se))
+
+confidence_band_plot <- ggplot(band_grid, aes(x = balance, y = p_hat)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "grey70", alpha = 0.6) +
+  geom_line(color = "#0072B2", linewidth = 1) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       title = "ISLR2::Default")
+
+peak_balance <- band_grid$balance[which.max(band_grid$upper - band_grid$lower)]
+```
+:::
+
+```{r default-confidence-band-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+confidence_band_plot
+```
+
+The gray band is squeezed to a hairline at both ends, where the curve is
+pinned near $0$ or near $1$ regardless of the exact coefficients, and is
+widest through the steep middle, peaking near a balance of
+\$`r format(round(peak_balance), big.mark = ",")`. This is not because the
+coefficients are estimated less precisely there — the standard error of
+$\hat\eta(x)$ is actually
+*smallest* near the middle of the balance range and largest at the two ends —
+but because a fixed-width interval on the log-odds scale converts to a wider
+probability-scale interval exactly where the logistic curve is steepest, and
+to a narrower one where it is nearly flat against $0$ or $1$. This is also
+why the band is not symmetric around the curve the way a linear regression's
+confidence interval for the mean response would be.
 
 ## Credit card default probability
 

@@ -204,7 +204,9 @@ an additive change in log-odds, with $e^{\beta_1}$ an odds ratio, together with
 $d\,p(x)/dx = \beta_1 p(x)[1-p(x)]$; testing $H_0: \beta_1 = 0$ with a
 $z$-statistic and confidence intervals for $\beta_1$ and for
 $e^{\beta_1}$; predicting
-$\hat p(x)$. Worked example: `ISLR2::Default`, predicting default from credit
+$\hat p(x)$, with a confidence interval for it obtained by transforming a
+log-odds confidence interval through the logistic function (pointwise, not
+simultaneous). Worked example: `ISLR2::Default`, predicting default from credit
 card balance. Only *one* feature is covered here — multiple logistic
 regression, interactions, and separation come in later chapters.
 
