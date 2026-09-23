@@ -255,6 +255,24 @@ This means local rendering is part of the normal workflow. After changing a
 chapter's R code, re-render and commit the updated `_freeze/` content, or the
 published site will show stale results.
 
+**Renaming or moving a `.qmd` file needs a real re-render, not just `git mv`.**
+A chunk's frozen output (`_freeze/<path>/execute-results/html.json`) embeds
+generated figure paths like `![](<basename>_files/figure-html/plot-1.png)`
+directly in its cached `markdown` field, derived from the file's basename at
+the time it was rendered. `freeze: auto` only re-executes a chunk when its
+*source code* changes — a rename never touches chunk source, so `git mv`-ing
+a chapter (and its `_freeze/` directory alongside it) faithfully relocates the
+cache but leaves those embedded path strings pointing at the *old* basename,
+even though the real PNGs land under a path built from the *new* one. Quarto
+and pandoc never validate that an image `src` resolves to a real file, so a
+render with this mismatch completes with no error or warning — the only
+symptom is a broken image on the published page, easy to miss until a reader
+happens to notice. After any `.qmd` rename or move, delete that file's
+`_freeze/<path>/` directory before rendering (rather than hand-editing the
+cached paths, which leaves the `hash` field stale) so Quarto is forced to
+regenerate the cache with correct paths, and then actually view the rendered
+page to confirm figures display before committing.
+
 ## Course tutor
 
 `tutor/DS3030-tutor.md` is a system-prompt file students upload to an AI
