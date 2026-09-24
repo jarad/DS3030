@@ -18,6 +18,8 @@ takes more or fewer days than planned.
 | 2026-09-14 | Mon | 03-regression/20-mlr.qmd | All content except F-tests |
 | 2026-09-16 | Wed | 03-regression/20-mlr.qmd, 03-regression/30-feature-engineering.qmd | First ~10 min on agentic AI course setup; then F-tests (20-mlr.qmd, held over from Monday), then Polynomials and Interactions (30-feature-engineering.qmd) |
 | 2026-09-18 | Fri | 03-regression/40-flexibility.qmd | Step functions and K-nearest neighbors. Potential problems (non-linearity, correlated errors, non-constant variance, outliers, leverage, collinearity) only briefly covered, ~5 minutes, due to time spent on step-function coefficient interpretation — students could state the mechanics but struggled to interpret the fitted $\beta_j$, which traced back to not understanding how the indicator functions work, specifically that the bin $X < c_1$ has no indicator/coefficient of its own. Prompted adding a worked coefficient-interpretation example to 40-flexibility.qmd. |
+| 2026-09-21 | Mon | 04-classification/10-logistic-regression.qmd | All content up through Coefficient inference (9.2.5); Prediction (9.2.6) held over to Wednesday. Paced deliberately slower than SLR/MLR, as planned. |
+| 2026-09-23 | Wed | 04-classification/10-logistic-regression.qmd, 04-classification/20-multiple-logistic-regression.qmd | Finished Prediction (9.2.6, held over from Monday), then covered all of Multiple Logistic Regression — ahead of the planned pace, which had budgeted the whole day for the multiple logistic regression chapter alone. |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -37,8 +39,6 @@ shifted.
 
 | Date | Day | Planned topic | Notes |
 | ---- | --- | -------------- | ----- |
-| 2026-09-21 | Mon | Simple logistic regression: why not linear regression for a qualitative response, the logistic model, log-odds, MLE, coefficient interpretation via odds ratios | `04-classification/10-logistic-regression.qmd` (ISLR2 4.1-4.3 is the assigned reading for this week per `SCHEDULE.md`). Paced deliberately slower than SLR/MLR — logistic regression is not guaranteed prior knowledge the way SLR/MLR were (the DS program's categorical-analysis STAT course covers it but isn't a prereq for this course) |
-| 2026-09-23 | Wed | Multiple logistic regression, additive models only (no interactions yet) | `04-classification/20-multiple-logistic-regression.qmd`. Given more time than the simple case, deliberately |
 | 2026-09-25 | Fri | Interactions in logistic regression; briefly connect back to polynomials and step functions from the multiple-regression material | `04-classification/30-flexible-logistic-regression.qmd` |
 | 2026-09-28 | Mon | Problems in logistic regression, including separation | `04-classification/40-problems-in-logistic-regression.qmd`. Multinomial logistic regression is deliberately deferred until after Exam 1 — not scheduled yet |
 | 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |

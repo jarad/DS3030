@@ -239,37 +239,66 @@ are not covered in this chapter.
 ### 11. Flexible Logistic Regression
 <https://jarad.github.io/DS3030/04-classification/30-flexible-logistic-regression.html>
 
-Interactions in logistic regression: the linear predictor
-$\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$ for a quantitative
-feature $X$ and an indicator $D$, giving group-specific log-odds slopes
-$\beta_1$ and $\beta_1 + \beta_3$ and group-specific odds ratios $e^{\beta_1}$
-and $e^{\beta_1+\beta_3}$, with $e^{\beta_3}$ the ratio of those two odds
-ratios; why no single odds ratio describes $X$ once an interaction is present;
-`glm(y ~ x * d, family = "binomial")` and hierarchy; the two-scale diagnostic
-— on the linear-predictor (log-odds) scale the additive model forces two
-*parallel* lines separated by $\beta_2$, while an interaction makes the slopes
-differ by $\beta_3$, and on the probability scale those become S-curves that
-never cross (additive) or can cross (interaction); `predict()` with the default
-`type = "link"` versus `type = "response"`; the **decision boundary** defined
-by $\hat p(x) = 0.5$, equivalently $\hat\eta(x) = 0$, solved as a threshold on
-the quantitative feature separately within each level of the categorical
-feature; the Wald $z$-test of $H_0: \beta_3 = 0$.
+Opens by framing interactions, polynomials, and step functions as all being
+choices of **basis function** $h_j(X)$ entering the linear predictor as their
+own column, $\eta = \beta_0 + \beta_1 h_1(X) + \beta_2 h_2(X) + \cdots$ (the
+same $h_j$ notation the feature engineering chapter uses), with every
+coefficient still read as a change in log-odds regardless of what $h_j$ is.
 
-Two worked examples, deliberately paired to show opposite verdicts. (1)
-`ISLR2::Default`, `balance * student`, continuing the previous chapter: the
-interaction is *not* significant ($z \approx -0.46$, $p \approx 0.65$), the
-two models' fitted lines are indistinguishable on both scales, and the
-additive model is the one to report. (2) `ISLR2::OJ` ($n = 1{,}070$ orange
-juice purchases), `SalePriceCH * Store7` after `relevel()`-ing `Purchase` so
-the model targets $P(\texttt{CH})$: the interaction is strongly significant
-($z \approx -4.7$), the two stores' fitted price slopes have opposite signs, and
-their break-even prices differ — with an explicit, unresolved note that the
-non-store-7 slope runs backwards from a price effect and that these data cannot
-say why. AIC comparisons appear only inside "Beyond this course" callouts.
-Closes with a short section noting that polynomial and step-function features
-carry over to logistic regression unchanged, since they are just columns of the
-model matrix $\mathbf{X}$. Multinomial (multi-class) logistic regression and
-separation are *not* covered here.
+Interactions get the most depth, worked through for all three combinations of
+feature types, each a light illustration reusing `ISLR2::Default` rather than
+a new dataset (to keep motivation overhead low): categorical-categorical
+(`balance` cut at \$1,500, `balance_cat * student`); continuous-categorical
+$\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$, giving group-specific
+log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and group-specific odds
+ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$, with $e^{\beta_3}$ the ratio of
+those two odds ratios — this is "the easiest to visualize," and gets the
+two-scale diagnostic (parallel vs. non-parallel lines on the log-odds scale,
+S-curves that never cross vs. can cross on the probability scale) and the
+**decision boundary** $\hat p(x) = 0.5 \iff \hat\eta(x) = 0$; and
+continuous-continuous (`balance * income`), used to make an explicit point
+that a coefficient's raw magnitude never indicates whether an interaction
+matters, since it depends on arbitrary units — demonstrated by rescaling
+`income` to thousands and showing the $z$-statistic and every fitted
+probability are unchanged while $\hat\beta_3$'s apparent size changes by
+$1{,}000\times$. Testing covers both the single-coefficient Wald $z$-test and
+the multi-degree-of-freedom drop-in-deviance test for an interaction involving
+a categorical feature with more than two levels.
+
+"Polynomials" and "Step functions" come next, each brief theory (both are just
+more basis-function columns) followed immediately by one light,
+self-contained `ISLR2::Default` illustration (pictures only, no inference): a
+5-tab comparison of linear vs. quadratic, additive vs. interaction fits of
+`balance` and `student`; and a 4-tab comparison of a 2-, 4-, and 8-bin step
+function in `balance` against the data (binned by student in the same style
+chapter 10 used), showing the fit sharpen as the bin count increases.
+
+Two full worked examples, deliberately paired to show opposite verdicts, come
+after all of the methodology and the light illustrations (heading convention:
+methodology and quick illustrations first, a section devoted entirely to one
+example goes at the end). (1) `ISLR2::Default`, `balance * student`,
+continuing the previous chapter: the interaction is *not* significant
+($z \approx -0.46$, $p \approx 0.65$), the two models' fitted lines are
+indistinguishable on both scales, and the additive model is the one to
+report — explicitly *not* because $\hat\beta_3$ looks small next to
+$\hat\beta_1$, which is not valid reasoning on its own, but because of the
+$z$-test. (2) `ISLR2::OJ` ($n = 1{,}070$ orange juice purchases), built around
+the 5-level `StoreID` from the start (the `Store7` indicator is never
+introduced), `SalePriceCH * factor(StoreID)` after `relevel()`-ing `Purchase`
+so the model targets $P(\texttt{CH})$: with 5 stores there is no single
+interaction coefficient to $z$-test, so the interaction test here *is* the
+drop-in-deviance test ($G^2 \approx 23.4$ on $4$ df, $p \approx 0.0001$),
+directly realizing the multi-df case set up earlier in the chapter. Reading
+each store's price slope shows 2 of 5 stores behaving as expected (higher
+price, fewer Citrus Hill purchases) and 3 running backwards, with an explicit,
+unresolved note that these data cannot say why; break-even prices are computed
+for all 5 stores, 2 of which fall outside the observed price range. AIC
+comparisons appear only inside "Beyond this course" callouts. Both examples'
+interaction-test subsections show the raw R output (`summary()$coefficients`
+or `anova(..., test = "Chisq")`) directly, not just a curated table.
+
+Multinomial
+(multi-class) logistic regression and separation are *not* covered here.
 
 ### 12. Problems in Logistic Regression
 <https://jarad.github.io/DS3030/04-classification/40-problems-in-logistic-regression.html>
