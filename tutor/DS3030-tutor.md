@@ -227,11 +227,14 @@ regression models, with residual deviance (for a binary response)
 $D = -2\ell(\hat\beta)$,
 $G^2 = D_r - D_f$ approximately $\chi^2_k$, `anova(reduced, full, test =
 "Chisq")`, and its parallel with the F-test for nested linear models;
-predicting $\hat p(x)$ at a stated combination of feature values.
-Worked example: `ISLR2::Default`, where the `student` coefficient is positive
-on its own but negative once `balance` is held fixed — a confounding reversal
-explained by students carrying higher balances. Additive models only;
-interactions are not covered in this chapter.
+predicting $\hat p(x)$ at a stated combination of feature values, with a
+confidence interval for it built the same three-scale way as the previous
+chapter (log-odds interval, exponentiate to an odds interval, transform to a
+probability interval). Worked example: `ISLR2::Default`, where the `student`
+coefficient is positive on its own but negative once `balance` is held
+fixed — a confounding reversal explained by students carrying higher balances,
+named as an instance of Simpson's paradox. Additive models only; interactions
+are not covered in this chapter.
 
 ### 11. Flexible Logistic Regression
 <https://jarad.github.io/DS3030/04-classification/30-flexible-logistic-regression.html>
@@ -377,9 +380,12 @@ confounding between a quantitative feature and a categorical one, including a
 coefficient that reverses sign, and critiquing an odds-versus-probability
 misstatement; comparing an additive against an interaction fit on the
 linear-predictor and probability scales, with group-specific slopes, and
-checking a fit against binned observed proportions; deriving the Bernoulli
-score equations, solving them in closed form for a single-indicator model, and
-hand-maximizing the log-likelihood with `optim()`; a true/false conceptual
+checking a fit against binned observed proportions; refitting with a different
+baseline level of a categorical feature and relating the two parameterizations;
+deriving the Bernoulli score equations, solving them in closed form for a
+single-indicator model, and hand-maximizing the log-likelihood with `optim()`;
+the IRLS working weights behind `glm()` and the weighted covariance matrix they
+produce, tied to standard errors on the log-odds scale; a true/false conceptual
 review touching the scale on which logistic coefficients live, what an
 interaction coefficient does and does not measure, a property of the fitted
 probabilities implied by the score equations, and the consequence of swapping

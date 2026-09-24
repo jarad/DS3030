@@ -1021,15 +1021,15 @@ That is the same interaction structure used in linear regression, evaluated on
 the log-odds scale instead of the mean-response scale, and fit by the same
 maximum likelihood machinery as every other logistic regression.
 
-The diagnostic is a picture on the linear-predictor scale: parallel lines mean
-the additive model is adequate, non-parallel lines mean it is not.
-`ISLR2::Default` produced lines that were parallel to the eye and an
-interaction the $z$-test could not distinguish from zero. `ISLR2::OJ` produced
-lines with opposite slopes, an interaction
-$\hat\beta_3 = `r sprintf("%.2f", boi[4])`$ that the same test rejected
-decisively, and two stores whose break-even prices sit
-\$`r sprintf("%.2f", abs(diff(oj_boundaries$price[oj_boundaries$Model == "Interaction"])))`
-apart.
+The diagnostic is a picture on the linear-predictor scale, where both fits are
+straight lines: if the interaction fit's two lines are all but parallel, the
+additive model already captures each group's log-odds slope; if they visibly
+cross or diverge, the slope changes from one group to the next. The $z$-test
+for $\beta_3$ turns that visual read into a formal one, and it can go either
+way: a plausible interaction is as often indistinguishable from noise as it is
+real. Each group's decision boundary is where its own fitted line crosses
+zero, so an interaction moves the two boundaries independently rather than by
+a common shift.
 
 Polynomials, step functions, and interactions all enter logistic regression as
 columns of the same model matrix, so the model can be made as flexible as the

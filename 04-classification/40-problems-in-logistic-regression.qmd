@@ -823,12 +823,16 @@ standard errors that grow as the curvature of $\ell$ flattens.
 
 The resulting output is recognizable once its signature is familiar: a
 `glm.fit` warning, a coefficient far too large for its feature's scale, a
-standard error larger still, a $z$-statistic near zero, and a residual deviance
-near nothing. The two examples bracket the range. Ten constructed observations
-produced a slope of `r sprintf("%.1f", toy_b[2])` with a standard error of
-`r format(round(toy_se[2]), big.mark = ",")`, a fit that failed to converge,
-and a perfectly predictive feature reported as not significant. The sample of
-`r nrow(dmd)` real women produced the same warning from a single extreme blood
-measurement, with a converged fit and an entirely usable estimate.
+standard error larger still, a $z$-statistic near zero despite the feature
+being (or nearly being) a perfect predictor, and a residual deviance far
+smaller than the fit has earned — essentially zero under complete separation,
+small but not zero under the quasi-complete kind. The same signature can come
+from a handful of constructed observations or from a categorical level in
+which the event never occurs, and it appears whether the fit fails to converge
+outright or the algorithm converges to coefficients the data no longer pin
+down. A `glm.fit` warning on its own does not establish it: a single extreme
+feature value can trigger the same warning while leaving a finite estimate, a
+small standard error, and a large $z$ — the coefficient table, not the
+warning, is what settles the question.
 
 That completes what this course covers of logistic regression before Exam 1.

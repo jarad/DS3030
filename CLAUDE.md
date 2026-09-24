@@ -161,6 +161,15 @@ introduces a new package should add it to `Imports:`.
   when it points at something the reader could otherwise miss; it is
   extemporaneous when it only restates what the preceding clause already
   said.
+- **A chapter's `## Conclusion` discusses the concepts the chapter introduced,
+  not the particular worked example.** Recap the model, the estimation
+  method, the interpretation rule, the test — the things a student carries
+  into the next chapter — rather than restating a specific coefficient,
+  odds ratio, or $p$-value from this chapter's data. Those numbers belong in
+  the worked-example section itself, which precedes the conclusion. A
+  conclusion with no inline R at all is a good sign; one that recaps "balance
+  raised the odds by X%" is answering the wrong question at the wrong point in
+  the chapter.
 
 ## Code
 
@@ -213,6 +222,13 @@ Compute the jittered coordinate once (`mutate(y_jit = y + runif(n(), -h, h))`)
 and plot that column with `geom_point()` instead, so every tab shows the exact
 same points in the exact same places. A single jittered figure that never
 appears alongside a variant of itself can still use `geom_jitter()` directly.
+Set the seed once, near the top of the chapter (its `packages` chunk is a
+natural spot), rather than immediately before each random draw — a chapter
+with several jittered figures should get identical points from one render to
+the next without a separate `set.seed()` guarding every one of them. Use the
+date the file was first created (`git log --diff-filter=A --follow --format=%ad
+--date=format:%Y%m%d -- <file>`) as the seed, so it is reproducible and traceable
+rather than an arbitrary number picked at edit time.
 
 **Put extensive R code in a collapsed callout.** When a chunk carries a lot of
 setup — simulating data, fitting several models, assembling a prediction grid,

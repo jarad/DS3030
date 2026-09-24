@@ -5,6 +5,7 @@
 library("tidyverse")
 library("ISLR2")
 theme_set(theme_bw())
+set.seed(20260919)
 ```
 
 ::: {.callout-tip}
@@ -58,7 +59,7 @@ occurs.
 So modeling the mean of a binary response *is* modeling a probability, and any
 model for $p(X)$ has to respect $0 \le p(X) \le 1$ for every $X$.
 
-### Credit card default
+### Credit card default data
 
 **Question.** Does a customer's credit card balance tell us whether that
 customer will default?
@@ -82,10 +83,11 @@ interest: $Y_i = 1$ when customer $i$ defaults. In this sample
 ```{r default-eda}
 #| output: false
 Default <- Default |>
-  mutate(default01 = as.numeric(default == "Yes"))
+  mutate(default01 = as.numeric(default == "Yes"),
+         default_jit = default01 + runif(n(), -0.03, 0.03))
 
-default_plot <- ggplot(Default, aes(x = balance, y = default01)) +
-  geom_jitter(height = 0.03, width = 0, alpha = 0.08, size = 0.7) +
+default_plot <- ggplot(Default, aes(x = balance, y = default_jit)) +
+  geom_point(alpha = 0.08, size = 0.7) +
   scale_y_continuous(breaks = c(0, 1), labels = c("No (0)", "Yes (1)")) +
   labs(x = "Credit card balance ($)", y = "Default",
        title = "ISLR2::Default")
@@ -130,8 +132,8 @@ default data, so the fastest way to see what goes wrong is to draw it:
 #| output: false
 default_lm <- lm(default01 ~ balance, data = Default)
 
-lm_plot <- ggplot(Default, aes(x = balance, y = default01)) +
-  geom_jitter(height = 0.03, width = 0, alpha = 0.08, size = 0.7) +
+lm_plot <- ggplot(Default, aes(x = balance, y = default_jit)) +
+  geom_point(alpha = 0.08, size = 0.7) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
   geom_abline(intercept = coef(default_lm)[1], slope = coef(default_lm)[2],
               color = "#0072B2", linewidth = 1) +
@@ -198,10 +200,13 @@ where
 
 Write $\eta = \beta_0 + \beta_1 X$ for the **linear predictor**. The function
 
-$$\text{logistic}(\eta) = \frac{e^{\eta}}{1 + e^{\eta}}$$
+$$\text{logistic}(\eta) = \frac{e^{\eta}}{1 + e^{\eta}} = \left(1 + e^{-\eta}\right)^{-1}$$
 
-is the **logistic function**, available in R as `plogis()`. It maps the whole
-real line into $(0,1)$: $e^{\eta} > 0$ makes $\text{logistic}(\eta) > 0$, and
+is the **logistic function**, available in R as `plogis()` — the second form
+follows from dividing numerator and denominator of the first by $e^\eta$, and
+the two are used interchangeably depending on which is easier to work with in
+a given derivation. The logistic function maps the whole real line into
+$(0,1)$: $e^{\eta} > 0$ makes $\text{logistic}(\eta) > 0$, and
 $e^\eta < 1 + e^\eta$ makes $\text{logistic}(\eta) < 1$. As
 $\eta \to -\infty$, $\text{logistic}(\eta) \to 0$; as $\eta \to \infty$,
 $\text{logistic}(\eta) \to 1$. The boundary problem raised above is gone no
@@ -500,11 +505,16 @@ default_glm <- glm(default ~ balance, data = Default, family = "binomial")
 coef(default_glm)
 ```
 
+```{r default-fit-plot-setup}
+#| include: false
+fit_bin_width <- 200
+```
+
 Putting the fitted curve back on the data checks the shape against what the
 plot suggested. Alongside it, the observed proportion defaulting within
-\$200-wide balance bins gives a model-free estimate of $p(X)$ to compare
-against; point size shows how many customers are in each bin, since the
-right-most bins hold very few.
+\$`r fit_bin_width`-wide balance bins gives a model-free estimate of $p(X)$ to
+compare against; point size shows how many customers are in each bin, since
+the right-most bins hold very few.
 
 ::: {.callout-note collapse="true"}
 ### Code for the figure below
@@ -514,12 +524,13 @@ balance_grid <- tibble(balance = seq(0, max(Default$balance), length.out = 400))
 balance_grid$p_hat <- predict(default_glm, newdata = balance_grid, type = "response")
 
 binned <- Default |>
-  mutate(bin = cut(balance, breaks = seq(0, 2800, by = 200), include.lowest = TRUE)) |>
+  mutate(bin = cut(balance, breaks = seq(0, 2800, by = fit_bin_width),
+                   include.lowest = TRUE)) |>
   group_by(bin) |>
   summarize(balance = mean(balance), p = mean(default01), n = n(), .groups = "drop")
 
-fit_plot <- ggplot(Default, aes(x = balance, y = default01)) +
-  geom_jitter(height = 0.03, width = 0, alpha = 0.08, size = 0.7) +
+fit_plot <- ggplot(Default, aes(x = balance, y = default_jit)) +
+  geom_point(alpha = 0.08, size = 0.7) +
   geom_point(data = binned, aes(y = p, size = n), shape = 1, color = "#D55E00") +
   geom_line(data = balance_grid, aes(y = p_hat),
             color = "#0072B2", linewidth = 1) +
@@ -668,14 +679,61 @@ identical \$500 step from \$500 to \$1,000 raises it by only
 pressed against $0$.
 
 $\hat p(x)$ is itself an estimate, with uncertainty inherited from
-$\hat\beta_0$ and $\hat\beta_1$. A confidence interval for $\eta(x)$ on the
-log-odds scale, built the same way as the interval for $\beta_1$ above,
-becomes a confidence interval for the mean $p(x)$ once both endpoints pass
-through $\text{logistic}(\cdot)$ — a valid move because the logistic function
-is increasing and so preserves the order of the endpoints, exactly as
-exponentiating did for the odds-ratio interval. This is a *pointwise*
-interval: each vertical slice is a separate 95% interval for $p(x)$ at that
-one balance, not a region covering the whole curve at once.
+$\hat\beta_0$ and $\hat\beta_1$. Building a confidence interval for $p(x)$
+climbs the same three scales as prediction did above: log-odds, then odds,
+then probability.
+
+`predict()` with `type = "link"` and `se.fit = TRUE` returns $\hat\eta(x)$ and
+$\text{SE}(\hat\eta(x))$, giving a Wald interval for the log-odds at $x$, built
+the same way as the interval for $\beta_1$ above:
+
+$$\hat\eta(x) \pm z_{1-\alpha/2}\,\text{SE}(\hat\eta(x)).$$
+
+Exponentiating both endpoints — the same increasing transform that turned the
+interval for $\beta_1$ into an interval for the odds ratio $e^{\beta_1}$ —
+carries this to an interval for the **odds** at $x$,
+$\text{odds}(x) = p(x)/[1-p(x)]$. A second increasing transform,
+$p = \text{odds}/(1+\text{odds})$ — the same map that turns $e^\eta$ into
+$\text{logistic}(\eta) = e^\eta/(1+e^\eta)$ earlier in this section — carries
+the odds interval to an interval for $p(x)$ itself.
+
+```{r default-ci-walkthrough-setup}
+x0 <- 1500
+```
+
+At a balance of \$`r format(x0, big.mark = ",")`:
+
+```{r default-ci-walkthrough}
+#| output: false
+link_x0    <- predict(default_glm, newdata = tibble(balance = x0),
+                      type = "link", se.fit = TRUE)
+eta_hat_x0 <- link_x0$fit
+eta_ci_x0  <- eta_hat_x0 + c(-1, 1) * qnorm(0.975) * link_x0$se.fit
+odds_ci_x0 <- exp(eta_ci_x0)
+p_ci_x0    <- odds_ci_x0 / (1 + odds_ci_x0)
+
+ci_walkthrough <- tibble(
+  Scale    = c("Log-odds", "Odds", "P(default)"),
+  Estimate = c(eta_hat_x0, exp(eta_hat_x0), plogis(eta_hat_x0)),
+  Lower    = c(eta_ci_x0[1], odds_ci_x0[1], p_ci_x0[1]),
+  Upper    = c(eta_ci_x0[2], odds_ci_x0[2], p_ci_x0[2])
+) |>
+  mutate(across(c(Estimate, Lower, Upper), \(x) sprintf("%.4f", x))) |>
+  knitr::kable(col.names = c("Scale", "Estimate", "2.5%", "97.5%"),
+               align = "lccc")
+```
+
+```{r default-ci-walkthrough-table}
+#| echo: false
+ci_walkthrough
+```
+
+The composition of two increasing transforms is increasing, so this two-step
+route lands on the same interval as applying $\text{logistic}(\cdot)$ directly
+to the $\eta(x)$ endpoints in one step — the shortcut used to build the whole
+band below. This is a *pointwise* interval: each vertical slice is a separate
+95% interval for $p(x)$ at that one balance, not a region covering the whole
+curve at once.
 
 ::: {.callout-note collapse="true"}
 ### Code for the figure below
@@ -726,16 +784,51 @@ confidence interval for the mean response would be.
 
 ## Credit card default probability
 
-Putting the pieces together for `balance` and `default`:
+**Question.** Does a customer's credit card balance predict whether they
+default, and by how much?
 
+**Data.** `ISLR2::Default` again: `r format(nrow(Default), big.mark = ",")`
+credit card customers, `default` as the response
+(`r round(100 * mean(Default$default == "Yes"), 2)`% default), and `balance`
+as the feature.
+
+```{r default-recap-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_plot
+```
+
+Defaults are rare at low balances and steadily more common as balance climbs,
+the shape a probability model needs to reproduce.
+
+### Fitting
+
+Fitting $\texttt{default} \sim \texttt{balance}$ by logistic regression,
+
+```{r default-recap-fit}
+coef(default_glm)
+```
+
+```{r default-recap-summary}
+summary(default_glm)
+```
+
+Both coefficients are far from zero relative to their standard errors, exactly
+as the $z$-test above found.
+
+### Estimated odds ratios
+
+::: {.callout-note collapse="true"}
+### Code for the values quoted below
 ```{r default-coefficients}
+#| output: false
 b         <- coef(default_glm)
 or_dollar <- unname(exp(b["balance"]))
 or_100    <- unname(exp(100 * b["balance"]))
 ci_or_100 <- exp(100 * ci_beta1)
-
-round(c("odds ratio per $1" = or_dollar, "odds ratio per $100" = or_100), 4)
 ```
+:::
 
 The estimated log-odds of default are
 
@@ -777,21 +870,42 @@ $100$ and exponentiating gives $(`r round(ci_or_100[1], 2)`,
 `r round(ci_or_100[2], 2)`)$ on the per-\$100 odds-ratio scale, every value of
 it well above $1$.
 
+### Fitted probability
+
+```{r default-recap-fit-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+fit_plot
+```
+
+The fitted curve stays inside $[0,1]$ everywhere, and tracks the binned
+observed proportions closely wherever a bin holds enough customers to estimate
+one.
+
 ## Conclusion
 
-Credit card balance is strongly associated with default. Each additional \$100
-of balance multiplies the estimated odds of default by
-`r round(or_100, 2)` (95% CI `r round(ci_or_100[1], 2)` to
-`r round(ci_or_100[2], 2)`), and the estimated probability of default rises
-from `r round(100 * p_at(500), 2)`% at a \$500 balance to
-`r round(100 * p_at(2000))`% at \$2,000.
+Simple logistic regression models a binary response's probability as the
+logistic function of a linear predictor,
+$p(X) = \text{logistic}(\beta_0 + \beta_1 X)$, equivalently a statement that
+the *log-odds* of the event are linear in $X$. Estimation is by maximum
+likelihood rather than least squares because a Bernoulli response has a
+variance determined by its own mean, which breaks the least squares error
+assumptions by construction; and because $p(x_i)$ is a nonlinear function of
+$\beta_0$ and $\beta_1$, the score equations have no closed-form solution, so
+`glm()` finds $\hat\beta_0$ and $\hat\beta_1$ numerically.
 
-The logistic model delivered this while a linear regression could not, because
-it constrains $p(X)$ to $[0,1]$, lets the effect of a dollar flatten as the
-probability approaches either boundary, and is estimated under a Bernoulli
-likelihood that matches how a binary response actually varies.
+Coefficients are read on the log-odds scale — $\beta_0$ as a baseline log-odds,
+$\beta_1$ as a change in log-odds per unit of $X$ — and exponentiated into odds
+ratios for a multiplicative statement about the odds. Neither describes a
+constant change in probability, because the logistic curve has no constant
+slope. The same increasing-transform idea that turns a log-odds interval into
+an odds-ratio interval also turns a confidence interval for the linear
+predictor at a point into a confidence interval for the predicted probability
+there, one increasing map — exponentiate, then odds-to-probability — at a
+time.
 
-What it has not done is use the rest of the data. `ISLR2::Default` also records
-whether each customer is a student and what their income is, and answering
-"does balance matter *after accounting for* those?" needs more than one
-feature — multiple logistic regression.
+The next lecture keeps this model and adds features: multiple logistic
+regression asks what each feature contributes once the others are held fixed,
+the same question multiple linear regression asked of a quantitative
+response.
