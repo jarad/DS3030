@@ -165,6 +165,17 @@ Symbols must mean one thing. Real examples of what to catch:
   and a polynomial's degree is $d$. A sentence like "every reduction in $K$" is
   ambiguous the moment $K$ also counts basis functions.
 - Unbalanced or stray delimiters — `$n-(p+1))$` has an extra parenthesis.
+- **Delimiter sizing.** A `(`, `[`, or `{` used as a math delimiter around
+  content taller than ordinary text — a hat (`\hat\beta`), a superscript like
+  `^\top` or `^{-1}`, a fraction, a sum or product with limits, a square
+  root, a nested delimiter of the same kind — must be `\left`/`\right` (or an
+  explicit `\big`-family size), not a bare `(`/`)`. `(X^\top X)^{-1}` and
+  `Var(\hat f(x_0))` render with delimiters the same height as a lowercase
+  letter, visibly crowding the tall content inside them;
+  `\left(X^\top X\right)^{-1}` and `Var\left[\hat f(x_0)\right]` grow to fit.
+  Check every such delimiter, question text and solution alike — this is easy
+  to miss because the expression is otherwise correct and the bare-parenthesis
+  version still compiles without error.
 - Double subscripts never take a comma: $X_{i1}$, $X_{ip}$, never $X_{i,1}$.
 - A quantity defined in one chapter and silently renamed in a later one.
 
