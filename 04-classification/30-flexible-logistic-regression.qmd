@@ -253,6 +253,70 @@ $`r sprintf("%.3f", cat_gap$gap[cat_gap$balance_cat == "Low"])`$ log-odds below
 above it. That difference in slope is what the $z$-statistic above finds
 indistinguishable from sampling error.
 
+The same fit looks different on the probability scale, where the four points
+and segments are bounded to $[0, 1]$ instead of spread across four log-odds.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cat-cat-prob-setup}
+#| output: false
+cat_fit_p <- cat_fit |> mutate(p_hat = plogis(eta))
+
+cat_prob_base <- ggplot(mapping = aes(x = student, y = p_hat,
+                                      color = student, shape = student)) +
+  geom_point(data = cat_obs |> rename(p_hat = rate), size = 3) +
+  facet_wrap(~ balance_cat, labeller = labeller(balance_cat = cat_labels)) +
+  coord_cartesian(ylim = c(0, 1)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Student", y = "P(default = Yes)",
+       color = "Student", shape = "Student", title = "ISLR2::Default")
+
+cat_prob_data <- cat_prob_base
+
+cat_prob_additive <- cat_prob_base +
+  geom_line(data = filter(cat_fit_p, Model == "Additive"), aes(group = 1),
+            color = "grey40", linetype = 2, linewidth = 0.8)
+
+cat_prob_interaction <- cat_prob_base +
+  geom_line(data = filter(cat_fit_p, Model == "Interaction"), aes(group = 1),
+            color = "grey40", linetype = 2, linewidth = 0.8)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r cat-cat-prob-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+cat_prob_data
+```
+
+#### + Additive
+```{r cat-cat-prob-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+cat_prob_additive
+```
+
+#### + Interaction
+```{r cat-cat-prob-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+cat_prob_interaction
+```
+:::
+
+Both balance categories now share one axis, since probabilities need no
+per-panel window to stay comparable. The roughly four-log-odds gap between
+balance categories compresses into two clusters, one near $0$ and one near
+$1$; the additive segments still share a slope and the interaction segments
+still pass through all four points, but the difference between the two models
+is harder to see here than on the log-odds scale above.
+
 ### Continuous-categorical interactions
 
 The combination easiest to visualize pairs one quantitative feature $X$ with
@@ -332,182 +396,6 @@ $\hat\beta_1 + \hat\beta_3 = `r signif(bdi[2] + bdi[4], 4)`$ for students, so
 the two per-\$100 odds ratios are
 $`r sprintf("%.3f", exp(100 * bdi[2]))`$ and
 $`r sprintf("%.3f", exp(100 * (bdi[2] + bdi[4])))`$.
-
-### Continuous-continuous interactions
-
-Two quantitative features multiply into a single new column, $X_1 X_2$, and
-the interpretation follows the same pattern: fixing $X_2$, a one-unit increase
-in $X_1$ changes the log-odds by $\beta_1 + \beta_3 X_2$ — a slope that itself
-depends on $X_2$, rather than two group-specific slopes.
-
-A coefficient's raw size says nothing about whether that dependence matters,
-because it depends on the units the two features happen to be measured in.
-Fitting `balance * income` on `ISLR2::Default`:
-
-```{r cont-cont-fit}
-balance_income_glm <- glm(default ~ balance * income, data = Default,
-                          family = "binomial")
-summary(balance_income_glm)$coefficients
-```
-
-```{r cont-cont-extract}
-#| include: false
-bi_b <- coef(balance_income_glm)
-bi_z <- summary(balance_income_glm)$coefficients["balance:income", "z value"]
-```
-
-The estimated interaction, $\hat\beta_3 \approx `r signif(bi_b[4], 3)`$, looks
-negligible beside $\hat\beta_1 \approx `r signif(bi_b[2], 3)`$ — but `income`
-runs into the tens of thousands of dollars while `balance` runs into the
-thousands, and rescaling `income` to thousands of dollars changes that
-comparison completely without changing the fitted model at all:
-
-```{r cont-cont-rescale}
-Default_k <- Default |> mutate(income_k = income / 1000)
-balance_income_k_glm <- glm(default ~ balance * income_k, data = Default_k,
-                            family = "binomial")
-rbind(dollars = coef(balance_income_glm),
-      thousands = coef(balance_income_k_glm))
-```
-
-The interaction coefficient moved by a factor of $1{,}000$, the same factor
-`income` was rescaled by, while the $z$-statistic
-($`r sprintf("%.3f", bi_z)`$ either way) and every fitted probability are
-unchanged to well beyond the precision this table shows. A coefficient's
-*size* is an artifact of the units it was
-estimated in; whether an interaction matters is a question for the $z$-test or
-the drop-in-deviance test below, never for comparing $\hat\beta_3$ against
-$\hat\beta_1$ by eye.
-
-Neither feature has levels to split the picture by, so the fit is drawn by
-splitting one of them: customers are grouped into income quartiles, and each
-group's fitted probability curve is drawn at that group's median income
-against the full range of balance. Both models are fit on `income` as
-recorded; the quartiles only decide which four curves to draw.
-
-::: {.callout-note collapse="true"}
-### Code
-```{r cont-cont-setup}
-#| output: false
-Default <- Default |>
-  mutate(income_q = cut(income, breaks = quantile(income, 0:4 / 4),
-                        include.lowest = TRUE,
-                        labels = c("Q1 (lowest)", "Q2", "Q3", "Q4 (highest)")))
-
-balance_income_add <- glm(default ~ balance + income, data = Default,
-                          family = "binomial")
-
-# One curve per income quartile, each evaluated at that quartile's median
-# income -- the fit is a function of income itself, so a group needs a single
-# income value to be drawn at.
-income_median <- Default |>
-  group_by(income_q) |>
-  summarize(income = median(income), .groups = "drop")
-
-income_grid <- expand_grid(
-  balance  = seq(0, max(Default$balance), length.out = 300),
-  income_q = income_median$income_q) |>
-  left_join(income_median, by = "income_q")
-
-income_prob <- bind_rows(
-  income_grid |> mutate(Model = "Additive",
-                        p_hat = predict(balance_income_add,
-                                        newdata = income_grid,
-                                        type = "response")),
-  income_grid |> mutate(Model = "Interaction",
-                        p_hat = predict(balance_income_glm,
-                                        newdata = income_grid,
-                                        type = "response")))
-
-# Observed default rates in $400-wide balance bins within each income
-# quartile, dropped where a bin holds fewer than 50 customers.
-income_binned <- Default |>
-  mutate(bin = cut(balance, breaks = seq(0, 2800, by = 400),
-                   include.lowest = TRUE)) |>
-  group_by(income_q, bin) |>
-  summarize(balance = mean(balance), rate = mean(default01), n = n(),
-            .groups = "drop") |>
-  filter(n >= 50)
-
-# Four groups, so shape and linetype cannot simply duplicate a two-level
-# color scale; viridis keeps the four distinguishable without color.
-income_base <- ggplot(mapping = aes(x = balance, y = p_hat,
-                                    color = income_q, linetype = income_q)) +
-  geom_point(data = income_binned,
-             aes(y = rate, size = n, shape = income_q)) +
-  coord_cartesian(xlim = range(income_grid$balance), ylim = c(0, 1)) +
-  scale_y_continuous(breaks = c(0, 0.5, 1)) +
-  scale_color_viridis_d(end = 0.8) +
-  scale_shape_manual(values = c(16, 17, 15, 18)) +
-  scale_size_area(max_size = 4) +
-  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
-       color = "Income\nquartile", linetype = "Income\nquartile",
-       shape = "Income\nquartile", size = "Customers\nin bin",
-       title = "ISLR2::Default")
-
-income_data <- income_base
-
-income_additive <- income_base +
-  geom_line(data = filter(income_prob, Model == "Additive"), linewidth = 0.9)
-
-income_interaction <- income_base +
-  geom_line(data = filter(income_prob, Model == "Interaction"), linewidth = 0.9)
-```
-:::
-
-::: {.panel-tabset}
-#### Data
-```{r cont-cont-data-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-income_data
-```
-
-#### + Additive
-```{r cont-cont-additive-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-income_additive
-```
-
-#### + Interaction
-```{r cont-cont-interaction-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-income_interaction
-```
-:::
-
-```{r cont-cont-spread}
-#| include: false
-income_at_2000 <- income_prob |> filter(abs(balance - 2000) ==
-                                        min(abs(balance - 2000)))
-income_spread <- income_at_2000 |>
-  group_by(Model) |>
-  summarize(spread = max(p_hat) - min(p_hat), .groups = "drop")
-```
-
-The additive tab draws four curves of identical shape, each shifted from the
-next by a fixed amount of log-odds, so no pair of them ever crosses. The
-interaction tab lets the balance slope grow with income, and its four curves
-pull apart at high balances and close up at low ones: at a balance of \$2,000
-the fitted probabilities span
-`r sprintf("%.2f", income_spread$spread[income_spread$Model == "Additive"])`
-under the additive model and
-`r sprintf("%.2f", income_spread$spread[income_spread$Model == "Interaction"])`
-under the interaction. Switching between the tabs changes the picture very
-little, which is the same verdict the $z$-statistic above reaches.
-
-### Fitted model geometry
-
-A fitted interaction differs from a fitted additive model in two visible ways:
-the shape of the two groups' fitted curves, and the feature value at which each
-group's predicted class flips. Both are easiest to see for the
-continuous-categorical case, where each group's fit is a straight line on the
-linear-predictor scale.
 
 Written as functions of $X$, the fitted log-odds for the two groups are
 
@@ -670,6 +558,244 @@ balance, with students and non-students distinguished by color and shape. The
 two model tabs are nearly the same picture: two S-curves of all but identical
 shape, the student curve shifted right, whether or not the interaction is in
 the model.
+
+### Continuous-continuous interactions
+
+Two quantitative features multiply into a single new column, $X_1 X_2$:
+
+$$\eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_1 X_2.$$
+
+The interpretation follows the same pattern as before: fixing $X_2$, a
+one-unit increase in $X_1$ changes the log-odds by $\beta_1 + \beta_3 X_2$ — a
+slope that itself depends on $X_2$, rather than two group-specific slopes.
+
+A coefficient's raw size says nothing about whether that dependence matters,
+because it depends on the units the two features happen to be measured in.
+Fitting `balance * income` on `ISLR2::Default`:
+
+```{r cont-cont-fit}
+balance_income_glm <- glm(default ~ balance * income, data = Default,
+                          family = "binomial")
+summary(balance_income_glm)$coefficients
+```
+
+```{r cont-cont-extract}
+#| include: false
+bi_b <- coef(balance_income_glm)
+bi_z <- summary(balance_income_glm)$coefficients["balance:income", "z value"]
+```
+
+The estimated interaction, $\hat\beta_3 \approx `r signif(bi_b[4], 3)`$, looks
+negligible beside $\hat\beta_1 \approx `r signif(bi_b[2], 3)`$ — but `income`
+runs into the tens of thousands of dollars while `balance` runs into the
+thousands, and rescaling `income` to thousands of dollars changes that
+comparison completely without changing the fitted model at all:
+
+```{r cont-cont-rescale}
+Default_k <- Default |> mutate(income_k = income / 1000)
+balance_income_k_glm <- glm(default ~ balance * income_k, data = Default_k,
+                            family = "binomial")
+rbind(dollars = coef(balance_income_glm),
+      thousands = coef(balance_income_k_glm))
+```
+
+The interaction coefficient moved by a factor of $1{,}000$, the same factor
+`income` was rescaled by, while the $z$-statistic
+($`r sprintf("%.3f", bi_z)`$ either way) and every fitted probability are
+unchanged to well beyond the precision this table shows. A coefficient's
+*size* is an artifact of the units it was
+estimated in; whether an interaction matters is a question for the $z$-test or
+the drop-in-deviance test below, never for comparing $\hat\beta_3$ against
+$\hat\beta_1$ by eye.
+
+Neither feature has levels to split the picture by, so the fit is drawn by
+splitting one of them: customers are grouped into income quartiles, and each
+group's fitted curve is drawn at that group's median income against the full
+range of balance. Both models are fit on `income` as recorded; the quartiles
+only decide which four curves to draw.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cont-cont-link-setup}
+#| output: false
+Default <- Default |>
+  mutate(income_q = cut(income, breaks = quantile(income, 0:4 / 4),
+                        include.lowest = TRUE,
+                        labels = c("Q1 (lowest)", "Q2", "Q3", "Q4 (highest)")))
+
+balance_income_add <- glm(default ~ balance + income, data = Default,
+                          family = "binomial")
+
+# One curve per income quartile, each evaluated at that quartile's median
+# income -- the fit is a function of income itself, so a group needs a single
+# income value to be drawn at.
+income_median <- Default |>
+  group_by(income_q) |>
+  summarize(income = median(income), .groups = "drop")
+
+income_grid <- expand_grid(
+  balance  = seq(0, max(Default$balance), length.out = 300),
+  income_q = income_median$income_q) |>
+  left_join(income_median, by = "income_q")
+
+income_link <- bind_rows(
+  income_grid |> mutate(Model = "Additive",
+                        eta = predict(balance_income_add, newdata = income_grid)),
+  income_grid |> mutate(Model = "Interaction",
+                        eta = predict(balance_income_glm, newdata = income_grid)))
+
+# Four groups, so shape and linetype cannot simply duplicate a two-level color
+# scale; viridis keeps the four distinguishable without color. No Data tab on
+# this scale, the same way the continuous-categorical case has none -- raw
+# 0/1 outcomes have no finite log-odds to plot.
+income_link_base <- ggplot(mapping = aes(x = balance, y = eta,
+                                         color = income_q, linetype = income_q)) +
+  geom_hline(yintercept = 0, color = "grey60", linewidth = 0.3) +
+  coord_cartesian(xlim = range(income_grid$balance),
+                  ylim = range(income_link$eta)) +
+  scale_color_viridis_d(end = 0.8) +
+  labs(x = "Credit card balance ($)", y = expression(hat(eta)),
+       color = "Income\nquartile", linetype = "Income\nquartile",
+       title = "ISLR2::Default")
+
+income_link_additive <- income_link_base +
+  geom_line(data = filter(income_link, Model == "Additive"), linewidth = 0.9)
+
+income_link_interaction <- income_link_base +
+  geom_line(data = filter(income_link, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Additive
+```{r cont-cont-link-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_link_additive
+```
+
+#### Interaction
+```{r cont-cont-link-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_link_interaction
+```
+:::
+
+Under the additive model the four lines are exactly parallel, each shifted
+from the next by a fixed amount of log-odds. Under the interaction model the
+slope on balance itself grows with income, so the four lines fan out instead
+of staying parallel — the same parallel-versus-not signature the
+continuous-categorical case showed, now with four lines instead of two.
+
+The probability scale is what a decision actually uses, and it is a distorted
+view of the same four lines: passing each one through $\text{logistic}(\cdot)$
+compresses it toward $0$ and $1$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cont-cont-prob-setup}
+#| output: false
+income_prob <- bind_rows(
+  income_grid |> mutate(Model = "Additive",
+                        p_hat = predict(balance_income_add,
+                                        newdata = income_grid,
+                                        type = "response")),
+  income_grid |> mutate(Model = "Interaction",
+                        p_hat = predict(balance_income_glm,
+                                        newdata = income_grid,
+                                        type = "response")))
+
+# Observed default rates in $400-wide balance bins within each income
+# quartile, dropped where a bin holds fewer than 50 customers.
+income_binned <- Default |>
+  mutate(bin = cut(balance, breaks = seq(0, 2800, by = 400),
+                   include.lowest = TRUE)) |>
+  group_by(income_q, bin) |>
+  summarize(balance = mean(balance), rate = mean(default01), n = n(),
+            .groups = "drop") |>
+  filter(n >= 50)
+
+# Four groups, so shape and linetype cannot simply duplicate a two-level
+# color scale; viridis keeps the four distinguishable without color.
+income_base <- ggplot(mapping = aes(x = balance, y = p_hat,
+                                    color = income_q, linetype = income_q)) +
+  geom_point(data = income_binned,
+             aes(y = rate, size = n, shape = income_q)) +
+  coord_cartesian(xlim = range(income_grid$balance), ylim = c(0, 1)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_color_viridis_d(end = 0.8) +
+  scale_shape_manual(values = c(16, 17, 15, 18)) +
+  scale_size_area(max_size = 4) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Income\nquartile", linetype = "Income\nquartile",
+       shape = "Income\nquartile", size = "Customers\nin bin",
+       title = "ISLR2::Default")
+
+income_data <- income_base
+
+income_additive <- income_base +
+  geom_line(data = filter(income_prob, Model == "Additive"), linewidth = 0.9)
+
+income_interaction <- income_base +
+  geom_line(data = filter(income_prob, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r cont-cont-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_data
+```
+
+#### + Additive
+```{r cont-cont-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_additive
+```
+
+#### + Interaction
+```{r cont-cont-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_interaction
+```
+:::
+
+```{r cont-cont-spread}
+#| include: false
+income_at_2000 <- income_prob |> filter(abs(balance - 2000) ==
+                                        min(abs(balance - 2000)))
+income_spread <- income_at_2000 |>
+  group_by(Model) |>
+  summarize(spread = max(p_hat) - min(p_hat), .groups = "drop")
+```
+
+The additive tab draws four curves of identical shape, each shifted from the
+next by a fixed amount of log-odds, so no pair of them ever crosses. The
+interaction tab lets the balance slope grow with income, and its four curves
+pull apart at high balances and close up at low ones: at a balance of \$2,000
+the fitted probabilities span
+`r sprintf("%.2f", income_spread$spread[income_spread$Model == "Additive"])`
+under the additive model and
+`r sprintf("%.2f", income_spread$spread[income_spread$Model == "Interaction"])`
+under the interaction. Switching between the tabs changes the picture very
+little, which is the same verdict the $z$-statistic above reaches.
+
+### Fitted model geometry
+
+Besides the shape of each group's fitted curve, shown above for `balance` and
+`student`, a fitted interaction differs from a fitted additive model in one
+more visible way: the feature value at which each group's predicted class
+flips.
 
 A fitted probability is often turned into a predicted class by comparing it to
 a threshold, most commonly $0.5$. The **decision boundary** is the set of

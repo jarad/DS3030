@@ -250,32 +250,40 @@ coefficient still read as a change in log-odds regardless of what $h_j$ is.
 
 Interactions get the most depth, worked through for all three combinations of
 feature types, each illustrated with a fitted figure on `ISLR2::Default`
-rather than a new dataset (to keep motivation overhead low) and each built as
-a tabset that adds one model at a time: categorical-categorical (`balance` cut
-at \$1,500, `balance_cat * student`, drawn as the four cell log-odds in two
-panels whose axes span the same number of log-odds, where the additive fit's
-segments share a slope and the interaction fit's pass exactly through all four
-cells);
-continuous-categorical $\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$,
-giving group-specific log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and
-group-specific odds ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$, with
-$e^{\beta_3}$ the ratio of those two odds ratios — this is "the easiest to
-visualize," and `default ~ balance + student` and `default ~ balance *
-student` are both fit here, with the two-scale diagnostic drawn for them in
-"Fitted model geometry" (parallel vs. non-parallel lines on the log-odds
-scale, S-curves that never cross vs. can cross on the probability scale)
-alongside the **decision boundary** $\hat p(x) = 0.5 \iff \hat\eta(x) = 0$;
-and continuous-continuous (`balance * income`, drawn as one fitted curve per
-income quartile), used to make an explicit point that a coefficient's raw
-magnitude never indicates whether an interaction matters, since it depends on
-arbitrary units — demonstrated by rescaling `income` to thousands and showing
-the $z$-statistic and every fitted probability are unchanged while
-$\hat\beta_3$'s apparent size changes by $1{,}000\times$. "Interaction tests"
-covers the single-coefficient Wald $z$-test and the drop-in-deviance test,
-framing the latter as the one that always applies: both are run on the
-`balance`-by-`student` fit, where $k = 1$ makes them agree
-($z^2 \approx G^2 \approx 0.21$) without being equal, and only the deviance
-test extends to a categorical feature with more than two levels.
+rather than a new dataset (to keep motivation overhead low), and each
+subsection follows the same order — the model equation, then a tabset on the
+linear-predictor scale, then a tabset on the probability scale: categorical-
+categorical ($\eta = \beta_0 + \beta_1 D_1 + \beta_2 D_2 + \beta_3 D_1 D_2$,
+`balance` cut at \$1,500, `balance_cat * student`), drawn as the four cell
+log-odds in two panels whose axes span the same number of log-odds (so the
+additive fit's shared-slope segments and the interaction fit's exact fit to
+all four cells stay comparable across panels), then the same four cells
+redrawn on the probability scale, where the roughly four-log-odds gap
+compresses into two clusters near $0$ and near $1$;
+continuous-categorical ($\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$,
+`default ~ balance + student` vs. `default ~ balance * student`), giving
+group-specific log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and
+group-specific odds ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$ with
+$e^{\beta_3}$ their ratio — this is "the easiest to visualize," and its own
+subsection carries the parallel-vs-non-parallel-lines algebra and both
+tabsets (log-odds, then probability) for the two fits, rather than a separate
+"Fitted model geometry" figure; that subsection now only covers the
+**decision boundary** $\hat p(x) = 0.5 \iff \hat\eta(x) = 0$, referring back
+to the figures above it; and continuous-continuous
+($\eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_1 X_2$, `balance *
+income`), drawn as one fitted curve per income quartile on both scales (log-
+odds lines fan out under the interaction model instead of staying parallel;
+no "Data" tab on that scale, same reasoning as continuous-categorical), used
+to make an explicit point that a coefficient's raw magnitude never indicates
+whether an interaction matters, since it depends on arbitrary units —
+demonstrated by rescaling `income` to thousands and showing the $z$-statistic
+and every fitted probability are unchanged while $\hat\beta_3$'s apparent size
+changes by $1{,}000\times$. "Interaction tests" covers the single-coefficient
+Wald $z$-test and the drop-in-deviance test, framing the latter as the one
+that always applies: both are run on the `balance`-by-`student` fit, where
+$k = 1$ makes them agree ($z^2 \approx G^2 \approx 0.21$) without being equal,
+and only the deviance test extends to a categorical feature with more than
+two levels.
 
 "Polynomials" and "Step functions" come next, each brief theory (both are just
 more basis-function columns) followed immediately by one light,
