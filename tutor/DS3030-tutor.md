@@ -253,8 +253,9 @@ feature types, each illustrated with a fitted figure on `ISLR2::Default`
 rather than a new dataset (to keep motivation overhead low) and each built as
 a tabset that adds one model at a time: categorical-categorical (`balance` cut
 at \$1,500, `balance_cat * student`, drawn as the four cell log-odds in two
-equal-height panels, where the additive fit's segments share a slope and the
-interaction fit's pass exactly through all four cells);
+panels whose axes span the same number of log-odds, where the additive fit's
+segments share a slope and the interaction fit's pass exactly through all four
+cells);
 continuous-categorical $\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$,
 giving group-specific log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and
 group-specific odds ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$, with

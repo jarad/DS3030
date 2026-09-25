@@ -130,6 +130,129 @@ $\hat\beta_1$ or $\hat\beta_2$ directly is fair; that comparison stops being
 fair once a quantitative feature is involved, as the continuous-continuous
 subsection below shows.
 
+Four coefficients describe four cells, so the whole fit can be drawn: one
+point per cell, at the log-odds of that cell's default rate, with the two
+balance categories in separate panels and the student status on the
+horizontal axis.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cat-cat-setup}
+#| output: false
+# default01 and default_jit are used by figures throughout this lecture, so
+# both columns are added here, at the first figure that needs either. The
+# jitter is drawn once into a column rather than left to geom_jitter(), which
+# would re-randomize every time a tab is drawn and make the same points land
+# in different places from one tab to the next.
+Default <- Default |>
+  mutate(default01 = as.numeric(default == "Yes"),
+         default_jit = default01 + runif(n(), -0.03, 0.03))
+
+cat_add <- glm(default ~ balance_cat + student, data = Default,
+               family = "binomial")
+
+cat_cells <- expand_grid(
+  balance_cat = factor(c("Low", "High"), levels = c("Low", "High")),
+  student     = factor(c("No", "Yes"), levels = levels(Default$student)))
+
+cat_obs <- Default |>
+  group_by(balance_cat, student) |>
+  summarize(rate = mean(default01), .groups = "drop") |>
+  mutate(eta = log(rate / (1 - rate)))
+
+cat_fit <- bind_rows(
+  cat_cells |> mutate(Model = "Additive",
+                      eta = predict(cat_add, newdata = cat_cells)),
+  cat_cells |> mutate(Model = "Interaction",
+                      eta = predict(balance_cat_glm, newdata = cat_cells)))
+
+# Each panel gets its own half-log-odds window, both of the same width: the
+# two balance categories are about four log-odds apart, so a common axis
+# would flatten every student difference in the figure to nothing, while
+# equal window widths keep a segment's slope comparable across panels.
+cat_window <- cat_obs |>
+  group_by(balance_cat) |>
+  summarize(mid = mean(range(eta)), .groups = "drop") |>
+  reframe(balance_cat = rep(balance_cat, 2), eta = c(mid - 0.25, mid + 0.25)) |>
+  mutate(student = factor("No", levels = levels(Default$student)))
+
+cat_labels <- c(Low = "Balance up to $1,500", High = "Balance above $1,500")
+
+# The same shared-base idea used throughout this lecture: one base layer
+# carrying the observed cells, with each tab adding only its own fit.
+cat_base <- ggplot(mapping = aes(x = student, y = eta,
+                                 color = student, shape = student)) +
+  geom_blank(data = cat_window) +
+  geom_point(data = cat_obs, size = 3) +
+  facet_wrap(~ balance_cat, scales = "free_y",
+             labeller = labeller(balance_cat = cat_labels)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Student", y = "Log-odds of default",
+       color = "Student", shape = "Student", title = "ISLR2::Default")
+
+cat_data <- cat_base
+
+cat_additive <- cat_base +
+  geom_line(data = filter(cat_fit, Model == "Additive"), aes(group = 1),
+            color = "grey40", linetype = 2, linewidth = 0.8)
+
+cat_interaction <- cat_base +
+  geom_line(data = filter(cat_fit, Model == "Interaction"), aes(group = 1),
+            color = "grey40", linetype = 2, linewidth = 0.8)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r cat-cat-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+cat_data
+```
+
+#### + Additive
+```{r cat-cat-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+cat_additive
+```
+
+#### + Interaction
+```{r cat-cat-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+cat_interaction
+```
+:::
+
+```{r cat-cat-gaps}
+#| include: false
+cat_gap <- cat_obs |>
+  group_by(balance_cat) |>
+  summarize(gap = eta[student == "Yes"] - eta[student == "No"],
+            .groups = "drop")
+```
+
+The points are the four observed cell log-odds; each dashed segment connects
+the two log-odds a model fits within one balance category. The two panels
+carry separate vertical axes of the same width, since the two balance
+categories are about four log-odds apart and a shared axis would flatten every
+student difference in the figure; a segment's steepness still means the same
+thing in both. The additive
+model's segments fall at the same slope in both panels, since one coefficient
+$\hat\beta_2 = `r sprintf("%.3f", coef(cat_add)[3])`$ has to serve as the
+student effect at both balance levels, and neither segment passes through both
+of its panel's points. The interaction model's segments pass exactly through
+all four points — four coefficients for four cells — with slopes differing by
+$\hat\beta_3$: the observed student gap is
+$`r sprintf("%.3f", cat_gap$gap[cat_gap$balance_cat == "Low"])`$ log-odds below
+\$1,500 and $`r sprintf("%.3f", cat_gap$gap[cat_gap$balance_cat == "High"])`$
+above it. That difference in slope is what the $z$-statistic above finds
+indistinguishable from sampling error.
+
 ### Continuous-categorical interactions
 
 The combination easiest to visualize pairs one quantitative feature $X$ with
@@ -144,7 +267,7 @@ $$\log\left(\frac{p(X,D)}{1 - p(X,D)}\right) = \underbrace{(\beta_0 + \beta_2 D)
 Setting $X = 0$ and $D = 0$ leaves $\beta_0$, the log-odds of the event in the
 reference group at $X = 0$, so $e^{\beta_0}$ are the odds and
 $\text{logistic}(\beta_0)$ the probability there. Adding $\beta_2$ shifts that
-baseline to the indicated group, still at $X = 0$.
+reference value to the indicated group, still at $X = 0$.
 
 The slope on $X$ is a function of $D$, which is the whole point of the
 interaction. Writing out the two levels:
@@ -182,6 +305,33 @@ contains both main effects and the product, satisfying hierarchy
 automatically. Writing `balance:student` alone would drop the main effects,
 violating hierarchy: R responds by giving each group its own balance slope
 while forcing both to share a single intercept.
+
+Fitting both models on `ISLR2::Default`, with `balance` as $X$ and the student
+indicator as $D$, gives the pair the rest of this section compares:
+
+```{r cont-cat-fits}
+default_additive    <- glm(default ~ balance + student,
+                           data = Default, family = "binomial")
+default_interaction <- glm(default ~ balance * student,
+                           data = Default, family = "binomial")
+coef(default_interaction)
+```
+
+```{r cont-cat-extract}
+#| include: false
+bda <- coef(default_additive)
+bdi <- coef(default_interaction)
+```
+
+The intercept $\hat\beta_0 = `r sprintf("%.2f", bdi[1])`$ is the log-odds of
+default for a non-student carrying no balance at all, a value far outside
+anything the data contain. From that reference, $\hat\beta_2$ moves a student
+with no balance by $`r sprintf("%.3f", bdi[3])`$ log-odds. The balance slope is
+$\hat\beta_1 = `r signif(bdi[2], 4)`$ for non-students and
+$\hat\beta_1 + \hat\beta_3 = `r signif(bdi[2] + bdi[4], 4)`$ for students, so
+the two per-\$100 odds ratios are
+$`r sprintf("%.3f", exp(100 * bdi[2]))`$ and
+$`r sprintf("%.3f", exp(100 * (bdi[2] + bdi[4])))`$.
 
 ### Continuous-continuous interactions
 
@@ -229,6 +379,128 @@ estimated in; whether an interaction matters is a question for the $z$-test or
 the drop-in-deviance test below, never for comparing $\hat\beta_3$ against
 $\hat\beta_1$ by eye.
 
+Neither feature has levels to split the picture by, so the fit is drawn by
+splitting one of them: customers are grouped into income quartiles, and each
+group's fitted probability curve is drawn at that group's median income
+against the full range of balance. Both models are fit on `income` as
+recorded; the quartiles only decide which four curves to draw.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cont-cont-setup}
+#| output: false
+Default <- Default |>
+  mutate(income_q = cut(income, breaks = quantile(income, 0:4 / 4),
+                        include.lowest = TRUE,
+                        labels = c("Q1 (lowest)", "Q2", "Q3", "Q4 (highest)")))
+
+balance_income_add <- glm(default ~ balance + income, data = Default,
+                          family = "binomial")
+
+# One curve per income quartile, each evaluated at that quartile's median
+# income -- the fit is a function of income itself, so a group needs a single
+# income value to be drawn at.
+income_median <- Default |>
+  group_by(income_q) |>
+  summarize(income = median(income), .groups = "drop")
+
+income_grid <- expand_grid(
+  balance  = seq(0, max(Default$balance), length.out = 300),
+  income_q = income_median$income_q) |>
+  left_join(income_median, by = "income_q")
+
+income_prob <- bind_rows(
+  income_grid |> mutate(Model = "Additive",
+                        p_hat = predict(balance_income_add,
+                                        newdata = income_grid,
+                                        type = "response")),
+  income_grid |> mutate(Model = "Interaction",
+                        p_hat = predict(balance_income_glm,
+                                        newdata = income_grid,
+                                        type = "response")))
+
+# Observed default rates in $400-wide balance bins within each income
+# quartile, dropped where a bin holds fewer than 50 customers.
+income_binned <- Default |>
+  mutate(bin = cut(balance, breaks = seq(0, 2800, by = 400),
+                   include.lowest = TRUE)) |>
+  group_by(income_q, bin) |>
+  summarize(balance = mean(balance), rate = mean(default01), n = n(),
+            .groups = "drop") |>
+  filter(n >= 50)
+
+# Four groups, so shape and linetype cannot simply duplicate a two-level
+# color scale; viridis keeps the four distinguishable without color.
+income_base <- ggplot(mapping = aes(x = balance, y = p_hat,
+                                    color = income_q, linetype = income_q)) +
+  geom_point(data = income_binned,
+             aes(y = rate, size = n, shape = income_q)) +
+  coord_cartesian(xlim = range(income_grid$balance), ylim = c(0, 1)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_color_viridis_d(end = 0.8) +
+  scale_shape_manual(values = c(16, 17, 15, 18)) +
+  scale_size_area(max_size = 4) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Income\nquartile", linetype = "Income\nquartile",
+       shape = "Income\nquartile", size = "Customers\nin bin",
+       title = "ISLR2::Default")
+
+income_data <- income_base
+
+income_additive <- income_base +
+  geom_line(data = filter(income_prob, Model == "Additive"), linewidth = 0.9)
+
+income_interaction <- income_base +
+  geom_line(data = filter(income_prob, Model == "Interaction"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r cont-cont-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_data
+```
+
+#### + Additive
+```{r cont-cont-additive-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_additive
+```
+
+#### + Interaction
+```{r cont-cont-interaction-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+income_interaction
+```
+:::
+
+```{r cont-cont-spread}
+#| include: false
+income_at_2000 <- income_prob |> filter(abs(balance - 2000) ==
+                                        min(abs(balance - 2000)))
+income_spread <- income_at_2000 |>
+  group_by(Model) |>
+  summarize(spread = max(p_hat) - min(p_hat), .groups = "drop")
+```
+
+The additive tab draws four curves of identical shape, each shifted from the
+next by a fixed amount of log-odds, so no pair of them ever crosses. The
+interaction tab lets the balance slope grow with income, and its four curves
+pull apart at high balances and close up at low ones: at a balance of \$2,000
+the fitted probabilities span
+`r sprintf("%.2f", income_spread$spread[income_spread$Model == "Additive"])`
+under the additive model and
+`r sprintf("%.2f", income_spread$spread[income_spread$Model == "Interaction"])`
+under the interaction. Switching between the tabs changes the picture very
+little, which is the same verdict the $z$-statistic above reaches.
+
 ### Fitted model geometry
 
 A fitted interaction differs from a fitted additive model in two visible ways:
@@ -241,20 +513,14 @@ Written as functions of $X$, the fitted log-odds for the two groups are
 
 $$\hat\eta(X, 0) = \hat\beta_0 + \hat\beta_1 X, \qquad \hat\eta(X, 1) = (\hat\beta_0 + \hat\beta_2) + (\hat\beta_1 + \hat\beta_3) X.$$
 
-Under the additive model $\hat\beta_3 = 0$, both lines have slope
+Under the additive model $\beta_3 = 0$, both lines have slope
 $\hat\beta_1$: they are **parallel**, separated by exactly $\hat\beta_2$ at
 every $X$. Under the interaction model the slopes differ by $\hat\beta_3$, so
 the lines are not parallel and, extended far enough, must cross. Parallel
 versus non-parallel on the linear-predictor scale is the visual signature that
 separates the two models.
 
-The probability scale is what a decision actually uses, and it is a distorted
-view of the same two lines. Passing each line through
-$\text{logistic}(\cdot)$ compresses it toward $0$ and $1$, so two parallel
-lines become two S-curves of identical shape that never cross, while two
-non-parallel lines become two S-curves of different steepness that can cross
-within the range of the data. In R, `predict()` on a `glm` object returns
-both scales:
+In R, `predict()` on a `glm` object returns both scales:
 
 ```{r predict-scales}
 #| eval: false
@@ -262,382 +528,11 @@ predict(fit, newdata = grid)                    # eta-hat, the linear predictor
 predict(fit, newdata = grid, type = "response") # p-hat, the probability
 ```
 
-A fitted probability is often turned into a predicted class by comparing it to
-a threshold, most commonly $0.5$. The **decision boundary** is the set of
-feature values at which the model estimates the two classes as equally likely,
-
-$$\hat p(x) = 0.5 \iff \frac{\hat p(x)}{1 - \hat p(x)} = 1 \iff \hat\eta(x) = 0,$$
-
-where $\hat p(x)$ is the estimated probability of the event at feature values
-$x$ and $\hat\eta(x) = x\hat\beta$ is the estimated linear predictor. Because
-the logistic function is strictly increasing, $\hat p(x) > 0.5$ exactly when
-$\hat\eta(x) > 0$, so the boundary is where the *linear* predictor crosses
-zero — for one quantitative feature and one indicator, a single threshold
-value of $X$ computed separately within each level of $D$:
-
-$$x^{*}_{D=0} = -\frac{\hat\beta_0}{\hat\beta_1}, \qquad x^{*}_{D=1} = -\frac{\hat\beta_0 + \hat\beta_2}{\hat\beta_1 + \hat\beta_3}.$$
-
-Dropping the interaction sets $\hat\beta_3 = 0$, so the two thresholds share a
-denominator, $x^{*}_{D=1} = x^{*}_{D=0} - \hat\beta_2/\hat\beta_1$: the
-additive model still gives the two groups different thresholds, but what it
-cannot give them is different *steepness*, since both groups cross the
-boundary at the common rate $\hat\beta_1$ per unit of $X$.
-
-### Interaction tests
-
-A single interaction coefficient is tested the way any other coefficient is,
-with the Wald $z$-statistic from the simple logistic regression lecture:
-$H_0: \beta_3 = 0$ against $z = \hat\beta_3/\text{SE}(\hat\beta_3)$, printed by
-`summary()` alongside every other coefficient.
-
-A categorical feature with more than two levels contributes more than one
-interaction coefficient — one per non-reference level — and no single
-$z$-test addresses whether the feature interacts with $X$ *at all*. That
-question compares two models with the drop-in-deviance test of the multiple
-logistic regression lecture: a reduced model without any of the interaction
-terms against a full model with all of them,
-$G^2 = D_r - D_f$ approximately $\chi^2_k$ with $k$ the number of interaction
-terms dropped. The price example late in this lecture uses exactly this
-multi-level case from the start: a store's actual identity has more than two
-levels, so testing whether price interacts with store at all takes a
-drop-in-deviance test, not a single $z$.
-
-## Polynomials
-
-A polynomial is a basis function like any other: $\beta_1 X + \beta_2 X^2$ adds
-one more column, $X^2$, to the linear predictor, and `poly(x, 2)` builds it in
-R exactly as it did for linear regression. It combines with an interaction the
-same way a linear term did — put it on both sides of `*` — giving each group
-its own quadratic shape rather than its own straight line.
-
-```{r poly-fits}
-Default <- Default |>
-  mutate(default01 = as.numeric(default == "Yes"),
-         default_jit = default01 + runif(n(), -0.03, 0.03))
-
-poly_linear_additive    <- glm(default ~ balance + student,
-                               data = Default, family = "binomial")
-poly_linear_interaction <- glm(default ~ balance * student,
-                               data = Default, family = "binomial")
-poly_additive    <- glm(default ~ poly(balance, 2) + student,
-                        data = Default, family = "binomial")
-poly_interaction <- glm(default ~ poly(balance, 2) * student,
-                        data = Default, family = "binomial")
-```
+Plotting $\hat\eta$ against balance for the two `Default` fits above draws
+those lines.
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
-```{r poly-prob-setup}
-#| output: false
-poly_grid <- expand_grid(
-  balance = seq(0, max(Default$balance), length.out = 300),
-  student = factor(c("No", "Yes"), levels = levels(Default$student)))
-
-poly_probs <- bind_rows(
-  poly_grid |> mutate(Model = "Additive (linear)",
-                      p_hat = predict(poly_linear_additive, newdata = poly_grid,
-                                      type = "response")),
-  poly_grid |> mutate(Model = "Interaction (linear)",
-                      p_hat = predict(poly_linear_interaction, newdata = poly_grid,
-                                      type = "response")),
-  poly_grid |> mutate(Model = "Additive (quadratic)",
-                      p_hat = predict(poly_additive, newdata = poly_grid,
-                                      type = "response")),
-  poly_grid |> mutate(Model = "Interaction (quadratic)",
-                      p_hat = predict(poly_interaction, newdata = poly_grid,
-                                      type = "response"))
-) |> mutate(Model = fct_inorder(Model))
-
-# The same shared-base idea used throughout this chapter: one base layer
-# carrying the raw (jittered) data, with each tab adding only its own line.
-poly_base <- ggplot(mapping = aes(x = balance, y = p_hat,
-                                  color = student, linetype = student)) +
-  geom_point(data = Default, aes(y = default_jit, shape = student),
-             alpha = 0.08, size = 0.7) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
-  coord_cartesian(xlim = range(poly_grid$balance), ylim = c(-0.05, 1.05)) +
-  scale_y_continuous(breaks = c(0, 0.5, 1)) +
-  scale_color_manual(values = c("#0072B2", "#D55E00")) +
-  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
-       color = "Student", linetype = "Student", shape = "Student",
-       title = "ISLR2::Default")
-
-poly_data    <- poly_base
-poly_lin_add <- poly_base +
-  geom_line(data = filter(poly_probs, Model == "Additive (linear)"), linewidth = 0.9)
-poly_lin_int <- poly_base +
-  geom_line(data = filter(poly_probs, Model == "Interaction (linear)"), linewidth = 0.9)
-poly_quad_add <- poly_base +
-  geom_line(data = filter(poly_probs, Model == "Additive (quadratic)"), linewidth = 0.9)
-poly_quad_int <- poly_base +
-  geom_line(data = filter(poly_probs, Model == "Interaction (quadratic)"), linewidth = 0.9)
-```
-:::
-
-::: {.panel-tabset}
-#### Data
-```{r poly-data-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-poly_data
-```
-
-#### + Additive (linear)
-```{r poly-lin-add-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-poly_lin_add
-```
-
-#### + Interaction (linear)
-```{r poly-lin-int-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-poly_lin_int
-```
-
-#### + Additive (quadratic)
-```{r poly-quad-add-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-poly_quad_add
-```
-
-#### + Interaction (quadratic)
-```{r poly-quad-int-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-poly_quad_int
-```
-:::
-
-```{r poly-quad-extract}
-#| include: false
-poly_quad_z <- summary(poly_additive)$coefficients["poly(balance, 2)2", "z value"]
-```
-
-The two quadratic tabs are all but identical to the two linear tabs above them
-and to each other: the quadratic term itself is not significant
-($z = `r sprintf("%.2f", poly_quad_z)`$), so these data give no evidence that
-balance's effect on the log-odds curves at all. Adding curvature does not
-manufacture an interaction where the data do not support one, any more than
-adding an interaction would manufacture curvature that is not there.
-
-## Step functions
-
-A step function is likewise just a set of indicator columns,
-$C_j(X) = \mathrm{I}(c_j \le X < c_{j+1})$ for $j = 1, \ldots, p$, built from
-cut points $-\infty = c_0 < c_1 < \cdots < c_p < c_{p+1} = \infty$ exactly as
-in the flexibility lecture, with $[c_0, c_1)$ the baseline bin and `cut(x,
-breaks)` in place of `poly(x, degree)`. Coefficients are read the same way:
-$\beta_j$ is the log-odds difference between bin $j$ and the baseline bin, so
-$e^{\beta_j}$ is the odds ratio between those two bins — where in linear
-regression $\beta_j$ was a difference between bin means.
-
-More bins mean a more flexible fit, at the same bias-variance cost flexibility
-always carries: with enough bins the step function tracks the training data
-closely, at the price of a noisier estimate in any bin with few observations.
-
-::: {.callout-note collapse="true"}
-### Code for the plots below
-```{r step-setup}
-#| output: false
-step_grid <- tibble(balance = seq(0, max(Default$balance), length.out = 400))
-
-# The same $400-wide-bin, by-student grouping used to check the additive fit
-# in the previous lecture, so the observed data look the same way here as
-# they did there. default01 was already added to Default in the Polynomials
-# section above.
-balance_bin_width <- 400
-balance_binned <- Default |>
-  mutate(bin = cut(balance, breaks = seq(0, 2800, by = balance_bin_width),
-                   include.lowest = TRUE)) |>
-  group_by(student, bin) |>
-  summarize(balance = mean(balance), rate = mean(default01), n = n(),
-            .groups = "drop") |>
-  filter(n >= 100)
-
-step_base <- ggplot(mapping = aes(x = balance)) +
-  geom_point(data = balance_binned,
-             aes(y = rate, color = student, shape = student, size = n)) +
-  coord_cartesian(xlim = range(step_grid$balance), ylim = c(0, 1)) +
-  scale_y_continuous(breaks = c(0, 0.5, 1)) +
-  scale_color_manual(values = c("#0072B2", "#D55E00")) +
-  scale_size_area(max_size = 5) +
-  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
-       color = "Student", shape = "Student", size = "Customers\nin bin",
-       title = "ISLR2::Default")
-
-step_curve <- function(breaks) {
-  fit <- glm(default ~ cut(balance, breaks = breaks, include.lowest = TRUE),
-            data = Default, family = "binomial")
-  step_grid |> mutate(p_hat = predict(fit, newdata = step_grid,
-                                      type = "response"))
-}
-
-# Explicit, unequal-width breaks rather than cut(balance, breaks = k): equal-
-# width bins put too few defaults in the lowest bin once k reaches 5 or more
-# (an empty-cell bin is a preview of the separation the next lecture covers),
-# and predicting from a re-fit cut() on new data is fragile unless the same
-# breaks are passed to both the fit and the prediction grid.
-step_data  <- step_base
-step_2bin  <- step_base +
-  geom_line(data = step_curve(c(0, 1350, 2700)), aes(y = p_hat),
-            color = "grey20", linewidth = 0.9)
-step_4bin  <- step_base +
-  geom_line(data = step_curve(c(0, 700, 1400, 2100, 2700)), aes(y = p_hat),
-            color = "grey20", linewidth = 0.9)
-step_8bin  <- step_base +
-  geom_line(data = step_curve(c(0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2700)),
-            aes(y = p_hat), color = "grey20", linewidth = 0.9)
-```
-:::
-
-The step-function fits below use `balance` alone, so a single curve is fit to
-both groups at once; the observed points stay split by student, in the same
-\$400-wide bins the previous lecture used, purely for comparison.
-
-::: {.panel-tabset}
-#### Data
-```{r step-data-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-step_data
-```
-
-#### + 2 bins
-```{r step-2bin-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-step_2bin
-```
-
-#### + 4 bins
-```{r step-4bin-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-step_4bin
-```
-
-#### + 8 bins
-```{r step-8bin-plot}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-step_8bin
-```
-:::
-
-Two bins draw one flat line and one jump, barely distinguishing low balances
-from high; each doubling adds detail the step function can track, until eight
-bins trace nearly the same rise the smooth logistic curve of the earlier
-lectures did. What none of these curves capture is the gap between the two
-student groups: the interaction test later in this lecture finds the two
-groups share a common balance *slope*, but the additive model's `student`
-coefficient still shifts one group below the other, and a step function fit to
-`balance` alone has no column left to represent that shift — visible in every
-tab as the student points running consistently under the non-student points
-the staircase was fit to.
-
-## Student-specific balance effects
-
-**Question.** The previous lecture fit `default ~ balance + student`
-additively, which forces the student-versus-non-student odds ratio to be
-identical at every balance and the balance odds ratio to be identical for
-students and non-students. Is that additive assumption right, or does balance
-act differently on the two groups?
-
-**Data.** The same `r format(nrow(Default), big.mark = ",")` simulated credit
-card customers as in the previous two lectures, with `balance` as the
-quantitative feature $X$, the student indicator
-$D = \mathrm{I}(\texttt{student} = \texttt{Yes})$, and $Y_i = 1$ when customer
-$i$ defaults.
-
-### Exploratory analysis
-
-::: {.callout-note collapse="true"}
-### Code for the figure below
-```{r default-eda}
-#| output: false
-default_eda_plot <- ggplot(Default, aes(x = balance, y = default_jit,
-                                        color = student, shape = student)) +
-  geom_point(alpha = 0.08, size = 0.7) +
-  scale_y_continuous(breaks = c(0, 1), labels = c("No (0)", "Yes (1)")) +
-  scale_color_manual(values = c("#0072B2", "#D55E00")) +
-  labs(x = "Credit card balance ($)", y = "Default",
-       color = "Student", shape = "Student", title = "ISLR2::Default")
-```
-:::
-
-```{r default-eda-figure}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.2
-default_eda_plot
-```
-
-Both groups show the same rough shape — defaults rare at low balances,
-steadily more common as balance grows — with the student points sitting a
-little to the right, a first hint of the confounding the previous lecture
-already worked through. Whether the *rate of increase* also differs by group
-is what an interaction asks and the raw scatter alone cannot answer.
-
-### Fitting both models
-
-```{r default-fits}
-default_additive    <- glm(default ~ balance + student,
-                           data = Default, family = "binomial")
-default_interaction <- glm(default ~ balance * student,
-                           data = Default, family = "binomial")
-coef(default_interaction)
-```
-
-::: {.callout-note collapse="true"}
-### Code for the table below
-```{r default-coef-setup}
-#| output: false
-bda <- coef(default_additive)
-bdi <- coef(default_interaction)
-
-default_coef_table <- tibble(
-  term        = names(bdi),
-  additive    = c(bda, NA),
-  interaction = bdi
-) |>
-  mutate(across(c(additive, interaction),
-                \(x) ifelse(is.na(x), "", sprintf("%.6f", x)))) |>
-  knitr::kable(col.names = c("Coefficient", "Additive fit",
-                             "Interaction fit"),
-               align = "lcc")
-```
-:::
-
-```{r default-coef-table}
-#| echo: false
-default_coef_table
-```
-
-The two fits agree closely on the intercept and on the `balance` slope.
-Whether the interaction $\hat\beta_3 = `r sprintf("%.6f", bdi[4])`$ is
-negligible is a question for the $z$-test below, not for its size relative to
-the `balance` main effect: a ratio of two point estimates says nothing about
-how precisely $\hat\beta_3$ was estimated.
-
-### Fitted log-odds
-
-Plotting $\hat\eta$ against balance for each model shows the two straight lines
-each one produces.
-
-::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r default-link-setup}
 #| output: false
 default_grid <- expand_grid(
@@ -694,13 +589,16 @@ tab's two lines have slopes $`r signif(bdi[2], 4)`$ and
 $`r signif(bdi[2] + bdi[4], 4)`$, a difference too small to see: switching
 between the tabs barely moves the picture.
 
-### Fitted probabilities
-
-Building the same comparison up from the raw data puts both fitted models on
-the scale a lending decision would use.
+The probability scale is what a decision actually uses, and it is a distorted
+view of the same two lines. Passing each line through
+$\text{logistic}(\cdot)$ compresses it toward $0$ and $1$, so two parallel
+lines become two S-curves of identical shape that never cross, while two
+non-parallel lines become two S-curves of different steepness that can cross
+within the range of the data. Building the same comparison up from the raw
+data puts both fits on that scale.
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r default-prob-setup}
 #| output: false
 default_prob <- bind_rows(
@@ -713,18 +611,11 @@ default_prob <- bind_rows(
            p_hat = predict(default_interaction, newdata = default_grid,
                            type = "response")))
 
-# Reuses the jittered column from the exploratory analysis above rather than
-# drawing a fresh one -- geom_jitter() re-randomizes every time a plot is
-# drawn, and each tab below is drawn separately, so leaving it to
-# geom_jitter() (or even a second runif() call) would put the points in
-# slightly different places from one tab to the next and make it look like
-# the data had changed.
-#
 # The same shared-base idea, with the raw data as the layer every tab keeps.
 # The legend is kept on every tab (with more visible swatches than the
 # points themselves) rather than suppressed on this one layer, so the panel
 # is the same width in all three tabs -- an unequal panel width across tabs
-# is the same "the data looks different" problem the jitter fix above solves.
+# looks, to a reader clicking between them, like the data changed.
 default_prob_base <- ggplot(mapping = aes(x = balance, y = p_hat,
                                           color = student, linetype = student)) +
   geom_point(data = Default,
@@ -774,11 +665,443 @@ default_prob_interaction
 ```
 :::
 
-The data tab replots the previous lecture's jittered scatter in a single
-panel, with students and non-students distinguished by color and shape. The
+The data tab plots each customer's outcome, jittered vertically, against
+balance, with students and non-students distinguished by color and shape. The
 two model tabs are nearly the same picture: two S-curves of all but identical
-shape, the student curve shifted right, whether or not
-the interaction is in the model.
+shape, the student curve shifted right, whether or not the interaction is in
+the model.
+
+A fitted probability is often turned into a predicted class by comparing it to
+a threshold, most commonly $0.5$. The **decision boundary** is the set of
+feature values at which the model estimates the two classes as equally likely,
+
+$$\hat p(x) = 0.5 \iff \frac{\hat p(x)}{1 - \hat p(x)} = 1 \iff \hat\eta(x) = 0,$$
+
+where $\hat p(x)$ is the estimated probability of the event at feature values
+$x$ and $\hat\eta(x) = x\hat\beta$ is the estimated linear predictor. Because
+the logistic function is strictly increasing, $\hat p(x) > 0.5$ exactly when
+$\hat\eta(x) > 0$, so the boundary is where the *linear* predictor crosses
+zero — for one quantitative feature and one indicator, a single threshold
+value of $X$ computed separately within each level of $D$:
+
+$$x^{*}_{D=0} = -\frac{\hat\beta_0}{\hat\beta_1}, \qquad x^{*}_{D=1} = -\frac{\hat\beta_0 + \hat\beta_2}{\hat\beta_1 + \hat\beta_3}.$$
+
+Dropping the interaction sets $\beta_3 = 0$, so the two thresholds share a
+denominator, $x^{*}_{D=1} = x^{*}_{D=0} - \hat\beta_2/\hat\beta_1$: the
+additive model still gives the two groups different thresholds, but what it
+cannot give them is different *steepness*, since both groups cross the
+boundary at the common rate $\hat\beta_1$ per unit of $X$.
+
+### Interaction tests
+
+A single interaction coefficient is tested the way any other coefficient is,
+with the Wald $z$-statistic from the simple logistic regression lecture:
+$H_0: \beta_3 = 0$ against $z = \hat\beta_3/\text{SE}(\hat\beta_3)$, printed by
+`summary()` alongside every other coefficient.
+
+A categorical feature with more than two levels contributes more than one
+interaction coefficient — one per non-reference level — and no single
+$z$-test addresses whether the feature interacts with $X$ *at all*. That
+question compares two models with the drop-in-deviance test of the multiple
+logistic regression lecture: a reduced model without any of the interaction
+terms against a full model with all of them,
+$G^2 = D_r - D_f$ approximately $\chi^2_k$ where
+
+- $D_r$ is the deviance of the reduced model,
+- $D_f$ is the deviance of the full model, and
+- $k$ is the number of interaction terms dropped.
+
+The drop-in-deviance test is the one that always applies: it asks the same
+question for $k = 1$ as for $k = 10$, where the $z$-test only ever addresses
+one coefficient at a time. Both tests apply to the `balance`-by-`student`
+interaction, which contributes exactly one coefficient:
+
+```{r default-interaction-z}
+summary(default_interaction)$coefficients["balance:studentYes", ]
+```
+
+```{r default-interaction-deviance}
+anova(default_additive, default_interaction, test = "Chisq")
+```
+
+```{r default-interaction-test-extract}
+#| include: false
+dz   <- summary(default_interaction)$coefficients["balance:studentYes", ]
+ddev <- anova(default_additive, default_interaction, test = "Chisq")
+dG2  <- ddev$Deviance[2]
+dp   <- ddev[["Pr(>Chi)"]][2]
+```
+
+Both are testing $H_0: \beta_3 = 0$. The $z$-statistic is
+$`r sprintf("%.3f", dz["z value"])`$ with $p = `r sprintf("%.3f", dz["Pr(>|z|)"])`$;
+dropping the interaction raises the deviance by
+$G^2 = `r sprintf("%.3f", dG2)`$ on $`r ddev$Df[2]`$ degree of freedom, giving
+$p = `r sprintf("%.3f", dp)`$. With $k = 1$ the two are different statistics
+for the same hypothesis, each with an approximate $\chi^2_1$ null
+distribution: the Wald statistic reads the curvature of the log-likelihood at
+$\hat\beta$, while the deviance compares the log-likelihood itself at the two
+fits, which is why $z^2 = `r sprintf("%.3f", dz["z value"]^2)`$ and $G^2$ come
+out close without being equal. Only the deviance test survives $k > 1$.
+
+The price example later in this lecture is exactly that multi-level case: a
+store's identity has more than two levels, so testing whether price interacts
+with store at all takes a drop-in-deviance test, not a single $z$.
+
+## Polynomials
+
+A polynomial is a basis function like any other: $\beta_1 X + \beta_2 X^2$ adds
+one more column, $X^2$, to the linear predictor, and `poly(x, 2)` builds it in
+R exactly as it did for linear regression. It combines with an interaction the
+same way a linear term did — put it on both sides of `*` — giving each group
+its own quadratic shape rather than its own straight line.
+
+```{r poly-fits}
+poly_linear_additive <- glm(default ~ balance + student,
+                            data = Default, family = "binomial")
+poly_additive        <- glm(default ~ poly(balance, 2) + student,
+                            data = Default, family = "binomial")
+poly_interaction     <- glm(default ~ poly(balance, 2) * student,
+                            data = Default, family = "binomial")
+```
+
+The first fit is the linear additive model again, kept as the reduced model
+for the test below. Its curves, and the linear interaction model's, were
+plotted in the Interactions section above, so the tabs here add only the
+quadratic fits to the same raw data.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r poly-prob-setup}
+#| output: false
+poly_grid <- expand_grid(
+  balance = seq(0, max(Default$balance), length.out = 300),
+  student = factor(c("No", "Yes"), levels = levels(Default$student)))
+
+poly_probs <- bind_rows(
+  poly_grid |> mutate(Model = "Additive (quadratic)",
+                      p_hat = predict(poly_additive, newdata = poly_grid,
+                                      type = "response")),
+  poly_grid |> mutate(Model = "Interaction (quadratic)",
+                      p_hat = predict(poly_interaction, newdata = poly_grid,
+                                      type = "response"))
+) |> mutate(Model = fct_inorder(Model))
+
+# The same shared-base idea used throughout this chapter: one base layer
+# carrying the raw (jittered) data, with each tab adding only its own line.
+poly_base <- ggplot(mapping = aes(x = balance, y = p_hat,
+                                  color = student, linetype = student)) +
+  geom_point(data = Default, aes(y = default_jit, shape = student),
+             alpha = 0.08, size = 0.7) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  coord_cartesian(xlim = range(poly_grid$balance), ylim = c(-0.05, 1.05)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Student", linetype = "Student", shape = "Student",
+       title = "ISLR2::Default")
+
+poly_data     <- poly_base
+poly_quad_add <- poly_base +
+  geom_line(data = filter(poly_probs, Model == "Additive (quadratic)"), linewidth = 0.9)
+poly_quad_int <- poly_base +
+  geom_line(data = filter(poly_probs, Model == "Interaction (quadratic)"), linewidth = 0.9)
+```
+:::
+
+::: {.panel-tabset}
+#### Data
+```{r poly-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+poly_data
+```
+
+#### + Additive (quadratic)
+```{r poly-quad-add-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+poly_quad_add
+```
+
+#### + Interaction (quadratic)
+```{r poly-quad-int-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+poly_quad_int
+```
+:::
+
+```{r poly-quad-extract}
+#| include: false
+poly_quad_z <- summary(poly_additive)$coefficients["poly(balance, 2)2", "z value"]
+```
+
+The two quadratic tabs are all but identical to each other, and to the linear
+fits of the Interactions section: the quadratic term itself is not significant
+($z = `r sprintf("%.2f", poly_quad_z)`$), so these data give no evidence that
+balance's effect on the log-odds curves at all. Adding curvature does not
+manufacture an interaction where the data do not support one, any more than
+adding an interaction would manufacture curvature that is not there.
+
+The quadratic term can equally be tested by comparing the linear-only and
+quadratic additive fits:
+
+```{r poly-deviance}
+anova(poly_linear_additive, poly_additive, test = "Chisq")
+```
+
+```{r poly-deviance-extract}
+#| include: false
+poly_dev <- anova(poly_linear_additive, poly_additive, test = "Chisq")
+poly_G2  <- poly_dev$Deviance[2]
+poly_p   <- poly_dev[["Pr(>Chi)"]][2]
+```
+
+Dropping the quadratic column costs $G^2 = `r sprintf("%.3f", poly_G2)`$ of
+deviance on $`r poly_dev$Df[2]`$ degree of freedom
+($p = `r sprintf("%.3f", poly_p)`$), matching
+$z^2 = `r sprintf("%.3f", poly_quad_z^2)`$ to three decimals — one added
+parameter, so the two tests carry the same information. The reason to reach
+for this one anyway
+is that it would still be a single test if the polynomial were cubic or
+quartic, where the $z$-column would offer one statistic per added degree and
+no verdict on the polynomial as a whole.
+
+## Step functions
+
+A step function is likewise just a set of indicator columns,
+$C_j(X) = \mathrm{I}(c_j \le X < c_{j+1})$ for $j = 1, \ldots, p$, built from
+cut points $-\infty = c_0 < c_1 < \cdots < c_p < c_{p+1} = \infty$ exactly as
+in the flexibility lecture, with $[c_0, c_1)$ the reference bin and `cut(x,
+breaks)` in place of `poly(x, degree)`. Coefficients are read the same way:
+$\beta_j$ is the log-odds difference between bin $j$ and the reference bin, so
+$e^{\beta_j}$ is the odds ratio between those two bins — where in linear
+regression $\beta_j$ was a difference between bin means.
+
+More bins mean a more flexible fit, at the same bias-variance cost flexibility
+always carries: with enough bins the step function tracks the training data
+closely, at the price of a noisier estimate in any bin with few observations.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r step-setup}
+#| output: false
+step_grid <- expand_grid(
+  balance = seq(0, max(Default$balance), length.out = 400),
+  student = factor(c("No", "Yes"), levels = levels(Default$student)))
+
+# The same $400-wide-bin, by-student grouping used to check the additive fit
+# in the previous lecture, so the observed data look the same way here as
+# they did there. default01 was added to Default in the Interactions section
+# above.
+balance_bin_width <- 400
+balance_binned <- Default |>
+  mutate(bin = cut(balance, breaks = seq(0, 2800, by = balance_bin_width),
+                   include.lowest = TRUE)) |>
+  group_by(student, bin) |>
+  summarize(balance = mean(balance), rate = mean(default01), n = n(),
+            .groups = "drop") |>
+  filter(n >= 100)
+
+step_base <- ggplot(mapping = aes(x = balance)) +
+  geom_point(data = balance_binned,
+             aes(y = rate, color = student, shape = student, size = n)) +
+  coord_cartesian(xlim = range(step_grid$balance), ylim = c(0, 1)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  scale_size_area(max_size = 5) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Student", shape = "Student", size = "Customers\nin bin",
+       title = "ISLR2::Default")
+
+step_curve <- function(breaks) {
+  fit <- glm(default ~ cut(balance, breaks = breaks, include.lowest = TRUE) *
+               student,
+             data = Default, family = "binomial")
+  step_grid |> mutate(p_hat = predict(fit, newdata = step_grid,
+                                      type = "response"))
+}
+
+step_line <- function(breaks) {
+  list(geom_line(data = step_curve(breaks),
+                 aes(y = p_hat, color = student, linetype = student),
+                 linewidth = 0.9),
+       labs(linetype = "Student"))
+}
+
+# Explicit, unequal-width breaks rather than cut(balance, breaks = k): every
+# bin now has to hold both outcomes within *each* student group, not just
+# overall, and equal-width bins leave the lowest bin with no student defaults
+# at all once k reaches 4 (an empty cell is a preview of the separation the
+# next lecture covers). Predicting from a re-fit cut() on new data is also
+# fragile unless the same breaks are passed to both the fit and the grid.
+step_data <- step_base
+step_2bin <- step_base + step_line(c(0, 1350, 2700))
+step_4bin <- step_base + step_line(c(0, 1100, 1500, 1900, 2700))
+step_8bin <- step_base +
+  step_line(c(0, 1100, 1300, 1500, 1700, 1900, 2100, 2300, 2700))
+```
+:::
+
+Each fit below uses `cut(balance, breaks) * student`, giving the two groups
+separate staircases over the same bins; the observed points are the default
+rate in the same \$400-wide bins the previous lecture used, split by student.
+
+::: {.panel-tabset}
+#### Data
+```{r step-data-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+step_data
+```
+
+#### + 2 bins
+```{r step-2bin-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+step_2bin
+```
+
+#### + 4 bins
+```{r step-4bin-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+step_4bin
+```
+
+#### + 8 bins
+```{r step-8bin-plot}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+step_8bin
+```
+:::
+
+```{r step-extract}
+#| include: false
+step_top <- Default |>
+  filter(balance > 2300) |>
+  count(student)
+```
+
+Two bins give each group one flat stretch and one jump, barely distinguishing
+low balances from high; each doubling adds detail the staircases can track,
+until eight bins trace nearly the same rise the smooth logistic curve of the
+earlier lectures did. Interacting the bins with `student` gives each group its
+own height in every bin, so the two staircases run together at low balances,
+where almost nobody defaults, and separate above roughly \$1,500, the student
+staircase sitting below the non-student one over most of that range.
+
+The price of that detail is visible in the eight-bin tab, where the staircases
+stop rising monotonically, cross each other, and jump around: only
+`r step_top$n[step_top$student == "No"]` non-students and
+`r step_top$n[step_top$student == "Yes"]` students carry a balance above
+\$2,300, so the top bin's two estimates are each built on a handful of
+customers. Every added bin is another pair of indicator columns to estimate —
+`cut(balance, breaks) * student` is a categorical-categorical interaction with
+one parameter per bin-by-group cell — and the data have to be spread across
+all of them.
+
+## Student-specific balance effects
+
+**Question.** The previous lecture fit `default ~ balance + student`
+additively, which forces the student-versus-non-student odds ratio to be
+identical at every balance and the balance odds ratio to be identical for
+students and non-students. Is that additive assumption right, or does balance
+act differently on the two groups?
+
+**Data.** The same `r format(nrow(Default), big.mark = ",")` simulated credit
+card customers as in the previous two lectures, with `balance` as the
+quantitative feature $X$, the student indicator
+$D = \mathrm{I}(\texttt{student} = \texttt{Yes})$, and $Y_i = 1$ when customer
+$i$ defaults.
+
+### Exploratory analysis
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-eda}
+#| output: false
+default_eda_plot <- ggplot(Default, aes(x = balance, y = default_jit,
+                                        color = student, shape = student)) +
+  geom_point(alpha = 0.08, size = 0.7) +
+  scale_y_continuous(breaks = c(0, 1), labels = c("No (0)", "Yes (1)")) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Credit card balance ($)", y = "Default",
+       color = "Student", shape = "Student", title = "ISLR2::Default")
+```
+:::
+
+```{r default-eda-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+default_eda_plot
+```
+
+Both groups show the same rough shape — defaults rare at low balances,
+steadily more common as balance grows — with the student points sitting a
+little to the right, a first hint of the confounding the previous lecture
+already worked through. Whether the *rate of increase* also differs by group
+is what an interaction asks and the raw scatter alone cannot answer.
+
+### Fitting both models
+
+```{r default-fits}
+default_additive    <- glm(default ~ balance + student,
+                           data = Default, family = "binomial")
+default_interaction <- glm(default ~ balance * student,
+                           data = Default, family = "binomial")
+coef(default_interaction)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-coef-setup}
+#| output: false
+bda <- coef(default_additive)
+bdi <- coef(default_interaction)
+
+default_coef_table <- tibble(
+  term        = names(bdi),
+  additive    = c(bda, NA),
+  interaction = bdi
+) |>
+  mutate(across(c(additive, interaction),
+                \(x) ifelse(is.na(x), "", sprintf("%.6f", x)))) |>
+  knitr::kable(col.names = c("Coefficient", "Additive fit",
+                             "Interaction fit"),
+               align = "lcc")
+```
+:::
+
+```{r default-coef-table}
+#| echo: false
+default_coef_table
+```
+
+The two fits agree closely on the intercept and on the `balance` slope.
+Whether the interaction $\hat\beta_3 = `r sprintf("%.6f", bdi[4])`$ is
+negligible is a question for the $z$-test below, not for its size relative to
+the `balance` main effect: a ratio of two point estimates says nothing about
+how precisely $\hat\beta_3$ was estimated.
+
+These are the two fits drawn in the Interactions section above. On the
+linear-predictor scale, the additive model's lines are exactly parallel, both
+with slope $`r signif(bda[2], 4)`$ log-odds per dollar and separated by
+$\hat\beta_2 = `r sprintf("%.3f", bda[3])`$ at every balance, while the
+interaction model's lines have slopes $`r signif(bdi[2], 4)`$ and
+$`r signif(bdi[2] + bdi[4], 4)`$ — a difference too small to see. On the
+probability scale the two are equally hard to tell apart: two S-curves of all
+but identical shape, the student curve shifted right, whether or not the
+interaction is in the model.
 
 ### Interaction test
 
@@ -787,7 +1110,7 @@ summary(default_interaction)$coefficients
 ```
 
 ::: {.callout-note collapse="true"}
-### Code for the values quoted below
+### Code
 ```{r default-inference}
 #| output: false
 dcoef   <- summary(default_interaction)$coefficients
@@ -808,12 +1131,6 @@ or_d_table <- or_d |>
                              "Odds ratio per \\$100"),
                align = "lcc")
 
-aic_d_table <- tibble(
-  Model = c("`default ~ balance + student`", "`default ~ balance * student`"),
-  k     = c(length(bda), length(bdi)),
-  AIC   = sprintf("%.2f", c(AIC(default_additive), AIC(default_interaction)))
-) |>
-  knitr::kable(col.names = c("Model", "Parameters", "AIC"), align = "lcc")
 ```
 :::
 
@@ -836,6 +1153,16 @@ The **Akaike information criterion**, $\text{AIC} = -2\ell(\hat\beta) + 2k$ for
 a model with $k$ estimated parameters, scores a fit by its log-likelihood with
 a penalty for the number of parameters it used; lower is better. It gives a
 second, test-free reading of whether a term earns its place.
+
+```{r default-aic-fit}
+#| output: false
+aic_d_table <- tibble(
+  Model = c("`default ~ balance + student`", "`default ~ balance * student`"),
+  k     = c(length(bda), length(bdi)),
+  AIC   = sprintf("%.2f", c(AIC(default_additive), AIC(default_interaction)))
+) |>
+  knitr::kable(col.names = c("Model", "Parameters", "AIC"), align = "lcc")
+```
 
 ```{r default-aic-table}
 #| echo: false
@@ -903,7 +1230,7 @@ Before fitting anything, plot each purchase against the price paid for
 Citrus Hill, split by store:
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r oj-eda}
 #| output: false
 OJ <- OJ |> mutate(ch01 = as.numeric(Purchase == "CH"))
@@ -957,7 +1284,7 @@ coef(oj_interaction)
 ```
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r oj-coef-setup}
 #| output: false
 boa <- coef(oj_additive)
@@ -996,7 +1323,7 @@ Plotting $\hat\eta$ against price for each store shows what those separate
 coefficients mean for the fitted lines:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r oj-link-setup}
 #| output: false
 # Each store's own observed price range, not the pooled range -- stores 3 and
@@ -1065,7 +1392,7 @@ The same two model fits, now on the scale a purchase decision actually uses,
 with the observed proportions overlaid:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r oj-prob-setup}
 #| output: false
 oj_prob <- bind_rows(
@@ -1141,7 +1468,7 @@ Reading each store's slope off the interaction fit, and converting it to an
 odds ratio, makes the split concrete:
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r oj-slope-setup}
 #| output: false
 store_ids <- sort(unique(OJ$StoreID))
@@ -1190,7 +1517,7 @@ The decision boundary here is the Citrus Hill price at which the model puts
 the two brands at 50/50, computed separately for each store.
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r oj-boundaries}
 #| output: false
 store_intercept <- function(s) {
@@ -1295,17 +1622,17 @@ glmer(Purchase ~ SalePriceCH + (SalePriceCH | StoreID),
 ```
 :::
 
-## Two examples, two verdicts
+## Two verdicts, two tests
 
 Both examples asked whether one feature's effect on the odds of the response
 depends on the value of another feature. `Default` answered no: the fitted
 slopes for students and non-students differed by almost nothing, the curves
-were indistinguishable, and a single $z$-test settled it
-($p = `r sprintf("%.3f", p_d)`$). `OJ` answered yes, and needed a different
-tool to ask the question at all — `r length(store_ids)` stores means testing
-the interaction is a drop-in-deviance test rather than a single $z$, and that
-test rejected the
-common-slope assumption decisively ($p = `r signif(oj_p, 3)`$).
+were indistinguishable, and both the $z$-test and the drop-in-deviance test
+agreed ($p = `r sprintf("%.3f", p_d)`$). `OJ` answered yes, and needed a
+different tool to ask the question at all — `r length(store_ids)` stores means
+testing the interaction is a drop-in-deviance test rather than a single $z$,
+and that test rejected the common-slope assumption decisively
+($p = `r signif(oj_p, 3)`$).
 
 Nothing about either pair of features announced which answer was coming, or
 which test the answer would take. The additive assumption is checkable, and
