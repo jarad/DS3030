@@ -41,8 +41,8 @@ standard errors of a believable size, and produced $z$-statistics that could be
 read against a normal distribution. Nothing in those outputs suggested that
 maximum likelihood might do anything else.
 
-It can. Least squares always returns an estimate as long as $X^\top X$ is
-invertible, because $\hat\beta = (X^\top X)^{-1}X^\top y$ is a formula. Maximum
+It can. Least squares always returns an estimate as long as $\mathbf{X}^\top \mathbf{X}$ is
+invertible, because $\hat\beta = (\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top y$ is a formula. Maximum
 likelihood for logistic regression has no formula: $\hat\beta$ is defined as
 the maximizer of $\ell(\beta)$, and a function need not have one.
 
@@ -69,7 +69,7 @@ toy <- tibble(x = x, y = y, class = factor(y))
 $y = 0$ and the five largest carry $y = 1$.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r toy-eda}
 #| output: false
 toy_eda_plot <- ggplot(toy, aes(x = x, y = y, color = class, shape = class)) +
@@ -110,7 +110,7 @@ recognizing the exact strings `glm.fit: algorithm did not converge` and
 being taught.
 
 ::: {.callout-note collapse="true"}
-### Code for the values quoted below
+### Code
 ```{r toy-extract}
 #| output: false
 toy_coef <- summary(toy_glm)$coefficients
@@ -188,11 +188,12 @@ Both conditions break maximum likelihood, and neither is visible in a
 coefficient table without knowing what to look for.
 
 ::: {.callout-note collapse="true"}
-### For example, one tie is enough
+### For example,
 
-Complete separation needs a gap between the classes. Quasi-complete separation
-does not: it needs only that no observation falls strictly on the wrong side.
-Give two observations the same feature value and opposite responses, and leave
+One tie is enough to turn complete separation into quasi-complete. Complete
+separation needs a gap between the classes; quasi-complete separation does
+not, needing only that no observation falls strictly on the wrong side. Give
+two observations the same feature value and opposite responses, and leave
 everything else separated:
 
 ```{r quasi-data}
@@ -281,7 +282,7 @@ Drawing the fitted curve at a few values of $\beta_1$ along this family shows
 what the derivative is describing.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r toy-curves}
 #| output: false
 toy_curve_betas <- c(0.5, 1, 2, 5)
@@ -322,7 +323,7 @@ approaches a step function and the likelihood approaches $1$.
 Evaluating $\ell$ along the same family puts numbers on it.
 
 ::: {.callout-note collapse="true"}
-### Code for the table and figure below
+### Code
 ```{r toy-loglik}
 #| output: false
 toy_loglik <- function(beta1) {
@@ -442,7 +443,7 @@ levels(dmd$Group)
 ```
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r dmd-eda}
 #| output: false
 # The jitter is computed once and stored, rather than left to geom_jitter(),
@@ -495,7 +496,7 @@ The warning from the toy example has reappeared. The convergence warning has
 not, and again this chunk's warning is intended output rather than a defect.
 
 ::: {.callout-note collapse="true"}
-### Code for the values and table below
+### Code
 ```{r dmd-extract}
 #| output: false
 dmd_b   <- coef(dmd_glm)
@@ -671,7 +672,7 @@ from this callout.
 The flexibility lecture listed six potential problems for a linear regression:
 non-linearity, correlated errors, non-constant variance, outliers,
 high-leverage points, and collinearity. Separation has no counterpart on that
-list: whenever $X^\top X$ is invertible, least squares evaluates a formula and
+list: whenever $\mathbf{X}^\top \mathbf{X}$ is invertible, least squares evaluates a formula and
 so cannot fail this way. The six themselves transfer to logistic regression
 unevenly.
 
@@ -726,7 +727,7 @@ an observation whose response disagrees with the rest of the data still
 distorts it.
 
 What does not carry over is the arithmetic. The hat matrix
-$H = X(X^\top X)^{-1}X^\top$, studentized residuals, and Cook's distance were
+$H = \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top$, studentized residuals, and Cook's distance were
 all defined through the least squares fit, and none of those formulas applies
 to a likelihood maximized iteratively. Whether the woman with
 `CK` = `r max(dmd$CK)` counts as a high-leverage point is a question the two
@@ -785,7 +786,7 @@ dmd_leverage_table
 Regressing the $0/1$ response on `CK` by least squares makes her the
 highest-leverage observation in the data, since leverage there depends only on
 how far a feature value sits from the mean. The logistic fit weights that
-geometry by $\hat p_i(1 - \hat p_i)$ — reweighting $X^\top X$ along with it,
+geometry by $\hat p_i(1 - \hat p_i)$ — reweighting $\mathbf{X}^\top \mathbf{X}$ along with it,
 not just scaling her row — and that weight at
 $\hat\eta = `r sprintf("%.2f", max(dmd_eta))`$ is $`r sci(w_true)`$ — smaller
 than every other observation's weight by a factor of at least
@@ -803,7 +804,7 @@ Collinearity needs no new definition: the variance inflation factor of the
 flexibility lecture, $1/(1-R_j^2)$, is computed from the features alone and
 never looks at the response, so that quantity is unchanged. (`car::vif()`
 run on a `glm` reports a different, weighted version built from
-$(X^\top\hat W X)^{-1}$, so the two do not agree numerically — the *idea*
+$(\mathbf{X}^\top\hat W \mathbf{X})^{-1}$, so the two do not agree numerically — the *idea*
 carries over, not the specific number a package function returns.)
 
 None of this is tested in this course, which is why the diagnostics in the

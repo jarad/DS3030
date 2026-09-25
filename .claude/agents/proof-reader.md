@@ -179,34 +179,61 @@ Symbols must mean one thing. Real examples of what to catch:
 - Double subscripts never take a comma: $X_{i1}$, $X_{ip}$, never $X_{i,1}$.
 - A quantity defined in one chapter and silently renamed in a later one.
 
-Also check that vocabulary follows the course: **features** (not "explanatory
-variables" or "input variables") and **response** (not "output variables").
-Flag deviations by quoting the phrase. Note that older chapters may predate this
-convention, so report it as a consistency issue rather than an error.
+Also check that vocabulary follows the course: **response** (not "output
+variable"). Flag deviations by quoting the phrase. Note that older chapters
+may predate this convention, so report it as a consistency issue rather than
+an error.
+
+**"Explanatory variable" and "feature" are not interchangeable, and both are
+correct in their place.** An explanatory variable is a raw column recorded in
+the data; a feature is the value of a basis function $h_j$ applied to one or
+more explanatory variables — the column that actually enters the model. They
+coincide only when $h_j$ is the identity on a single explanatory variable,
+which is every model before the feature engineering lecture
+(`03-regression/30-feature-engineering.qmd`) — calling $X_j$ a "feature" there
+or earlier is as much a finding as calling an interaction or polynomial term
+an "explanatory variable" anywhere. See `CONVENTIONS.md` for the full
+definition.
+
+**The model matrix is $\mathbf{X}$ (bold), never bare $X$** — bare $X$ is
+reserved for a scalar explanatory variable or a generic random variable. A row
+of the matrix, $X_i$ or $X_{ij}$, does not need bolding; the subscript already
+disambiguates it. See `CONVENTIONS.md`.
 
 ### 6. Section and subsection structure
 
 Headings are how a reader (and the table of contents) tells what's a peer of
 what. Check for these patterns specifically:
 
-- **A worked example with no heading of its own, sitting beside one that has
-  one.** If a `##` section contains two real-data worked examples and one of
-  them gets a `### Example: ...` heading while the other is unheaded content
-  floating directly under the `##`, that's a structural inconsistency even
-  though nothing in either example is individually wrong — the table of
-  contents makes it look like only one example exists. Fix: give every
-  worked example in a section the same kind of heading its siblings get,
-  following this repository's own naming pattern (`### Example: <what it's
-  about>`), not just checking that headings which do exist are enumerated
+- **A heading using an `Example:` prefix, or the bare word "Example" anywhere
+  in a heading.** `CLAUDE.md` is explicit: when a section or subsection is a
+  worked example, name the heading after what the example actually is
+  (`## Credit card default probability`, `### Student status and default`),
+  never with an `Example:` prefix — the heading's content is what marks it as
+  an example, the same way every other heading in the book is named for its
+  content rather than its function. Flag every instance, not just duplicates.
+- **A worked example with no heading of its own, sitting beside one that
+  has one.** If a `##` section contains two real-data worked examples and one
+  of them gets its own descriptive heading while the other is unheaded
+  content floating directly under the `##`, that's a structural
+  inconsistency even though nothing in either example is individually wrong
+  — the table of contents makes it look like only one example exists. Fix:
+  give every worked example in a section its own heading named after what
+  it is, not just checking that headings which do exist are enumerated
   correctly.
 - **A subsection heading that names an analysis step rather than the thing
   being analyzed.** A heading like `### Reading the coefficients` outranks
   nothing — it's part of whatever example produced the coefficients, not a
   topic of its own — and it silently swallows the example it belongs to
   (there is no separate heading for the example itself). Prefer folding that
-  content into the same `### Example: ...` section as prose, the way this
-  repository's other worked examples handle interpretation without a further
-  subheading.
+  content into the example's own section as prose, the way this repository's
+  other worked examples handle interpretation without a further subheading.
+- **A chapter with no `## Conclusion`, or one that isn't the last section.**
+  Every chapter ends with a `## Conclusion` recapping the concepts taught —
+  not the worked example's specific numbers — and, except in the course's
+  final chapter, a short closing paragraph naming what the next lecture
+  covers. Report a missing one as a finding, the same as any other convention
+  violation.
 - **Heading level jumps or unjustified depth.** A `####` under a `##` with no
   intervening `###`, or a `###` that exists only to hold one paragraph no
   sibling section would need its own heading for.
@@ -293,11 +320,21 @@ inside solution blocks, which are the ones most often missed:
 - Quarto `#|` option syntax, never rmarkdown's ```` ```{r, eval=FALSE} ````.
 - No semicolons joining statements on one line.
 
-**Expectation and variance take square brackets** — $E[Y]$, $Var[\epsilon]$,
-$Bias[\hat f(X)]$ — and the square goes inside them:
-$E[(y_0 - \hat f(x_0))^2]$, not $E(y_0 - \hat f(x_0))^2$. ISLR2 uses
-parentheses and the course deliberately does not follow it, so quoting the book
-is not a defense.
+**Nested delimiters cycle `()`, then `[]`, then `{}`, then back to `()`** for a
+fourth level, innermost first — never two of the same bracket nested, and
+never brackets in the wrong order for their depth. $E[Y]$, $Var[\epsilon]$,
+$Bias[\hat f(X)]$ take square brackets with nothing nested inside them; once
+something is nested, the inner content takes the *next* delimiter down the
+cycle from the outside in — $E[(y_0 - \hat f(x_0))^2]$, not
+$E\{[y_0-\hat f(x_0)]^2\}$ and not $E(y_0 - \hat f(x_0))^2$. ISLR2 uses bare
+parentheses for expectation and the course deliberately does not follow it, so
+quoting the book is not a defense. See `CONVENTIONS.md` for the full rule.
+
+**The indicator function is always $\mathrm{I}(\cdot)$**, upright, never plain
+italic $I(\cdot)$.
+
+***Reference*, not *baseline*,** for the omitted category or bin a set of
+dummy variables or step-function indicators is measured against.
 
 **Released assignments are frozen.** If the material has already gone to
 students, typos, wrong notation, unclear instructions, and missing solutions are

@@ -13,25 +13,39 @@ After this lecture you should be able to
 - **explain** why a model built from polynomials and interactions is still a
 *linear* model,
 - **construct** these features and **write** the corresponding `lm()` formula,
-- **interpret** a coefficient in each case, and explain why "a one-unit increase,
-holding all else constant" can stop making sense, and
+- **interpret** a coefficient in each case, and **explain** why "a one-unit
+increase, holding all else constant" can stop making sense, and
 - **use** an F-test to decide how much curvature, or whether an interaction, the
 data actually support.
 :::
 
 ## Linear in the parameters
 
-Multiple linear regression looks restrictive: a straight line in each feature.
-It is not. Consider
+Multiple linear regression looks restrictive: a straight line in each
+explanatory variable. It is not. Consider
 
 $$Y_i = \beta_0 + \beta_1 h_1(X_i) + \cdots + \beta_p h_p(X_i) + \epsilon_i$$
 
-where $h_1, \ldots, h_p$ are known, fixed functions of the features $X_i$,
-called *basis functions*.
+where $X_i$ collects the **explanatory variables** recorded for observation
+$i$ — the raw columns in the data — and $h_1, \ldots, h_p$ are known, fixed
+functions of them, called *basis functions*. The value $h_j(X_i)$ each one
+produces, not $X_i$ itself, is the **feature** that actually enters the model
+as a column of the design matrix.
+
+A feature is constructed from one or more explanatory variables through its
+basis function. Every model up to this lecture used the identity basis
+function on a single explanatory variable, $h_j(X_i) = X_{ij}$, so feature and
+explanatory variable were the same thing and the distinction never mattered.
+This lecture is about the cases where $h_j$ is not the identity: a polynomial
+term $h_j(X_i) = X_{i1}^2$ is a feature built from one explanatory variable,
+and an interaction term $h_j(X_i) = X_{i1}X_{i2}$ (below) is a feature built
+from two. From here on, *explanatory variable* means a column recorded in the
+data, and *feature* means whatever column actually enters the model — the two
+coincide only when $h_j$ is the identity.
 
 This model is linear in $\beta$, which is all least squares ever required.
 Every result from last lecture therefore carries over **unchanged**:
-$\hat\beta = (X^\top X)^{-1}X^\top y$, the t-tests, the F-tests, the intervals.
+$\hat\beta = (\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top y$, the t-tests, the F-tests, the intervals.
 Only the columns of the design matrix change.
 
 Choosing the $h_j$ is **feature engineering**, and it is where most of the
@@ -79,7 +93,7 @@ to ask "is the cubic term needed?"
 
 
 
-### Example: Galileo's falling bodies
+### Galileo's falling bodies
 
 Galileo released a ball from a ramp at seven different heights and measured how
 far it travelled horizontally. Physics says that relationship should be curved,
@@ -88,7 +102,7 @@ so this is a natural place to ask *how much* curvature the data support.
 Before fitting anything, look at the relationship itself:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r galileo-plot-setup}
 #| output: false
 m1 <- lm(Distance ~ Height,          data = Sleuth3::case1001)
@@ -260,7 +274,7 @@ interaction, the groups are forced to share a slope (parallel lines). With it,
 $H_0: \beta_3 = 0$ tests whether the slopes differ.
 :::
 
-### Example: meadowfoam, where the interaction is not needed
+### Meadowfoam, where the interaction is not needed
 
 Twenty-four meadowfoam plots were grown at six light intensities, with the light
 begun either early or late. Does the timing change the *slope* on intensity, or
@@ -269,7 +283,7 @@ only the intercept?
 Before fitting anything, look at the relationship itself:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r meadowfoam-plot-setup}
 #| output: false
 meadowfoam <- Sleuth3::case0901 |>
@@ -371,7 +385,7 @@ constant amount and "the effect of intensity" is a single number again.
 
 Dropping the *interaction* is fine. Dropping a main effect would not be.
 
-### Example: alcohol metabolism, where the interaction matters
+### Alcohol metabolism, where the interaction matters
 
 Thirty-two subjects had their first-pass metabolism of alcohol measured along
 with the activity of gastric alcohol dehydrogenase, the enzyme that breaks
@@ -380,7 +394,7 @@ alcohol down in the stomach.
 Before fitting anything, look at the relationship itself:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r metabolism-plot-setup}
 #| output: false
 noteworthy <- Sleuth3::case1101 |> filter(Subject %in% c(17, 31, 32))
@@ -500,9 +514,25 @@ three by number and separate leverage — an unusual *feature* value — from
 outliers, an unusual *response*.
 :::
 
-## What we have not fixed
+## Conclusion
 
-Polynomials and interactions both stay inside the linear model: we pick the
-basis functions $h_k$ by hand and least squares does the rest. Next lecture we
-let the data take over more of that choice — step functions and K-nearest
-neighbors — and then take stock of what can go wrong.
+Feature engineering keeps the model linear in $\beta$ while letting the fitted
+curve be nonlinear in the explanatory variables: a polynomial or an
+interaction is just a choice of basis function $h_j$, and choosing $h_j$ only
+changes which columns enter the design matrix, not how $\hat\beta$ is
+estimated or tested. Every result from ordinary least squares — the formula
+for $\hat\beta$, the t-tests, the F-tests, the intervals — carries over
+unchanged.
+
+A polynomial's coefficients no longer have individual interpretations on their
+own; a feature's effect on $Y$ is a derivative that depends on where it is
+evaluated, which is why hierarchy (keeping a lower-degree term once a higher
+one is in the model) and caution about extrapolating past the observed range
+both matter. An interaction lets one feature's effect depend on the value of
+another, and an F-test comparing the additive and interaction models is how
+you decide whether the data actually need that dependence rather than just
+eyeballing the fitted lines.
+
+We picked the basis functions $h_j$ by hand in both cases. Next lecture lets
+the data take over more of that choice — step functions and K-nearest
+neighbors — and then takes stock of what flexibility costs.

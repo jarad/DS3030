@@ -159,12 +159,15 @@ $\beta_1$ (beta) financially.
 ### 6. Multiple (Linear) Regression
 <https://jarad.github.io/DS3030/03-regression/20-mlr.html>
 
-The MLR model in matrix form, $\hat\beta = (X^\top X)^{-1}X^\top y$;
-categorical features via dummy variables and the baseline level; coefficient
-interpretation holding other features constant, including logged variables;
-t-tests and confidence intervals for coefficients; CI for the mean response
-vs. PI for a new observation; F-tests comparing nested models via reduced vs.
-full residual sums of squares.
+The MLR model in matrix form,
+$\hat\beta = (\mathbf{X}^\top \mathbf{X})^{-1}\mathbf{X}^\top y$; categorical
+explanatory variables via dummy variables and the reference level; coefficient
+interpretation holding other explanatory variables constant, including logged
+variables; t-tests and confidence intervals for coefficients; CI for the mean
+response vs. PI for a new observation; F-tests comparing nested models via
+reduced vs. full residual sums of squares. Worked example: meadowfoam
+light-intensity data fit with an additive model in intensity and the timing of
+the light.
 
 ### 7. Feature Engineering
 <https://jarad.github.io/DS3030/03-regression/30-feature-engineering.html>
@@ -246,32 +249,44 @@ same $h_j$ notation the feature engineering chapter uses), with every
 coefficient still read as a change in log-odds regardless of what $h_j$ is.
 
 Interactions get the most depth, worked through for all three combinations of
-feature types, each a light illustration reusing `ISLR2::Default` rather than
-a new dataset (to keep motivation overhead low): categorical-categorical
-(`balance` cut at \$1,500, `balance_cat * student`); continuous-categorical
-$\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$, giving group-specific
-log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and group-specific odds
-ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$, with $e^{\beta_3}$ the ratio of
-those two odds ratios — this is "the easiest to visualize," and gets the
-two-scale diagnostic (parallel vs. non-parallel lines on the log-odds scale,
-S-curves that never cross vs. can cross on the probability scale) and the
-**decision boundary** $\hat p(x) = 0.5 \iff \hat\eta(x) = 0$; and
-continuous-continuous (`balance * income`), used to make an explicit point
-that a coefficient's raw magnitude never indicates whether an interaction
-matters, since it depends on arbitrary units — demonstrated by rescaling
-`income` to thousands and showing the $z$-statistic and every fitted
-probability are unchanged while $\hat\beta_3$'s apparent size changes by
-$1{,}000\times$. Testing covers both the single-coefficient Wald $z$-test and
-the multi-degree-of-freedom drop-in-deviance test for an interaction involving
-a categorical feature with more than two levels.
+feature types, each illustrated with a fitted figure on `ISLR2::Default`
+rather than a new dataset (to keep motivation overhead low) and each built as
+a tabset that adds one model at a time: categorical-categorical (`balance` cut
+at \$1,500, `balance_cat * student`, drawn as the four cell log-odds in two
+equal-height panels, where the additive fit's segments share a slope and the
+interaction fit's pass exactly through all four cells);
+continuous-categorical $\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$,
+giving group-specific log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and
+group-specific odds ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$, with
+$e^{\beta_3}$ the ratio of those two odds ratios — this is "the easiest to
+visualize," and `default ~ balance + student` and `default ~ balance *
+student` are both fit here, with the two-scale diagnostic drawn for them in
+"Fitted model geometry" (parallel vs. non-parallel lines on the log-odds
+scale, S-curves that never cross vs. can cross on the probability scale)
+alongside the **decision boundary** $\hat p(x) = 0.5 \iff \hat\eta(x) = 0$;
+and continuous-continuous (`balance * income`, drawn as one fitted curve per
+income quartile), used to make an explicit point that a coefficient's raw
+magnitude never indicates whether an interaction matters, since it depends on
+arbitrary units — demonstrated by rescaling `income` to thousands and showing
+the $z$-statistic and every fitted probability are unchanged while
+$\hat\beta_3$'s apparent size changes by $1{,}000\times$. "Interaction tests"
+covers the single-coefficient Wald $z$-test and the drop-in-deviance test,
+framing the latter as the one that always applies: both are run on the
+`balance`-by-`student` fit, where $k = 1$ makes them agree
+($z^2 \approx G^2 \approx 0.21$) without being equal, and only the deviance
+test extends to a categorical feature with more than two levels.
 
 "Polynomials" and "Step functions" come next, each brief theory (both are just
 more basis-function columns) followed immediately by one light,
-self-contained `ISLR2::Default` illustration (pictures only, no inference): a
-5-tab comparison of linear vs. quadratic, additive vs. interaction fits of
-`balance` and `student`; and a 4-tab comparison of a 2-, 4-, and 8-bin step
-function in `balance` against the data (binned by student in the same style
-chapter 10 used), showing the fit sharpen as the bin count increases.
+self-contained `ISLR2::Default` illustration: a 3-tab comparison of the
+additive and interaction quadratic fits of `balance` and `student` against
+the data, with the quadratic term tested both by its $z$-statistic and by a
+drop-in-deviance comparison against the linear fit; and a 4-tab comparison of
+a 2-, 4-, and 8-bin step function fit as `cut(balance, breaks) * student`, so
+each tab shows a separate staircase per student status against the data
+(binned by student in the same style chapter 10 used), showing the fit
+sharpen — and grow noisier in thinly populated top bins — as the bin count
+increases.
 
 Two full worked examples, deliberately paired to show opposite verdicts, come
 after all of the methodology and the light illustrations (heading convention:
@@ -279,10 +294,11 @@ methodology and quick illustrations first, a section devoted entirely to one
 example goes at the end). (1) `ISLR2::Default`, `balance * student`,
 continuing the previous chapter: the interaction is *not* significant
 ($z \approx -0.46$, $p \approx 0.65$), the two models' fitted lines are
-indistinguishable on both scales, and the additive model is the one to
-report — explicitly *not* because $\hat\beta_3$ looks small next to
-$\hat\beta_1$, which is not valid reasoning on its own, but because of the
-$z$-test. (2) `ISLR2::OJ` ($n = 1{,}070$ orange juice purchases), built around
+indistinguishable on both scales (the figures for them appear earlier, in
+"Interactions," and are referred back to rather than repeated), and the
+additive model is the one to report — explicitly *not* because $\hat\beta_3$
+looks small next to $\hat\beta_1$, which is not valid reasoning on its own,
+but because of the $z$-test. (2) `ISLR2::OJ` ($n = 1{,}070$ orange juice purchases), built around
 the 5-level `StoreID` from the start (the `Store7` indicator is never
 introduced), `SalePriceCH * factor(StoreID)` after `relevel()`-ing `Purchase`
 so the model targets $P(\texttt{CH})$: with 5 stores there is no single

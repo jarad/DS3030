@@ -79,7 +79,7 @@ interest: $Y_i = 1$ when customer $i$ defaults. In this sample
 `r round(100 * mean(Default$default == "Yes"), 2)`% of customers default.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r default-eda}
 #| output: false
 Default <- Default |>
@@ -227,7 +227,7 @@ Plotting the curve at a few parameter values shows what $\beta_0$ and $\beta_1$
 each control:
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r logistic-shapes}
 #| output: false
 shape_data <- tibble(b0 = c(0, 0, 0, -4), b1 = c(1, 2, -1, 1)) |>
@@ -450,7 +450,7 @@ glm(default == "Yes" ~ balance, data = Default, family = "binomial")  # comparis
 ```
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r glm-equivalent-forms-check}
 #| output: false
 default_prep <- Default |>
@@ -517,7 +517,7 @@ compare against; point size shows how many customers are in each bin, since
 the right-most bins hold very few.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r default-fit-plot}
 #| output: false
 balance_grid <- tibble(balance = seq(0, max(Default$balance), length.out = 400))
@@ -642,7 +642,7 @@ shows how the three scales — log-odds, odds, and probability — move against
 one another:
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r default-predictions}
 #| output: false
 pred_balances <- c(500, 1000, 1500, 2000, 2500)
@@ -736,7 +736,7 @@ band below. This is a *pointwise* interval: each vertical slice is a separate
 curve at once.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r default-confidence-band}
 #| output: false
 band_grid <- tibble(balance = seq(0, max(Default$balance), length.out = 400))
@@ -820,7 +820,7 @@ as the $z$-test above found.
 ### Estimated odds ratios
 
 ::: {.callout-note collapse="true"}
-### Code for the values quoted below
+### Code
 ```{r default-coefficients}
 #| output: false
 b         <- coef(default_glm)

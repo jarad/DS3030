@@ -84,7 +84,7 @@ previous lecture, now using `student` as the feature and `default` as the
 response, with $Y_i = 1$ when customer $i$ defaults.
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r student-eda}
 #| output: false
 Default <- Default |>
@@ -129,7 +129,7 @@ coef(student_glm)
 ```
 
 ::: {.callout-note collapse="true"}
-### Code for the estimates quoted below
+### Code
 ```{r student-glm-extract}
 #| output: false
 bs <- coef(student_glm)
@@ -165,7 +165,7 @@ summary of them: the same jittered scatter of default against balance from
 the previous lecture, now split into two panels by student status.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r student-default-raw}
 #| output: false
 raw_plot <- ggplot(Default, aes(x = balance, y = default_jit)) +
@@ -194,7 +194,7 @@ eye. Two descriptive summaries make it precise.
 The first compares the distribution of balance for students and non-students.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r balance-by-student}
 #| output: false
 balance_means <- Default |>
@@ -249,7 +249,7 @@ Bins holding too few customers of a given student status to estimate a rate
 are dropped.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r binned-rates}
 #| output: false
 binned_rates <- Default |>
@@ -316,9 +316,9 @@ regression lecture. Using that lecture's model matrix notation together with
 the linear predictor $\eta$ of the previous lecture,
 
 - $X_i = (1, X_{i1}, \ldots, X_{ip})$ is the $i$th row of the $n \times (p+1)$
-model matrix $X$,
+model matrix $\mathbf{X}$,
 - $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of coefficients, and
-- $\eta = X\beta$ is the $n$-vector of linear predictors, with $i$th element
+- $\eta = \mathbf{X}\beta$ is the $n$-vector of linear predictors, with $i$th element
 $\eta_i = X_i\beta$,
 
 the model is
@@ -461,7 +461,7 @@ summary(additive_glm)
 ```
 
 ::: {.callout-note collapse="true"}
-### Code for the estimates quoted below
+### Code
 ```{r additive-extract}
 #| output: false
 ba <- coef(additive_glm)
@@ -478,7 +478,7 @@ p_student_adj <- summary(additive_glm)$coefficients["studentYes", "Pr(>|z|)"]
 Collecting the two tests and the two odds ratios on interpretable scales:
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r additive-inference}
 #| output: false
 inference_table <- tibble(
@@ -628,7 +628,7 @@ Evaluating $\hat p(x)$ for a student and a non-student at three balances gives
 six predictions, and the odds ratio between the two customers at each balance:
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r additive-predictions}
 #| output: false
 pred_grid <- expand_grid(balance = c(1000, 1500, 2000),
@@ -678,7 +678,7 @@ a constant odds ratio looks like on the probability scale, with the binned
 observed rates from the exploratory plot overlaid as a check.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r additive-curves}
 #| output: false
 curve_grid <- expand_grid(
@@ -806,7 +806,7 @@ Both fits are already in hand: `student_glm`, with `student` alone, and
 `additive_glm`, with `balance` and `student` together.
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r student-vs-additive-table}
 #| output: false
 fits_comparison <- tibble(
@@ -837,7 +837,7 @@ Each model's fitted probabilities, against the same binned observed rates
 used above:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r default-prob-setup}
 #| output: false
 student_newdata <- tibble(student = factor(c("No", "Yes"),
@@ -952,7 +952,7 @@ fixed, at every level of that third variable, is an instance of **Simpson's
 paradox**.
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r comparison-table}
 #| output: false
 comparison_table <- tibble(
@@ -1005,7 +1005,7 @@ other's interpretation.
 ## Conclusion
 
 Multiple logistic regression passes multiple linear regression's linear
-predictor $X\beta$ through the logistic function, estimated by the same
+predictor $\mathbf{X}\beta$ through the logistic function, estimated by the same
 Bernoulli maximum likelihood as the one-feature case. Each $\beta_j$ is a
 change in log-odds, and $e^{\beta_j}$ an odds ratio, *holding every other
 feature in the model fixed* — the qualifier that distinguishes a coefficient

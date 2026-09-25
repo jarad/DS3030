@@ -75,6 +75,12 @@ introduces a new package should add it to `Imports:`.
 
 ## Authoring conventions
 
+`CONVENTIONS.md` holds the specific symbol- and word-level decisions this
+project has settled on (which notation wins when more than one is defensible,
+which of two near-synonyms to use) — check it before introducing a new symbol
+or picking between words like "reference" and "baseline." The conventions
+below are the broader authoring rules those specific decisions sit inside.
+
 - Open each chapter with a Bloom-aligned learning objectives block — a short
   "After this lecture you should be able to..." list (all eight existing
   chapters use "lecture," not "chapter" — match them), three to six items,
@@ -85,6 +91,14 @@ introduces a new package should add it to `Imports:`.
   repository require `\(...\)` for Canvas — that convention does not apply here.)
 - Define every symbol the first time it appears, as a bulleted list immediately
   after the equation introducing it.
+- **An explanatory variable and a feature are not the same thing** (see
+  `CONVENTIONS.md`). An explanatory variable is a raw column recorded in the
+  data; a feature is the value of a basis function applied to one or more
+  explanatory variables — the column that actually enters the model. They
+  coincide only when that function is the identity on a single explanatory
+  variable, which is every model before `03-regression/30-feature-engineering.qmd`.
+  Use each word for what it actually names, rather than treating them as
+  interchangeable synonyms.
 - Use collapsible callouts for worked examples of taught material:
   `::: {.callout-note collapse="true"}` with a `### For example,` heading.
 - Use a collapsible callout headed `### Beyond this course` for a pointer to
@@ -161,6 +175,10 @@ introduces a new package should add it to `Imports:`.
   when it points at something the reader could otherwise miss; it is
   extemporaneous when it only restates what the preceding clause already
   said.
+- **Every chapter ends with a `## Conclusion` section**, the last section in
+  the file, after any worked-example sections. It closes with a short
+  paragraph naming what the next lecture covers, except in the course's final
+  chapter.
 - **A chapter's `## Conclusion` discusses the concepts the chapter introduced,
   not the particular worked example.** Recap the model, the estimation
   method, the interpretation rule, the test — the things a student carries
@@ -232,10 +250,14 @@ rather than an arbitrary number picked at edit time.
 
 **Put extensive R code in a collapsed callout.** When a chunk carries a lot of
 setup — simulating data, fitting several models, assembling a prediction grid,
-building a table — wrap it in `::: {.callout-note collapse="true"}`, suppress
-its output with `#| output: false`, and assign the result (a plot, a table) to
-an object. The code stays reachable for students reading later without
-occupying the page or class time.
+building a table — wrap it in `::: {.callout-note collapse="true"}` headed
+`### Code`, suppress its output with `#| output: false`, and assign the result
+(a plot, a table) to an object. Always exactly `### Code` — never "Code for
+the figure below" or any other variant naming what the code produces; the
+callout's own content already shows that, and a fixed heading keeps every such
+callout in the book visually identical instead of accumulating one-off
+wording per chapter. The code stays reachable for students reading later
+without occupying the page or class time.
 
 Display that object afterward in its own named chunk with `#| echo: false` —
 the reader sees the plot or table, not the one-line `object_name` that

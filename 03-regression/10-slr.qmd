@@ -160,3 +160,38 @@ where $RSS$ is the residual sum of squares and $TSS$ is the total sum of squares
 $$TSS = \sum_{i=1}^n (y_i - \bar{y})^2.$$
 
 Thus, $R^2$ can be interpreted as the proportion of the total variability in the response variable that is explained by the model.
+
+## Conclusion
+
+Simple linear regression approximates the unknown $f$ in $Y = f(X) + \epsilon$
+by a straight line, $f(X) = \beta_0 + \beta_1 X$. We estimate the two
+coefficients by least squares, minimizing the residual sum of squares, and the
+error variance by $\hat\sigma^2 = RSS/(n-2)$, where the $n-2$ pays for the two
+coefficients already estimated from the same data. Assuming the errors are
+independent and normal leaves those point estimates alone — the maximum
+likelihood estimators of $\beta_0$ and $\beta_1$ are the least squares
+estimators — and supplies the sampling distributions that inference runs on.
+
+We read the coefficients in order. $\beta_0$ is the expected response when the
+explanatory variable is zero, which is only a meaningful quantity when zero is
+a value the explanatory variable can actually take; $\beta_1$ is the expected
+change in the response for a one-unit increase in the explanatory variable.
+Taking logarithms replaces those additive statements with multiplicative ones:
+a logged response makes $e^{\beta_1}$ a multiplicative change in the *median*
+response, a logged explanatory variable makes $\beta_1\log(2)$ the change per
+doubling, and logging both combines the two.
+
+Different questions get different intervals. A t-test and a confidence
+interval for $\beta_1$ ask whether, and by how much, the mean response changes
+with $X$. A confidence interval for the mean response at $x_0$ asks where the
+regression line is at that point. A prediction interval at $x_0$ asks where a
+new observation will fall, and is wider because its standard error carries the
+error variance of that new observation on top of the uncertainty in the line.
+Across the whole fit, $R^2 = 1 - RSS/TSS$ reports the proportion of the
+variability in the response that the line explains.
+
+Next lecture puts this model to work on financial data. The capital asset
+pricing model rearranges into exactly a simple linear regression of an asset's
+excess return on the market's, so $\beta_0$, $\beta_1$, and $R^2$ all acquire
+financial meanings — and the theory predicts a specific value for the
+intercept, which we can test.

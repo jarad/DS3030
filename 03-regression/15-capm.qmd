@@ -50,13 +50,13 @@ excess return not explained by market exposure. CAPM implies $\beta_0 = 0$, so
 an estimate far from zero is evidence against the model, and
 - $\beta_1$ is the asset's sensitivity to market movements, also known as the asset's *beta*.
 
-## Example: AAPL vs SPY
+## Apple against the S&P 500
 
 We fit the CAPM using Apple (AAPL) as the asset, the S&P 500 ETF (SPY) as the
 market portfolio, and the 13-week T-bill yield (`^IRX`) as the risk-free rate.
 
 ::: {.callout-note collapse="true"}
-### Code for this analysis
+### Code
 ```{r capm-analysis}
 #| results: hide
 #| fig-keep: none
@@ -191,3 +191,35 @@ AAPL's.
 Adapt the code above by substituting your chosen ticker for `AAPL` (`getSymbols()`
 accepts any Yahoo Finance ticker), re-fit the model, and report the resulting
 $R^2$ and $\hat\beta_1$ alongside AAPL's for comparison.
+
+## Conclusion
+
+CAPM is a financial model, but subtracting the risk-free rate from both the
+asset's return and the market's turns it into a simple linear regression of
+one excess return on the other. Once the model is in that form, `lm()` fits
+it, `confint()` gives intervals for its coefficients, and `summary()` reports
+$R^2$, with no new estimation theory required.
+
+The finance lives in the interpretation. The intercept $\beta_0$ is the
+asset's *alpha*, the expected excess return left over when the market is flat,
+and CAPM predicts it is exactly zero — an unusual situation in which theory
+names a specific null value for an intercept, so the t-test already printed in
+the regression output is a test of the model itself. The slope $\beta_1$ is
+the asset's *beta*, the expected change in its excess return for a one-unit
+change in the market's, so a beta above one amplifies market movements and a
+beta below one damps them. $R^2$ measures how much of the asset's excess
+return moves with the market at all: a fund holding the index would sit near
+one, a single company well below it, and the unexplained remainder is the
+asset's idiosyncratic risk — the part of its variability that diversification
+can remove.
+
+A large beta says the asset is sensitive to the market, not that it earns
+more: both coefficients describe an association between two contemporaneous
+excess returns, estimated over the particular window of history the downloaded
+data cover.
+
+Next lecture extends the model from one explanatory variable to several. The
+same reasoning that produced CAPM produces multi-factor models, which regress
+an asset's excess return on the market's *and* on additional explanatory
+variables, and multiple regression is the machinery for fitting and testing
+them.

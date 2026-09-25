@@ -147,3 +147,37 @@ ggplot(
   )
 ```
 
+## Conclusion
+
+Statistical learning is the modeling stage of a larger pipeline.
+However the stages are drawn, data must be imported, cleaned, transformed, and
+explored before anything is modeled, and the results must be communicated
+afterward.
+Those stages are also what distinguish the data roles: a data engineer builds
+and maintains the infrastructure that collects and delivers the data,
+a data analyst summarizes and reports on the data that arrives, and a data
+scientist builds the models in between.
+
+We classify a learning problem first by whether the response is observed:
+*supervised* when it is, *unsupervised* when it is not, and *semi-supervised*
+when it is observed for only some of the data.
+Within supervised learning, the type of response decides the rest.
+A quantitative response makes the problem a *regression*, the prediction a
+number, and the assessment a mean squared error.
+A qualitative response makes the problem a *classification*, the prediction a
+category, and the assessment a misclassification rate.
+
+Whichever it is, we still have to choose how flexible a method to use, and that
+choice is a tradeoff.
+As flexibility increases, the squared bias of our estimate decreases while its
+variance increases, and underneath both sits an irreducible error that no
+method removes because it comes from the randomness in the response itself.
+The sum of the three is the expected test error, and because one piece falls
+while another rises, that sum is typically U-shaped: the best method is neither
+the least nor the most flexible one available.
+
+Next lecture develops these ideas for a quantitative response.
+We write down the model we are estimating, distinguish the training MSE from
+the test MSE, and decompose the expected test MSE into the three pieces plotted
+above.
+

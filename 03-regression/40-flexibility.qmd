@@ -34,20 +34,20 @@ $$-\infty = c_0 < c_1 < \cdots < c_p < c_{p+1} = \infty,$$
 pinning the outer two at $\pm\infty$ so the bins they define cover the entire
 range of $X$, and define indicators
 
-$$C_j(X) = I(c_j \le X < c_{j+1}), \quad j = 1, \ldots, p.$$
+$$C_j(X) = \mathrm{I}(c_j \le X < c_{j+1}), \quad j = 1, \ldots, p.$$
 
 Then fit
 
 $$Y_i = \beta_0 + \beta_1 C_1(X_i) + \cdots + \beta_p C_p(X_i) + \epsilon_i,$$
 
-leaving the first bin, $[c_0, c_1)$, as the baseline. This is **exactly** the
+leaving the first bin, $[c_0, c_1)$, as the reference. This is **exactly** the
 dummy-variable machinery from multiple regression — we have turned a
 quantitative feature into a categorical one — so the coefficients mean what
 they always mean for dummy variables:
 
-- $\beta_0$ is the mean of $Y$ in the baseline bin, and
+- $\beta_0$ is the mean of $Y$ in the reference bin, and
 - $\beta_j$, for $j = 1, \ldots, p$, is the mean of $Y$ in the bin
-  $[c_j, c_{j+1})$ *minus* the mean of $Y$ in the baseline bin.
+  $[c_j, c_{j+1})$ *minus* the mean of $Y$ in the reference bin.
 
 Least squares makes the fitted value in every bin exactly that bin's sample
 mean of $y$, which is why these coefficients are differences between sample
@@ -59,7 +59,7 @@ lm(wage ~ cut(age, breaks = c(18, 23, 30, 45, 65, 80),
               right = FALSE, include.lowest = TRUE), data = Wage)
 ```
 
-### Example: wages by age
+### Wages in age bins
 
 Suppose we are interested in the relationship between age and wage. We have
 data from `r nrow(Wage)` male workers in the Mid-Atlantic region
@@ -67,7 +67,7 @@ data from `r nrow(Wage)` male workers in the Mid-Atlantic region
 against a straight line and a degree-5 polynomial.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r flexibility-comparison}
 #| output: false
 age_cuts   <- c(18, 23, 30, 45, 65, 80)
@@ -136,11 +136,11 @@ additional cut points; they just stand in for $c_0 = -\infty$ and $c_5 = \infty$
 since no worker in the data falls outside them. The bin labeled
 `r age_labels[1]` (that's $(-\infty, c_1)$, which prints as `r age_labels[1]`
 only because 18 happens to be the youngest worker in the data) has no $C_j$ of
-its own. It is the baseline, and everything about it is already inside
+its own. It is the reference bin, and everything about it is already inside
 $\beta_0$:
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r step-function-interpretation}
 #| output: false
 b <- coef(step_fit)
@@ -161,16 +161,16 @@ step_table
 ```
 
 Read this row by row: $\hat\beta_0 = `r round(b[1], 1)`$ is the mean wage of
-workers aged `r age_labels[1]`, the baseline, exactly per the rule above — and
-every other row adds its coefficient to that baseline. Workers aged
+workers aged `r age_labels[1]`, the reference bin, exactly per the rule above — and
+every other row adds its coefficient to that reference. Workers aged
 `r age_labels[2]` earn on average
 $\hat\beta_0 + \hat\beta_1 = `r round(b[1],1)` + `r round(b[2],1)` =
-`r round(b[1]+b[2],1)`$. There is no coefficient at all for the baseline bin,
+`r round(b[1]+b[2],1)`$. There is no coefficient at all for the reference bin,
 because $X < c_1$ is exactly what happens when
 every $C_j(X)$ is zero.
 
-::: {.callout-important collapse="true"}
-### Where this is going
+::: {.callout-note collapse="true"}
+### Beyond this course
 That last complaint is the whole idea behind **regression trees** (ISLR2 Chapter 8).
 A tree is a step function whose cut points are *learned from the data*, applied
 recursively and in several features at once — so a tree gets interactions for
@@ -212,12 +212,12 @@ and minimum variance.
 
 So it is $1/K$ that plays the role of flexibility.
 
-### Example: wages by age
+### Wages in moving neighborhoods
 
 The same age-and-wage data lets us see how $K$ actually controls flexibility:
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r knn-comparison}
 #| output: false
 knn_pred <- map_df(c(1, 10, 50), function(K) {
@@ -266,7 +266,7 @@ both used to predict median home value (`medv`). Before fitting anything, look
 at the relationship itself:
 
 ::: {.callout-note collapse="true"}
-### Code for the plots below
+### Code
 ```{r knn-2d-setup}
 #| output: false
 knn_reg_multi <- function(X0, X, y, K) {
@@ -444,7 +444,7 @@ A plot of residuals against fitted values diagnoses problems 1 and 3 at a
 glance. Both of our regressions from last lecture have something to confess.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r residual-diagnostics}
 #| output: false
 galileo_lin <- lm(Distance ~ Height,          data = Sleuth3::case1001)
@@ -492,7 +492,7 @@ $n = `r nrow(Sleuth3::case1101)`$ observations, average leverage is
 $`r length(coef(metabol_fit))`/`r nrow(Sleuth3::case1101)` = `r round(length(coef(metabol_fit)) / nrow(Sleuth3::case1101), 3)`$.
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r leverage-diagnostics}
 #| output: false
 average_leverage <- length(coef(metabol_fit)) / nrow(Sleuth3::case1101)
@@ -522,7 +522,7 @@ Three subjects sit outside the dashed guides, and they are outside for different
 reasons. **Cook's distance** settles which of them actually matter.
 
 ::: {.callout-note collapse="true"}
-### Code for the table below
+### Code
 ```{r influence-table}
 #| output: false
 influence_data_full <- tibble(
@@ -608,7 +608,7 @@ cause. Plotting the first two terms of each basis against each other makes it
 visible directly:
 
 ::: {.callout-note collapse="true"}
-### Code for the figure below
+### Code
 ```{r collinearity-compare}
 #| output: false
 poly_basis <- poly(Height, 3)
@@ -675,9 +675,9 @@ The habit worth building now, while you can still check the answer by looking,
 is to compute the diagnostic anyway and learn what its values mean. Later the
 number is all you will have.
 
-## The cost of flexibility
+## Conclusion
 
-Every feature you add to $X$, and every reduction in the number of neighbors
+Every feature you add to $\mathbf{X}$, and every reduction in the number of neighbors
 $K$, is another turn of the flexibility dial from ISLR2 Chapter 2. The training
 RSS can only fall as you turn it; the **test** MSE need not, because you are
 trading bias for variance.

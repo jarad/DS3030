@@ -10,10 +10,7 @@ $p_{ic} = P(Y_i = c|X_i)$,
 - **distinguish** prediction from understanding as the goal of a classification
 model,
 - **define** the training and test error rate and **explain** why the test error
-rate is the quantity of interest,
-- **compute** accuracy, sensitivity, specificity, and precision from a
-confusion matrix, and **compute** log loss from predicted class probabilities,
-and **interpret** what each one measures, and
+rate is the quantity of interest, and
 - **describe** how the test error rate of a classifier changes with model
 flexibility in terms of the bias-variance tradeoff.
 :::
@@ -62,7 +59,7 @@ Understanding: we would like the model to fit well, but are willing to sacrifice
 some fit to have a model that is simple to understand
 
 ::: {.callout-note collapse="true"}
-### Examples 
+### For example,
 - The log odds of initial job placement for those with a high school diploma are not statistically significantly different from those with a bachelor's degree.
 :::
 
@@ -129,7 +126,7 @@ $$\text{Precision} = \frac{TP}{TP + FP}.$$
 Precision is also called the *positive predictive value*.
 
 
-### C x C
+#### C x C
 
 For $C$ classes, the confusion matrix is a $C \times C$ table:
 
@@ -158,3 +155,42 @@ error rate on the y-axis.
 
 ![](30-classification-bias-variance-tradeoff.jpg)
 
+## Conclusion
+
+Classification asks the same questions as regression, of a different kind of
+response.
+Because the response is qualitative, the quantity we estimate is not a number
+but the probability of each class,
+$p_{ic} = P(Y_i = c|X_i)$, collected into $p_i = f(X_i)$,
+and a predicted class $\hat{y}_i$ is read off those estimated probabilities.
+As in regression, the goal may be prediction, where only the quality of
+$\hat{y}_i$ matters, or understanding, where we accept a worse-fitting model in
+exchange for one whose effect on the class probabilities we can describe.
+
+Evaluation changes with the response.
+In place of a mean squared error we count the predictions that are wrong,
+giving a training error rate when those predictions come from the same data
+used to estimate $\hat{f}$ and a test error rate when they come from data held
+out.
+The training error rate is again the optimistic one, and the test error rate is
+what we want to be small.
+Accuracy reports the same information in the opposite direction, and we prefer
+the error rate so that a larger value always means worse performance.
+
+An error rate counts every mistake the same way, so we also have metrics that
+separate them.
+The confusion matrix splits the mistakes by which class was true and which was
+predicted, and sensitivity, specificity, and precision are ratios read from it:
+the first two condition on the true class, the third on the predicted class.
+The log loss instead uses the predicted probabilities themselves, so a
+confident wrong prediction costs more than a hesitant one.
+
+The bias-variance tradeoff carries over as well.
+Increasing the flexibility of a classifier drives the training error rate down
+and eventually drives the test error rate back up,
+so here too we are choosing a flexibility rather than maximizing one.
+
+Next lecture begins the Regression part of the course with simple linear
+regression,
+the first specific choice of $f$ we make:
+a straight line in a single explanatory variable, estimated by least squares.

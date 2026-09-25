@@ -74,6 +74,24 @@ If a chapter needs a package the course does not yet use, add it to `Imports:`
 in `DESCRIPTION` — that package metadata exists so students can install
 everything the course needs in one step.
 
+## Lead with figures, not prose
+
+The instructor has been explicit about this: a visual representation of a
+concept teaches it far better than a written explanation of the same idea,
+and is far more useful when presenting live in class. Before adding another
+paragraph of exposition to explain what a technique does, ask whether a
+figure would show it instead. When a section introduces a technique — a kind
+of interaction, a polynomial degree, a step-function bin count, a choice of
+$K$ — reach for a worked figure first, ideally a `.panel-tabset` that lets the
+reader build the idea up visually one property at a time (see the existing
+`.panel-tabset` figures in `03-regression/30-feature-engineering.qmd`,
+`03-regression/40-flexibility.qmd`, and `04-classification/30-flexible-logistic-regression.qmd`
+for the established pattern: a shared base plot with the raw data, then one
+tab per added feature/model/bin count). Prose still matters for definitions,
+derivations, and interpretation rules that a picture cannot carry, but do not
+default to writing a paragraph where a figure would teach the same point
+better.
+
 ## Writing style
 
 Match the voice of the existing chapters. Specifically:
@@ -88,12 +106,35 @@ Match the voice of the existing chapters. Specifically:
 - Display math in `$$...$$`, inline math in `$...$`. (This differs from the
   quiz files, which require `\(...\)` for Canvas. Do not carry that convention
   into the notes.)
-- Use collapsible callouts for examples and asides:
-  `::: {.callout-note collapse="true"}` with a `### For example,` or similar
-  heading inside. This keeps the main line of argument clean while the
-  supporting material stays one click away.
+- Use collapsible callouts, `::: {.callout-note collapse="true"}`, for two
+  distinct purposes, each with its own fixed heading — do not invent a
+  variant of either:
+  - A short illustrative aside inside a theory subsection: `### For example,`.
+  - Extensive setup code (simulating data, fitting several models, building a
+    table or figure): `### Code`, with `#| output: false` and the result
+    assigned to an object, displayed afterward in its own `#| echo: false`
+    chunk. Always just `### Code` — never "Code for the figure below" or any
+    other variant naming what the code produces; the callout's own content
+    already shows that.
+  - A pointer to related material that is mentioned but not taught or tested:
+    `### Beyond this course`. Content under this heading must never be echoed
+    in the chapter's learning objectives.
+  This keeps the main line of argument clean while the supporting material
+  stays one click away.
 - Define every symbol the first time it appears, in a bulleted list right after
   the equation that introduces it.
+- **An explanatory variable and a feature are not the same thing.** An
+  explanatory variable is a raw column recorded in the data. A feature is the
+  value of a basis function $h_j$ applied to one or more explanatory
+  variables — the column that actually enters the model. They coincide only
+  when $h_j$ is the identity on a single explanatory variable, which is every
+  model before `03-regression/30-feature-engineering.qmd`. Use "explanatory
+  variable" for the raw quantity and "feature" for the (possibly transformed)
+  quantity that enters the model; see `CONVENTIONS.md`.
+- **The model matrix is $\mathbf{X}$ (bold)**, never bare $X$, which is
+  reserved for a scalar explanatory variable or a generic random variable. A
+  row of the matrix, $X_i$ or $X_{ij}$, stays unbolded; its subscript already
+  disambiguates it. See `CONVENTIONS.md`.
 - Prefer short paragraphs and frequent `##` section headings over long prose
   runs. The notes are read on a web page and used live in class.
 - Every worked example follows **motivation → exploratory data analysis →
@@ -102,6 +143,13 @@ Match the voice of the existing chapters. Specifically:
   interpreting it, and show a model's output before discussing what it means.
   Never mix interpretation into the sentence that introduces a figure or a
   fit.
+- **Every chapter ends with a `## Conclusion` section**, the last section in
+  the file, after any worked-example sections. It recaps the concepts the
+  chapter introduced — the model, the estimation method, the interpretation
+  rule, the test — not the particular worked example's numbers; those stay in
+  the worked-example section itself. It closes with a short paragraph naming
+  what the next lecture covers, except in the course's final chapter. When
+  writing or revising a chapter that lacks this section, add it.
 - **Cut extemporaneous asides** — phrasing that reinforces a point verbally but
   adds no information in writing, the kind of thing you'd say out loud in
   class for emphasis but that only restates what the preceding clause already
