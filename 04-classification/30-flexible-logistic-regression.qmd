@@ -29,8 +29,9 @@ boundary,
 - **test** a single interaction coefficient with a $z$-statistic and several
 at once with a drop-in-deviance test, **recognizing** that a plausible
 interaction often turns out not to be, and
-- **describe**, from a picture, how a fitted curve changes as a polynomial's
-degree or a step function's number of bins increases.
+- **describe** how raising a polynomial's degree adds curvature to the linear
+predictor, and, from a picture, how a fitted curve changes as a step
+function's number of bins increases.
 :::
 
 Additive logistic regression gives each feature its own term in the linear
@@ -60,8 +61,8 @@ appear below. What changes from one choice of $h_j$ to the next is only what a
 "one-unit change" of it means.
 
 This lecture works through interactions first, since they raise the most that
-is genuinely new, then polynomials and step functions more briefly, since
-transferring them needs nothing beyond what this introduction already said.
+is genuinely new, then polynomials and step functions more briefly, since the
+transfer is mostly mechanical.
 
 ## Interactions
 
@@ -98,7 +99,7 @@ case gets from being at both non-reference levels at once, beyond what
 $\beta_1$ and $\beta_2$ already give it separately.
 
 A quantitative explanatory variable becomes categorical the same way it did in
-the feature engineering lecture: pick a cutoff and take an indicator.
+the flexibility lecture: pick a cutoff and take an indicator.
 Splitting `balance` at \$1,500 turns the running `Default` example into a
 categorical-categorical case, `balance_cat * student`, with four
 balance-by-student cells to describe. The additive model spends three
@@ -250,11 +251,18 @@ cat_gap <- cat_obs |>
   group_by(balance_cat) |>
   summarize(gap = eta[student == "Yes"] - eta[student == "No"],
             .groups = "drop")
+
+cat_climb <- cat_obs |>
+  group_by(student) |>
+  summarize(climb = eta[balance_cat == "High"] - eta[balance_cat == "Low"],
+            .groups = "drop")
 ```
 
-On the log-odds scale the lines climb about four log-odds from the
-low-balance cells to the high-balance ones, so the student gap — the vertical
-distance between the two lines — is a small quantity inside that climb. The
+On the log-odds scale the lines climb
+$`r sprintf("%.1f", min(cat_climb$climb))`$–$`r sprintf("%.1f", max(cat_climb$climb))`$
+log-odds from the low-balance cells to the high-balance ones, so the student
+gap — the vertical distance between the two lines — is a small quantity
+inside that climb. The
 additive fit's two lines are exactly parallel: one coefficient
 $\hat\beta_2 = `r sprintf("%.3f", coef(cat_add)[3])`$ serves as the student
 gap at both balance levels, so neither line passes through both of its group's
@@ -404,14 +412,19 @@ while forcing both to share a single intercept.
 
 Written as functions of $X$, the fitted log-odds for the two groups are
 
-$$\hat\eta(X, 0) = \hat\beta_0 + \hat\beta_1 X, \qquad \hat\eta(X, 1) = (\hat\beta_0 + \hat\beta_2) + (\hat\beta_1 + \hat\beta_3) X.$$
+$$\hat\eta(X, 0) = \hat\beta_0 + \hat\beta_1 X, \qquad \hat\eta(X, 1) = \left(\hat\beta_0 + \hat\beta_2\right) + \left(\hat\beta_1 + \hat\beta_3\right) X.$$
 
 Under the additive model $\beta_3 = 0$, both lines have slope
 $\hat\beta_1$: they are **parallel**, separated by exactly $\hat\beta_2$ at
 every $X$. Under the interaction model the slopes differ by $\hat\beta_3$, so
 the lines are not parallel and, extended far enough, must cross. Parallel
 versus non-parallel on the linear-predictor scale is the visual signature that
-separates the two models.
+separates the two models. Each group's **decision boundary** — the $X$ where
+its own line crosses zero, since $\hat p = 0.5$ there — sits wherever
+$\hat\eta(X, d) = 0$ solves for that group's $d$; under the additive model a
+constant $\hat\beta_2$ shifts both groups' boundaries by the same amount,
+while under the interaction model the differing slopes can move them by
+different amounts entirely.
 
 In R, `predict()` on a `glm` object returns both scales:
 
@@ -914,8 +927,9 @@ $X^2$, which changes what the individual coefficients mean but leaves the
 fitted values, and the test below, unchanged.
 
 Four fits are drawn against the same raw data below: the additive and
-interaction models of the previous section, whose group curves are straight
-lines on the log-odds scale, and the two quadratic models above.
+interaction models of the continuous-categorical subsection, whose group
+curves are straight lines on the log-odds scale, and the two quadratic models
+above.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1021,8 +1035,9 @@ poly_link_quad_int
 ```
 :::
 
-The two linear tabs are the parallel and near-parallel lines of the previous
-section. The quadratic tabs add curvature, but too little of it to see: over
+The two linear tabs are the parallel and near-parallel lines of the
+continuous-categorical subsection. The quadratic tabs add curvature, but too
+little of it to see: over
 the observed range of balance both still look like straight lines. What does
 differ between them is the separation between the two groups — constant in
 the additive tab, where one shared shape is shifted by $\hat\beta_3$, and
@@ -1575,6 +1590,21 @@ store_slope <- function(s) {
 }
 store_slopes <- sapply(store_ids, store_slope)
 
+oj_slope_vcov <- vcov(oj_interaction)
+store_slope_se <- function(s) {
+  if (s == store_ids[1]) {
+    return(sqrt(oj_slope_vcov["SalePriceCH", "SalePriceCH"]))
+  }
+  term <- paste0("SalePriceCH:factor(StoreID)", s)
+  sqrt(oj_slope_vcov["SalePriceCH", "SalePriceCH"] + oj_slope_vcov[term, term] +
+       2 * oj_slope_vcov["SalePriceCH", term])
+}
+store_ses <- sapply(store_ids, store_slope_se)
+store_z   <- store_slopes / store_ses
+store_p   <- 2 * pnorm(-abs(store_z))
+n_decisive     <- sum(store_p < 0.05)
+decisive_store <- store_ids[which.max(abs(store_z))]
+
 oj_slope_table <- tibble(
   store = store_ids,
   slope = store_slopes,
@@ -1599,10 +1629,13 @@ oj_slope_table
 The fitted slopes run downward, the direction a price increase is expected to
 push demand, at `r n_negative` of the `r length(store_ids)` stores; the other
 `r n_positive` run backwards, the same \$0.10 *raising* the estimated odds.
-None of these five point estimates is individually far enough from zero to
-rule out sampling error on its own — the drop-in-deviance test above is what
-supports "not all five slopes are the same," not any one store's estimate by
-itself. What these data cannot say is why the slopes that do run backwards do
+Only store `r decisive_store`'s slope is individually far enough from zero to
+rule out sampling error on its own ($z = `r sprintf("%.2f", store_z[store_ids == decisive_store])`$,
+$p = `r signif(store_p[store_ids == decisive_store], 3)`$); the other
+`r length(store_ids) - n_decisive` point estimates are not — the
+drop-in-deviance test above is what supports "not all five slopes are the
+same," not any one store's estimate by itself. What these data cannot say is
+why the slopes that do run backwards do
 so — `SalePriceCH` records what was paid, not what else varied alongside it
 across stores and weeks, so the association it carries need not be the effect
 of price by itself.
@@ -1663,9 +1696,9 @@ store_intercept <- function(s) {
 store_intercepts <- sapply(store_ids, store_intercept)
 store_boundaries <- -store_intercepts / store_slopes
 
-# Each store's own observed price range, not the pooled range -- store 3's
+# Each store's own observed price range, not the pooled range -- store 7's
 # break-even price, for instance, is inside the range OJ$SalePriceCH covers
-# overall but above the highest price ever charged at store 3 specifically.
+# overall but above the highest price ever charged at store 7 specifically.
 store_ranges <- OJ |>
   group_by(StoreID) |>
   summarize(lo = min(SalePriceCH), hi = max(SalePriceCH), .groups = "drop")
@@ -1706,7 +1739,7 @@ regression instead treats the stores actually observed as a sample from a
 population of stores, and estimates the *distribution* of intercepts and
 slopes across that population rather than a separate fixed value for each one.
 
-A **random intercept** model lets each store's baseline log-odds vary around a
+A **random intercept** model lets each store's own intercept vary around a
 shared mean, $b_{0,\text{store}} \sim N(0, \sigma_0^2)$, while every store
 keeps the same price slope — the mixed-effects analogue of the additive model
 above. A **random slope** model goes further and lets the price slope itself
@@ -1718,10 +1751,10 @@ instead of five. In R, `lme4::glmer()` fits both:
 
 ```{r glmer-syntax}
 #| eval: false
-glmer(Purchase ~ SalePriceCH + (1 | StoreID),
-      family = "binomial")                          # random intercept
-glmer(Purchase ~ SalePriceCH + (SalePriceCH | StoreID),
-      family = "binomial")                          # random intercept and slope
+lme4::glmer(Purchase ~ SalePriceCH + (1 | StoreID),
+            data = OJ, family = "binomial")          # random intercept
+lme4::glmer(Purchase ~ SalePriceCH + (SalePriceCH | StoreID),
+            data = OJ, family = "binomial")          # random intercept and slope
 ```
 :::
 
@@ -1782,4 +1815,5 @@ issues once basis functions are in view — only the question of how much
 flexibility the data can support, the same bias-variance tradeoff the
 flexibility lecture raised for a quantitative response. Adding columns to a
 binary-response model can also break the estimation itself in a way that least
-squares never breaks, a failure that goes by the name separation.
+squares never breaks, a failure that goes by the name separation — the next
+lecture's subject.

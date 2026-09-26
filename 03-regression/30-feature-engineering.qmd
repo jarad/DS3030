@@ -263,7 +263,7 @@ Hierarchy applies here too: keep $X_1$ and $X_2$ whenever $X_1X_2$ is present,
 whatever their individual p-values say.
 
 ::: {.callout-note collapse="true"}
-### Interaction with a categorical feature
+### For example,
 With $D = 1$ for group B and $0$ for group A,
 
 $$Y_i = \beta_0 + \beta_1 X_i + \beta_2 D_i + \beta_3 X_i D_i + \epsilon_i$$
