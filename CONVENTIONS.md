@@ -70,4 +70,10 @@ convention.
   A heading that names a worked example is named after what the example
   actually is (`## Credit card default probability`, not
   `## Example: credit card default`) — see `CLAUDE.md`'s heading rules for
-  the full statement of this convention.
+  the full statement of this convention. The one exception is a `##` section
+  that exists purely to group several worked examples together and is named
+  for that grouping function rather than mislabeling any one example — e.g.
+  `04-classification/30-flexible-logistic-regression.qmd`'s `## Examples`,
+  whose own `###` children are still named for their content, not "Example:
+  ...". This exception is for a container heading only, never for a heading
+  that names a single example.

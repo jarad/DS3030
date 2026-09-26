@@ -212,6 +212,10 @@ what. Check for these patterns specifically:
   never with an `Example:` prefix — the heading's content is what marks it as
   an example, the same way every other heading in the book is named for its
   content rather than its function. Flag every instance, not just duplicates.
+  Exception: a `##` section that exists purely to group several worked
+  examples together (e.g. `## Examples`), named for that grouping function
+  rather than mislabeling any one example — as long as its own `###` children
+  are still named for their content. See `CONVENTIONS.md`.
 - **A worked example with no heading of its own, sitting beside one that
   has one.** If a `##` section contains two real-data worked examples and one
   of them gets its own descriptive heading while the other is unheaded

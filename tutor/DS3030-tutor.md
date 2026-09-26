@@ -248,82 +248,117 @@ own column, $\eta = \beta_0 + \beta_1 h_1(X) + \beta_2 h_2(X) + \cdots$ (the
 same $h_j$ notation the feature engineering chapter uses), with every
 coefficient still read as a change in log-odds regardless of what $h_j$ is.
 
-Interactions get the most depth, worked through for all three combinations of
-feature types, each illustrated with a fitted figure on `ISLR2::Default`
-rather than a new dataset (to keep motivation overhead low), and each
-subsection follows the same order — the model equation, then a tabset on the
-linear-predictor scale, then a tabset on the probability scale: categorical-
-categorical ($\eta = \beta_0 + \beta_1 D_1 + \beta_2 D_2 + \beta_3 D_1 D_2$,
-`balance` cut at \$1,500, `balance_cat * student`), drawn as the four cell
-log-odds in two panels whose axes span the same number of log-odds (so the
-additive fit's shared-slope segments and the interaction fit's exact fit to
-all four cells stay comparable across panels), then the same four cells
-redrawn on the probability scale, where the roughly four-log-odds gap
-compresses into two clusters near $0$ and near $1$;
-continuous-categorical ($\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD$,
-`default ~ balance + student` vs. `default ~ balance * student`), giving
-group-specific log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$ and
-group-specific odds ratios $e^{\beta_1}$ and $e^{\beta_1+\beta_3}$ with
-$e^{\beta_3}$ their ratio — this is "the easiest to visualize," and its own
-subsection carries the parallel-vs-non-parallel-lines algebra and both
-tabsets (log-odds, then probability) for the two fits, rather than a separate
-"Fitted model geometry" figure; that subsection now only covers the
-**decision boundary** $\hat p(x) = 0.5 \iff \hat\eta(x) = 0$, referring back
-to the figures above it; and continuous-continuous
-($\eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_1 X_2$, `balance *
-income`), drawn as one fitted curve per income quartile on both scales (log-
-odds lines fan out under the interaction model instead of staying parallel;
-no "Data" tab on that scale, same reasoning as continuous-categorical), used
-to make an explicit point that a coefficient's raw magnitude never indicates
-whether an interaction matters, since it depends on arbitrary units —
-demonstrated by rescaling `income` to thousands and showing the $z$-statistic
-and every fitted probability are unchanged while $\hat\beta_3$'s apparent size
-changes by $1{,}000\times$. "Interaction tests" covers the single-coefficient
-Wald $z$-test and the drop-in-deviance test, framing the latter as the one
-that always applies: both are run on the `balance`-by-`student` fit, where
-$k = 1$ makes them agree ($z^2 \approx G^2 \approx 0.21$) without being equal,
-and only the deviance test extends to a categorical feature with more than
-two levels.
+"Interactions" has exactly four subsections — the additive assumption, then
+categorical-categorical, continuous-categorical, and continuous-continuous
+interactions. Each of the three type subsections is self-contained and built
+the same way: the model equation (and, for the two with a quantitative
+feature, the rearranged intercept-and-slope form), then the figures, then the
+visible model-fit output, then a $z$-test and a drop-in-deviance test of the
+same interaction. Figures always precede any fitted output. All three use
+`ISLR2::Default` rather than a new dataset, to keep motivation overhead low.
 
-"Polynomials" and "Step functions" come next, each brief theory (both are just
-more basis-function columns) followed immediately by one light,
-self-contained `ISLR2::Default` illustration: a 3-tab comparison of the
-additive and interaction quadratic fits of `balance` and `student` against
-the data, with the quadratic term tested both by its $z$-statistic and by a
-drop-in-deviance comparison against the linear fit; and a 4-tab comparison of
-a 2-, 4-, and 8-bin step function fit as `cut(balance, breaks) * student`, so
-each tab shows a separate staircase per student status against the data
-(binned by student in the same style chapter 10 used), showing the fit
-sharpen — and grow noisier in thinly populated top bins — as the bin count
-increases.
+- **Categorical-categorical** ($\eta = \beta_0 + \beta_1 D_1 + \beta_2 D_2 +
+\beta_3 D_1 D_2$, `balance` cut at \$1,500, `balance_cat * student`): a
+3-tab tabset (Data / + Additive / + Interaction) in which each tab shows the
+log-odds scale and the probability scale *side by side*, with `balance_cat`
+on the horizontal axis in a single panel and one line per student group;
+then a 2-tab tabset of `knitr::kable()` tables giving the fitted probability
+in each of the four balance-by-student cells under the additive and the
+interaction model (the interaction model reproduces the four observed cell
+proportions exactly, the additive model does not); then
+`summary()$coefficients` and `anova(..., test = "Chisq")`
+($G^2 \approx 0.21$ on 1 df, $p \approx 0.65$).
+- **Continuous-categorical** ($\eta = \beta_0 + \beta_1 X + \beta_2 D +
+\beta_3 XD$, `balance + student` vs. `balance * student`): group-specific
+log-odds slopes $\beta_1$ and $\beta_1 + \beta_3$, group-specific odds ratios
+$e^{\beta_1}$ and $e^{\beta_1+\beta_3}$ with $e^{\beta_3}$ their ratio, the
+parallel-vs-non-parallel-lines algebra, a log-odds tabset (no "Data" tab —
+raw 0/1 outcomes have no finite log-odds) and a probability tabset, and then
+both tests of $H_0: \beta_3 = 0$ ($z \approx -0.46$, $p \approx 0.65$;
+$G^2 \approx 0.21$ on 1 df), with the $z^2 \approx G^2$ comparison and the
+note that only the deviance test extends to a categorical feature with more
+than two levels.
+- **Continuous-continuous** ($\eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2 +
+\beta_3 X_1 X_2$, `balance * income`), rearranged to
+$(\beta_0 + \beta_2 X_2) + (\beta_1 + \beta_3 X_2) X_1$ so both the intercept
+and the slope on $X_1$ are functions of $X_2$: one fitted curve per income
+quartile on both scales (log-odds lines fan out under the interaction model
+instead of staying parallel), then `summary()$coefficients` and
+`anova(..., test = "Chisq")` ($G^2 \approx 0.54$ on 1 df, $p \approx 0.46$).
+The units point is made in prose — $\hat\beta_3 \approx 10^{-8}$ would be
+multiplied by $1{,}000$ by re-expressing `income` in thousands without moving
+any fitted probability or the $z$-statistic — rather than by a rescaling
+demonstration.
 
-Two full worked examples, deliberately paired to show opposite verdicts, come
-after all of the methodology and the light illustrations (heading convention:
-methodology and quick illustrations first, a section devoted entirely to one
-example goes at the end). (1) `ISLR2::Default`, `balance * student`,
-continuing the previous chapter: the interaction is *not* significant
-($z \approx -0.46$, $p \approx 0.65$), the two models' fitted lines are
-indistinguishable on both scales (the figures for them appear earlier, in
-"Interactions," and are referred back to rather than repeated), and the
-additive model is the one to report — explicitly *not* because $\hat\beta_3$
-looks small next to $\hat\beta_1$, which is not valid reasoning on its own,
-but because of the $z$-test. (2) `ISLR2::OJ` ($n = 1{,}070$ orange juice purchases), built around
-the 5-level `StoreID` from the start (the `Store7` indicator is never
+There is no separate "Interaction tests" subsection and no decision-boundary
+subsection; each interaction subsection carries its own test, and the only
+decision boundary in the chapter is the break-even price in the `OJ` example.
+
+"Polynomials" states both models in raw-power form before any fitting —
+additive $\eta = \beta_0 + \beta_1 X + \beta_2 X^2 + \beta_3 D$ (4
+parameters) versus interaction
+$\eta = \beta_0 + \beta_1 X + \beta_2 X^2 + \beta_3 D + \beta_4 XD +
+\beta_5 X^2 D$ (6) — and rearranges the interaction model into two entirely
+independent quadratics, one per group, sharing no coefficient, the polynomial
+analogue of the continuous-categorical case's two lines. (The R code fits
+`poly(balance, 2)`, an orthogonal basis for the same span; the chapter says
+so.) Two tabsets follow, both stepping through the same four fits: a log-odds
+tabset with 4 tabs (Additive (linear) / Interaction (linear) / Additive
+(quadratic) / Interaction (quadratic), no Data tab) and a probability tabset
+with the same four plus Data. The linear tabs reuse the `balance + student`
+and `balance * student` fits from "Interactions" rather than re-fitting. The
+test is `anova(poly_additive, poly_interaction, test = "Chisq")` — the
+interaction contributes two coefficients, one per polynomial column, so no
+single $z$ addresses it — giving $G^2 \approx 0.77$ on 2 df,
+$p \approx 0.68$.
+
+"Step functions" gives the additive and interaction step-function models
+explicitly, $\eta = \beta_0 + \sum_j \beta_j C_j(X) + \gamma D$ ($p+2$
+parameters, identical step heights in both groups) versus
+$\eta = \beta_0 + \sum_j \beta_j C_j(X) + \gamma D + \sum_j \delta_j C_j(X) D$
+($2(p+1)$ parameters, a free log-odds value per bin-by-group cell), then
+fits and plots only the interaction version: a 4-tab comparison of 2-, 4-,
+and 8-bin fits as `cut(balance, breaks) * student`, so each tab shows a
+separate staircase per student status against the data (binned by student in
+the same style chapter 10 used), showing the fit sharpen — and grow noisier
+in thinly populated top bins — as the bin count increases.
+
+An "Examples" section then holds two trimmed worked examples, deliberately
+paired to contrast **understanding (inference)** with **prediction**, plus a
+short closing comparison. Neither repeats a figure or a fit already shown in
+the methodology sections above it.
+
+1. `ISLR2::Default`, `balance * student`, framed as an inference question:
+the quantity of interest *is* $\beta_3$, and the analysis ends with a verdict
+on whether it is zero. No figures of its own — it refers back to the
+continuous-categorical subsection — just the two group-specific per-\$100
+odds ratios (1.789 and 1.751), $z \approx -0.46$ with $p \approx 0.65$, a
+95% Wald interval for $\beta_3$ containing zero, the drop-in-deviance test's
+agreeing verdict, and the conclusion that the additive model of the previous
+chapter is the one to report. Explicitly *not* concluded from $\hat\beta_3$
+looking small next to $\hat\beta_1$.
+2. `ISLR2::OJ` ($n = 1{,}070$ orange juice purchases), built around the
+5-level `StoreID` from the start (the `Store7` indicator is never
 introduced), `SalePriceCH * factor(StoreID)` after `relevel()`-ing `Purchase`
-so the model targets $P(\texttt{CH})$: with 5 stores there is no single
-interaction coefficient to $z$-test, so the interaction test here *is* the
-drop-in-deviance test ($G^2 \approx 23.4$ on $4$ df, $p \approx 0.0001$),
-directly realizing the multi-df case set up earlier in the chapter. Reading
-each store's price slope shows 2 of 5 stores behaving as expected (higher
-price, fewer Citrus Hill purchases) and 3 running backwards, with an explicit,
-unresolved note that these data cannot say why; break-even prices are computed
-for all 5 stores, 2 of which fall outside the observed price range. AIC
-comparisons appear only inside "Beyond this course" callouts. Both examples'
-interaction-test subsections show the raw R output (`summary()$coefficients`
-or `anova(..., test = "Chisq")`) directly, not just a curated table.
+so the model targets $P(\texttt{CH})$, framed as a prediction question: a
+store setting next week's Citrus Hill price wants the predicted purchase
+probability at \$1.99. EDA figure faceted by store; a probability-scale
+tabset (no log-odds tabset); the drop-in-deviance test, which with 5 stores
+*is* the interaction test since there is no single coefficient to $z$-test
+($G^2 \approx 23.4$ on 4 df, $p \approx 0.0001$); a per-store slope table
+showing 2 of 5 stores behaving as expected and 3 running backwards, with an
+explicit unresolved note that these data cannot say why; a table of predicted
+$P(\texttt{CH})$ at \$1.99 under both models, which disagree by up to $0.16$
+(a minority versus a majority of customers at one store); and break-even
+prices for all 5 stores, 3 of which fall outside that store's own observed
+price range.
+3. "Two questions, two verdicts" contrasts the two: for `Default` the test's
+answer *was* the result; for `OJ` it decided which model supplies a number
+that moves by $0.16$.
 
-Multinomial
-(multi-class) logistic regression and separation are *not* covered here.
+AIC comparisons and random/mixed effects (`lme4::glmer()`) appear only inside
+"Beyond this course" callouts. Multinomial (multi-class) logistic regression
+and separation are *not* covered here.
 
 ### 12. Problems in Logistic Regression
 <https://jarad.github.io/DS3030/04-classification/40-problems-in-logistic-regression.html>
