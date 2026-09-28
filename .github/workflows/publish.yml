@@ -36,6 +36,9 @@ jobs:
         with:
           to: html
 
+      - name: Render slide decks
+        run: ./render-slides.sh
+
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:

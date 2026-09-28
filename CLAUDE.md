@@ -311,6 +311,21 @@ cached paths, which leaves the `hash` field stale) so Quarto is forced to
 regenerate the cache with correct paths, and then actually view the rendered
 page to confirm figures display before committing.
 
+**Slide decks (`<chapter>_slides.qmd`) render separately from the book.**
+A `type: book` project's `quarto render` only renders files listed in
+`book.chapters`, so a deck — deliberately not listed there, since it isn't
+book content — needs its own render step: `render-slides.sh` at the repo
+root finds every `*_slides.qmd`, renders it, and copies the output (plus
+the `_freeze/<chapter>/figure-html/` directory its figures reuse) into the
+matching path under `docs/`. `.github/workflows/publish.yml` calls this
+same script during the normal publish workflow, so decks are picked up
+automatically — a new one needs no workflow or `_quarto.yml` change. To
+preview the whole site locally, including the chapter-to-slides links,
+render both: `quarto render && ./render-slides.sh`, then serve `docs/`
+(e.g. `cd docs && python3 -m http.server 8000`). `quarto preview` alone
+will not show a working slides link, since decks are excluded from the
+live-reloading book project by design.
+
 ## Course tutor
 
 `tutor/DS3030-tutor.md` is a system-prompt file students upload to an AI
@@ -346,9 +361,20 @@ convention violation worth reporting.
 ## Agents
 
 Project agents for this repository live in `.claude/agents/`: `notes-author`,
-`proof-reader`, and `semester-refresh`. `homework-author`, `exam-author`, and
-`quiz-reviewer` live in the sibling private repository, `../DS3030Private/`,
-and are only available when Claude Code is launched from there.
+`slides-author`, `proof-reader`, and `semester-refresh`. `homework-author`,
+`exam-author`, and `quiz-reviewer` live in the sibling private repository,
+`../DS3030Private/`, and are only available when Claude Code is launched
+from there.
+
+`slides-author` distills an already-written notes chapter into a minimal-text
+reveal.js lecture deck (`<chapter>_slides.qmd`, co-located with the chapter)
+of figures, tables, and equations reused as-is from the chapter's own
+rendered output — it never executes R itself and never invents content the
+chapter doesn't already contain. It also inserts the one-line link students
+follow from a chapter to its deck. Run it when a chapter needs slides built
+or refreshed for lecture; the instructor supplies the spoken explanation
+live in class, so a deck is not a substitute for the notes and should not
+carry the prose that makes the notes work as a standalone document.
 
 `proof-reader` works on any course file — here or in `DS3030Private` — and
 reports, without editing, typos, notation collisions, stale cross-references,

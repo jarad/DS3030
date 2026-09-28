@@ -1,0 +1,187 @@
+---
+title: "Problems in Logistic Regression"
+format:
+  revealjs:
+    slide-number: true
+    footer: "DS 3030"
+execute:
+  enabled: false
+---
+
+## Today
+
+<!-- derived-from: 04-classification/40-problems-in-logistic-regression.qmd @ e171373 -->
+
+- Complete and quasi-complete separation
+- Log-likelihood with no finite maximizer
+- Diagnosing separation vs. one extreme observation
+- Responses when separation occurs
+- Linear regression problems, revisited for logistic regression
+
+## A perfectly predictive feature
+
+![](../_freeze/04-classification/40-problems-in-logistic-regression/figure-html/toy-eda-figure-1.png)
+
+## `glm()` on separated data
+
+```
+Warning: glm.fit: algorithm did not converge
+Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+```
+
+Call:
+glm(formula = y ~ x, family = "binomial", data = toy)
+
+Coefficients:
+            Estimate Std. Error z value Pr(>|z|)
+(Intercept)   -245.8   337834.2  -0.001    0.999
+x               44.7    61172.1   0.001    0.999
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 1.3863e+01  on 9  degrees of freedom
+Residual deviance: 7.8648e-10  on 8  degrees of freedom
+AIC: 4
+
+Number of Fisher Scoring iterations: 25
+```
+
+## Complete separation
+
+$$x_i b > 0 \ \text{ for every } i \text{ with } y_i = 1, \qquad x_i b < 0 \ \text{ for every } i \text{ with } y_i = 0$$
+
+- $x_i = (1, x_{i1}, \ldots, x_{ip})$ — feature row for observation $i$
+- $b$ — any coefficient vector in $\mathbb{R}^{p+1}$
+- $y_i \in \{0, 1\}$ — observed response
+- A condition on the **data**, not on a fitted model
+
+## Quasi-complete separation
+
+$$x_i b \ge 0 \ \text{ for every } i \text{ with } y_i = 1, \qquad x_i b \le 0 \ \text{ for every } i \text{ with } y_i = 0$$
+
+- Strict inequalities weakened to $\ge$ / $\le$
+- Some observations sit exactly on the boundary
+- None sits on the wrong side
+
+## Log-likelihood along one family
+
+$$\ell(\beta_0, \beta_1) = \sum_{i=1}^n \left\{ y_i (\beta_0 + \beta_1 x_i) - \log\left(1 + e^{\beta_0 + \beta_1 x_i}\right) \right\}$$
+
+- Restrict to $\beta_0 = -5.5\beta_1$ — boundary fixed at $x = 5.5$
+- $\eta_i = \beta_1(x_i - 5.5)$
+
+## Derivative never vanishes
+
+$$\frac{d\ell}{d\beta_1} = \sum_{i=1}^n (x_i - 5.5)\left(y_i - p_i\right)$$
+
+- $y_i = 1 \Rightarrow x_i - 5.5 > 0$ and $y_i - p_i > 0$
+- $y_i = 0 \Rightarrow x_i - 5.5 < 0$ and $y_i - p_i < 0$
+- Both cases: positive product
+
+$$\frac{d\ell}{d\beta_1} > 0 \quad \text{for every finite } \beta_1$$
+
+## Supremum, never attained
+
+- $\ell < 0$ for every finite $\beta_1$
+- As $\beta_1 \to \infty$, $\ell \to 0$
+- **Supremum of $0$, attained only in the limit**
+- No finite $\widehat\beta$ maximizes $\ell$
+
+## Fitted curves as $\beta_1$ grows
+
+![](../_freeze/04-classification/40-problems-in-logistic-regression/figure-html/toy-curves-figure-1.png)
+
+## Log-likelihood flattening
+
+| $\beta_1$ | $\ell(\beta_1)$ | $L(\beta_1)$ |
+|:---------:|:---------------:|:------------:|
+|    0.0    |     -6.931      |    0.001     |
+|    0.5    |     -2.950      |    0.052     |
+|    1.0    |     -1.590      |    0.204     |
+|    2.0    |     -0.739      |    0.477     |
+|    5.0    |     -0.159      |    0.853     |
+|    8.0    |     -0.036      |    0.964     |
+
+## Log-likelihood curve
+
+![](../_freeze/04-classification/40-problems-in-logistic-regression/figure-html/toy-loglik-figure-1.png)
+
+## Muscular dystrophy carrier screening
+
+![](../_freeze/04-classification/40-problems-in-logistic-regression/figure-html/dmd-eda-figure-1.png)
+
+- `Sleuth3::ex2012` — carrier status vs. serum creatine kinase (`CK`)
+- Groups overlap heavily below the dashed line
+- Not separated under either definition
+
+## `glm()` on overlapping data
+
+```
+Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+```
+               Estimate Std. Error   z value     Pr(>|z|)
+(Intercept) -3.96219273  0.6719084 -5.896924 3.703413e-09
+CK           0.05073407  0.0106958  4.743364 2.101984e-06
+```
+
+- Same warning as the toy example — different reason (`converged`: TRUE, 7 iterations)
+
+## What triggered the warning
+
+| CK  | Group | $\widehat\eta$|          $1 - \widehat p$|
+|:---:|:-----:|----------:|---------------------:|
+| 925 | Case  |       43.0| $2.2 \times 10^{-16}$|
+| 657 | Case  |       29.4| $1.8 \times 10^{-13}$|
+| 560 | Case  |       24.4| $2.4 \times 10^{-11}$|
+| 440 | Case  |       18.4|  $1.1 \times 10^{-8}$|
+| 363 | Case  |       14.5|  $5.3 \times 10^{-7}$|
+
+## Clamping near 0 and 1
+
+$$1 - \text{logistic}(\widehat\eta) = \frac{e^{-\widehat\eta}}{1 + e^{-\widehat\eta}}$$
+
+- One woman's $\widehat\eta = 42.97 \Rightarrow$ true gap $2.2 \times 10^{-19}$
+- No double holds a probability that close to 1
+- `glm()` clamps into $[\varepsilon,\ 1-\varepsilon]$ before inverting the link
+
+## Carrier screening conclusion
+
+- Each $+10$ units of `CK` $\times\ 1.66$ odds of carrier (95% CI 1.35–2.05)
+- Estimate finite, SE small relative to it, converged
+- Warning here: one extreme observation, not a failed estimator
+
+## Recognizing separation
+
+- `glm.fit: algorithm did not converge` — close to conclusive
+- `fitted probabilities numerically 0 or 1` — not conclusive alone
+- A coefficient absurd on the feature's own scale
+- SE far larger than the coefficient it belongs to
+- Residual deviance near zero (complete) or just small (quasi-complete)
+- Check `fit$converged` and $|\widehat\beta_j|$ vs. its SE — one line
+
+## Available responses
+
+- **Collect more data** — separation is a property of the sample
+- **Simplify the model** — drop or merge the level/feature causing it
+- **Use the fit for classification only** — decision boundary can still be trustworthy even when the coefficient is not
+
+## What transfers from linear regression
+
+- Correlated observations — transfers unchanged
+- Non-constant variance — requires no assumption; $Var[Y_i|X_i] = p(X_i)[1-p(X_i)]$
+- Log-odds non-linearity — the assumption that can fail
+- Collinearity, leverage, outliers — carry over in substance, not in the least-squares arithmetic
+- Separation itself has **no** linear regression counterpart
+
+## Conclusion
+
+- Complete / quasi-complete separation
+- No finite $\widehat\beta$ maximizes $\ell$ under separation
+- Signature: warning + huge coefficient + huge SE + $z \approx 0$ + tiny deviance
+- The coefficient table settles it, not the warning alone
+- Three responses: more data, simpler model, classification-only use
+- Some linear-regression diagnostics don't transfer arithmetically

@@ -1,5 +1,7 @@
 # Problems in Logistic Regression
 
+[Slides for this lecture](40-problems-in-logistic-regression_slides.html)
+
 ```{r packages}
 #| include: false
 library("tidyverse")
