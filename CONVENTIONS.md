@@ -51,6 +51,20 @@ convention.
   for the raw recorded quantity and "feature" for whatever actually enters
   the model, rather than treating either as a general-purpose synonym for
   the other.
+- **$K$ is the number of classes**, with classes indexed $k = 1, \ldots, K$,
+  matching ISLR2. This applies from `04-classification/50-lda.qmd` onward.
+  $C$ is not used for class count going forward: that chapter already uses
+  $c$ for an ROC cutoff and $c_{FN}$/$c_{FP}$ for misclassification costs, so
+  $C$ would collide. The earlier chapters `02-learning/30-classification.qmd`
+  and `04-classification/10-logistic-regression.qmd` write $C$ (and index
+  classes by $c$); that predates this decision and is not being retroactively
+  renamed, and `50-lda.qmd` says so in a bridging sentence where $K$ is
+  introduced.
+- **$K$ is also the number of neighbors in KNN**, again matching ISLR2
+  (`03-regression/40-flexibility.qmd` onward). The two meanings are
+  contextual. A passage that uses KNN alongside a class count (e.g. KNN
+  classification compared with the generative classifiers) must make clear
+  which $K$ is meant rather than introduce a new symbol for either.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

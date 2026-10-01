@@ -79,14 +79,23 @@ allowed alternatives below instead.
 Use the course's own terms, not generic textbook synonyms, so your answers
 read consistently with the notes:
 
-- **features** (not "explanatory variables," "predictors," or "input
-  variables") and **response** (not "output variable" or "target"). A few
-  older chapters still say "explanatory variable" — that's a known
-  inconsistency in the notes, not something to imitate going forward.
+- **"Explanatory variable" and "feature" are not interchangeable.** An
+  explanatory variable is a raw column recorded in the data; a feature is
+  the value of a basis function applied to one or more explanatory
+  variables — the column that actually enters the model. Use "predictor"
+  or "input variable" for neither in particular; use "response" (not
+  "output variable" or "target") for $Y$.
 - $\beta_j$ for coefficients, $\hat\beta_j$ for estimates, never a bare $b$.
 - $p$ is always the number of features (including basis functions from a
-  polynomial expansion or dummy variables from a categorical feature). $K$ is
-  reserved for the number of neighbors in KNN. A polynomial's degree is $d$.
+  polynomial expansion or dummy variables from a categorical explanatory
+  variable). $K$
+  has two meanings, both following ISLR2, and which one is meant depends on
+  context: the number of neighbors in KNN, and the number of classes from the
+  LDA chapter onward, where classes are indexed $k = 1, \ldots, K$. (The
+  earlier classification and logistic regression chapters write $C$ for the
+  number of classes; treat $C$ there and $K$ later as the same quantity.)
+  When KNN classification and a class count appear together, say which $K$
+  you mean. A polynomial's degree is $d$.
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -217,7 +226,9 @@ regression, interactions, and separation come in later chapters.
 <https://jarad.github.io/DS3030/04-classification/20-multiple-logistic-regression.html>
 
 The additive multiple logistic regression model, with the log-odds equal to
-the same linear predictor $X_i\beta$ used in multiple linear regression;
+the linear predictor $x_i\beta$ (the same form multiple linear regression
+uses for its mean, written here in this book's lowercase row-of-the-model-
+matrix convention);
 two-level categorical features encoded as a single indicator against a
 reference level; the Bernoulli log-likelihood as a function of
 $\beta_0,\ldots,\beta_p$, still with no closed-form maximizer, fit by
@@ -473,6 +484,64 @@ GLM analogues of all three, and the alternatives for correlated observations
 and overdispersion, are named only inside "Beyond this course" callouts and
 are neither taught nor tested. Multinomial (multi-class) logistic regression
 is still not covered.
+
+### 13. Linear Discriminant Analysis
+<https://jarad.github.io/DS3030/04-classification/50-lda.html>
+
+First generative classifier. Contrasts logistic regression, which models
+$P(Y = k \mid X = x)$ directly, with modeling the **class-conditional
+density** $f_k(x)$ and **prior probability** $\pi_k = P(Y = k)$ and reversing
+the conditioning by Bayes' theorem, $p_k(x) = \pi_k f_k(x) / \sum_l \pi_l
+f_l(x)$; here $X$ is treated as random, unlike every earlier chapter. Classes
+are indexed $k = 1, \ldots, K$ as in ISLR2. The **Bayes classifier** (assign
+the class with the largest posterior) is shown to minimize the error rate,
+with $K = 2$ reducing to a $0.5$ threshold.
+
+One feature: Gaussian $f_k$ with class means $\mu_k$ and a **shared**
+variance $\sigma^2$; derivation of the discriminant
+$\delta_k(x) = x\mu_k/\sigma^2 - \mu_k^2/(2\sigma^2) + \log\pi_k$ (the
+$x^2$ term cancels only because $\sigma^2$ is shared), recovery of
+$p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$, the log posterior odds
+$\beta_0 + \beta_1 x$ (logistic regression's form, estimated differently),
+and the boundary
+$x^* = (\mu_1+\mu_2)/2 + \sigma^2\log(\pi_1/\pi_2)/(\mu_2-\mu_1)$, which
+moves toward the rarer class's mean. Estimates $\hat\pi_k = n_k/n$, class
+sample means, and pooled variance with divisor $n - K$, derived from the
+**joint** likelihood $\prod_i \pi_{y_i} f_{y_i}(x_i)$ (closed form, so
+separation does not prevent them from existing, though a singular pooled
+covariance does) versus logistic regression's conditional
+likelihood. Multiple features: $x$ a column $p$-vector (no leading 1),
+multivariate Gaussian with mean vectors $\mu_k$ and shared covariance
+$\Sigma$, $\delta_k(x) = x^\top\Sigma^{-1}\mu_k -
+\tfrac12\mu_k^\top\Sigma^{-1}\mu_k + \log\pi_k$, a hyperplane boundary
+with slopes $\beta = \Sigma^{-1}(\mu_2 - \mu_1)$ (not perpendicular to the
+segment joining the means), and the pooled covariance estimate $\hat\Sigma$.
+
+Evaluation vocabulary, extending the classification chapter's confusion
+matrix to the two-class case in full: positive/negative class, threshold
+$t$, confusion matrix (TP, FN, FP, TN; truth in rows), error rate,
+**sensitivity** (recall, true positive rate), **specificity** (true negative
+rate), false negative and false positive rates, why lowering $t$ can only
+raise sensitivity and lower specificity, the **ROC curve** (sensitivity vs.
+$1 -$ specificity over all thresholds, depending only on how a classifier
+orders observations), and **AUC**, derived as $P(S_+ > S_-)$ and, for
+equal-variance Gaussians, $\Phi((\mu_2-\mu_1)/(\sigma\sqrt2))$, with the
+pairwise-comparison estimator. Theory figures use known Gaussian parameters.
+
+Worked example: `ISLR2::Default` with `MASS::lda()`, first `balance` alone
+(priors interpreted first as the no-feature baseline, group means, pooled
+$\hat\sigma$, LDA-implied $\hat\beta_0, \hat\beta_1$ beside the logistic
+regression's, boundary near \$2,009 vs. \$1,937), then `balance + student`
+(negative student slope via $\hat\Sigma^{-1}$, matching the confounding
+reversal of the multiple logistic regression chapter; the 0/1 indicator
+cannot be Gaussian). Confusion matrix at $t = 0.5$ (error 2.75%,
+sensitivity about 24%, specificity about 99.8%) and at $t = 0.2$ (sensitivity
+about 59%), with the point that $t = 0.5$ is the Bayes classifier's threshold
+but need not minimize an *estimated* classifier's error rate (here the
+training error is lowest somewhat below $0.5$); ROC curves for LDA and logistic regression nearly coincide, with
+identical AUCs for the one-feature models and AUC about 0.95 for both
+two-feature models. All rates are training rates; test-error estimation is
+deferred to resampling. QDA and naive Bayes are the next chapter.
 
 ## What has already been assessed
 

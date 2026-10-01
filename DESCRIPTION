@@ -11,6 +11,7 @@ RoxygenNote: 8.1.0
 Imports:
     hexbin,
     ISLR2,
+    MASS,
     quantmod,
     Sleuth3,
     tidymodels,

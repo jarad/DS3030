@@ -43,6 +43,9 @@ shifted.
 | ---- | --- | -------------- | ----- |
 | 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |
 | 2026-10-02 | Fri | **Exam 1** | |
+| 2026-10-05 | Mon | `04-classification/50-lda.qmd` | Bayes'-theorem framing for generative classification; LDA for $p=1$ and $p>1$; confusion matrix, ROC curve, AUC |
+| 2026-10-07 | Wed | `04-classification/60-qda-naive-bayes.qmd` | QDA (bias-variance tradeoff vs. LDA); Naive Bayes (conditional independence); Comparison of classification methods (ISLR2 4.5) folded in here rather than its own file, since it directly compares LDA/QDA/NB against logistic regression and KNN once all three generative methods are on the table |
+| 2026-10-09 | Fri | `04-classification/70-generalized-linear-models.qmd` | GLMs as a unifying framework (linear and logistic regression as special cases); Poisson regression for count data, using `ISLR2::Bikeshare` |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |
 

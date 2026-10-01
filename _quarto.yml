@@ -26,6 +26,7 @@ book:
       - 04-classification/20-multiple-logistic-regression.qmd
       - 04-classification/30-flexible-logistic-regression.qmd
       - 04-classification/40-problems-in-logistic-regression.qmd
+      - 04-classification/50-lda.qmd
 
 format:
   html:

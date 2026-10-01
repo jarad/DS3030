@@ -1,0 +1,1726 @@
+# Linear Discriminant Analysis
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("ISLR2")
+theme_set(theme_bw())
+set.seed(20261001)
+
+# MASS is called as MASS::lda() rather than attached, because attaching it
+# masks dplyr::select().
+# Renders a number in LaTeX scientific notation for use inside $...$.
+sci <- function(x, digits = 2) {
+  e <- floor(log10(abs(x)))
+  m <- signif(x / 10^e, digits)
+  sprintf("%s \\times 10^{%d}", format(m), e)
+}
+
+class_colors <- c("#0072B2", "#D55E00")
+model_colors <- c("LDA" = "#009E73", "Logistic regression" = "#CC79A7")
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **derive** the posterior probability $p_k(x) = P(Y = k \mid X = x)$ from the
+prior probabilities $\pi_k$ and the class-conditional densities $f_k(x)$ using
+Bayes' theorem, and **explain** why classifying to the class with the largest
+posterior probability minimizes the expected error rate,
+- **derive** the LDA discriminant function $\delta_k(x)$ for one feature under
+Gaussian class-conditional densities with a shared variance $\sigma^2$, and
+**show** that the resulting decision boundary is linear in $x$ and moves toward
+the mean of the class whose prior probability is smaller,
+- **write** the discriminant function for $p > 1$ features in matrix form using
+class mean vectors $\mu_k$ and a shared covariance matrix $\Sigma$, and
+**compute** the estimates $\hat\pi_k$, $\hat\mu_k$, and $\hat\sigma^2$ or
+$\hat\Sigma$ from training data,
+- **fit** LDA with `MASS::lda()`, **interpret** its prior probabilities, group
+means, and posterior probabilities, and **compare** its posterior
+probabilities and decision boundary with those of logistic regression,
+- **construct** a confusion matrix at a stated threshold, **compute** the error
+rate, sensitivity, and specificity from it, and **explain** how sensitivity
+and specificity trade off as the threshold moves, and
+- **interpret** an ROC curve and its AUC, including AUC as the probability that
+a randomly chosen positive observation receives a higher score than a randomly
+chosen negative one.
+:::
+
+## Generative classifiers
+
+Logistic regression models the conditional probability $P(Y = k \mid X = x)$
+directly. Its likelihood is the conditional distribution of the response given
+the features, and the distribution of the features themselves never enters it.
+
+A **generative classifier** takes the other route. It models how the features
+are distributed *within* each class, and how common each class is, and then
+reverses the conditioning with Bayes' theorem to obtain
+$P(Y = k \mid X = x)$. Linear discriminant analysis (LDA) is the first generative
+classifier in this course.
+
+### Bayes' theorem
+
+Every earlier lecture conditioned on the features and treated them as fixed. A
+generative classifier models their distribution, so here $X$ is a random
+vector — the features of a randomly chosen observation — and $x$ is a value it
+takes. Let the response $Y$ take one of $K$ classes, $k = 1, \ldots, K$, and
+define
+
+$$\pi_k = P(Y = k), \qquad f_k(x) = \text{density of } X \text{ given } Y = k,$$
+
+where
+
+- $K$ is the number of classes ($K = 2$ for a binary response),
+- $\pi_k$ is the **prior probability** of class $k$, the probability that a
+randomly chosen observation belongs to class $k$ before its features are
+seen, with $\sum_{k=1}^K \pi_k = 1$, and
+- $f_k(x)$ is the **class-conditional density** of $X$ among observations in
+class $k$ (a probability mass function if $X$ is discrete).
+
+The classification and logistic regression lectures wrote $C$ for the number
+of classes; following ISLR2, this and later lectures write $K$.
+
+Bayes' theorem, with densities in place of the probabilities of the events
+$\{X = x\}$, gives
+
+$$P(Y = k \mid X = x) = \frac{P(Y = k)\, f_k(x)}{f(x)},$$
+
+where $f(x)$ is the marginal density of $X$. By the law of total probability,
+$f(x) = \sum_{l=1}^K P(Y = l)\, f_l(x)$, so
+
+$$p_k(x) = P(Y = k \mid X = x) = \frac{\pi_k f_k(x)}{\sum_{l=1}^K \pi_l f_l(x)},$$
+
+where
+
+- $p_k(x)$ is the **posterior probability** of class $k$ for an observation
+with features $x$, and
+- $l$ indexes the classes in the sum, kept distinct from the $k$ being
+evaluated.
+
+The denominator is the same for every $k$. The posterior is therefore
+proportional to $\pi_k f_k(x)$: a class is probable at $x$ when it is common
+($\pi_k$ large) and when $x$ is a typical feature value for it ($f_k(x)$
+large).
+
+### Bayes classifier
+
+Suppose an observation with features $x$ is assigned to class $\hat y(x)$. The
+probability that the assignment is wrong is
+
+$$P\left(Y \ne \hat y(x) \mid X = x\right) = 1 - p_{\hat y(x)}(x).$$
+
+This is smallest when $\hat y(x)$ is the class with the largest posterior
+probability. Choosing that class at every $x$ minimizes the conditional error
+probability at every $x$, and so it also minimizes the overall error rate
+$E\left[1 - p_{\hat y(X)}(X)\right]$, which averages those conditional error
+probabilities over the distribution of $X$.
+
+The rule "assign each observation to $\arg\max_k p_k(x)$" is the **Bayes
+classifier**, and its error rate, the **Bayes error rate**, is the lowest
+achievable by any classifier. With $K = 2$ classes it reduces to assigning
+class $2$ whenever $p_2(x) > 0.5$.
+
+The Bayes classifier needs the true $\pi_k$ and $f_k$, which are never known.
+A generative classifier estimates both from training data and substitutes the
+estimates into Bayes' theorem. Estimating $\pi_k$ takes nothing more than the
+proportion of training observations in class $k$. Estimating $f_k$ requires an
+assumption about its form, and LDA's assumption is that it is Gaussian.
+
+## One-feature LDA
+
+### Gaussian class-conditional densities
+
+With a single feature ($p = 1$), LDA assumes
+
+$$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left(-\frac{(x - \mu_k)^2}{2\sigma^2}\right), \qquad k = 1, \ldots, K,$$
+
+where
+
+- $\mu_k = E[X \mid Y = k]$ is the mean of the feature in class $k$,
+- $\sigma^2 = Var[X \mid Y = k]$ is the variance of the feature, **the same in
+every class**, and
+- $\pi$ without a subscript is the constant $3.14159\ldots$, unrelated to the
+prior probabilities $\pi_k$.
+
+The classes differ only in where their densities are centered. The shared
+variance is what makes the classifier linear.
+
+### Discriminant function
+
+Since $p_k(x)$ is proportional to $\pi_k f_k(x)$ and the logarithm is
+increasing, the class with the largest posterior probability is also the class
+with the largest $\log\left(\pi_k f_k(x)\right)$. Expanding the square,
+
+$$\log\left(\pi_k f_k(x)\right) = \log \pi_k - \log\left(\sqrt{2\pi}\,\sigma\right) - \frac{x^2}{2\sigma^2} + x\frac{\mu_k}{\sigma^2} - \frac{\mu_k^2}{2\sigma^2}.$$
+
+The second and third terms do not involve $k$ — the third only because
+$\sigma^2$ is shared — so they cannot change which class is largest. Dropping
+them leaves the **discriminant function**
+
+$$\delta_k(x) = x\frac{\mu_k}{\sigma^2} - \frac{\mu_k^2}{2\sigma^2} + \log \pi_k,$$
+
+where
+
+- $\delta_k(x)$ is the discriminant score of class $k$ at feature value $x$.
+
+The classifier assigns an observation to the class with the largest
+$\delta_k(x)$. Each $\delta_k$ is a linear function of $x$, with slope
+$\mu_k/\sigma^2$ and intercept $\log \pi_k - \mu_k^2/(2\sigma^2)$.
+
+The dropped terms are added to every class's $\log\left(\pi_k f_k(x)\right)$,
+so their exponentials are common factors of every $\pi_k f_k(x)$. They cancel
+from the ratio in Bayes' theorem and the posterior probabilities can be
+recovered from the discriminant scores alone:
+
+$$p_k(x) = \frac{e^{\delta_k(x)}}{\sum_{l=1}^K e^{\delta_l(x)}}.$$
+
+### Decision boundary
+
+With $K = 2$ classes, $p_1(x) = 1 - p_2(x)$, and the log posterior odds of
+class $2$ are
+
+$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \underbrace{\log\frac{\pi_2}{\pi_1} - \frac{\mu_2^2 - \mu_1^2}{2\sigma^2}}_{\beta_0} + \underbrace{\frac{\mu_2 - \mu_1}{\sigma^2}}_{\beta_1}\, x.$$
+
+The log-odds are linear in $x$, so LDA's posterior probability has exactly the
+form of a simple logistic regression. The two methods differ in how they
+estimate $\beta_0$ and $\beta_1$, not in the shape of the curve they fit.
+
+The **decision boundary** is the set of $x$ where the two classes are equally
+probable, $\delta_1(x) = \delta_2(x)$. Setting the log posterior odds to zero
+and solving,
+
+$$x^* = \frac{\mu_1 + \mu_2}{2} + \frac{\sigma^2}{\mu_2 - \mu_1}\log\frac{\pi_1}{\pi_2},$$
+
+where
+
+- $x^*$ is the feature value at which the classifier switches from one class
+to the other.
+
+With equal prior probabilities the logarithm is zero and the boundary is the
+midpoint of the two means. Take $\mu_2 > \mu_1$. If class $2$ is the rarer
+class, $\pi_2 < \pi_1$, the logarithm is positive and the boundary moves to the
+right, toward $\mu_2$: an observation must look more like a typical class-$2$
+observation before the classifier assigns it to the rarer class.
+
+The figure below uses two classes with $\mu_1 = -1.25$, $\mu_2 = 1.25$, and
+$\sigma = 1$. Each curve is $\pi_k f_k(x)$, so the boundary is where the two
+curves cross.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r theory-1d}
+#| output: false
+mu_1 <- -1.25
+mu_2 <-  1.25
+sigma <- 1
+pi_unequal <- c(0.8, 0.2)
+
+boundary_1d <- function(pi1, pi2) {
+  (mu_1 + mu_2) / 2 + sigma^2 / (mu_2 - mu_1) * log(pi1 / pi2)
+}
+x_star_equal   <- boundary_1d(0.5, 0.5)
+x_star_unequal <- boundary_1d(pi_unequal[1], pi_unequal[2])
+
+theory_grid <- tibble(x = seq(-4.5, 4.5, length.out = 500))
+
+weighted_curves <- function(pi1, pi2) {
+  theory_grid |>
+    mutate(`k = 1` = pi1 * dnorm(x, mu_1, sigma),
+           `k = 2` = pi2 * dnorm(x, mu_2, sigma)) |>
+    pivot_longer(-x, names_to = "class", values_to = "density")
+}
+
+weighted_plot <- function(pi1, pi2, x_star) {
+  ggplot(weighted_curves(pi1, pi2),
+         aes(x = x, y = density, color = class, linetype = class)) +
+    geom_line(linewidth = 0.9) +
+    geom_vline(xintercept = x_star, linetype = "dotted") +
+    scale_color_manual(values = class_colors) +
+    coord_cartesian(ylim = c(0, 0.33)) +
+    labs(x = "x", y = expression(pi[k] * f[k](x)), color = "Class",
+         linetype = "Class",
+         title = sprintf("pi_1 = %.1f, pi_2 = %.1f; boundary x* = %.2f",
+                         pi1, pi2, x_star))
+}
+
+theory_equal_plot   <- weighted_plot(0.5, 0.5, x_star_equal)
+theory_unequal_plot <- weighted_plot(pi_unequal[1], pi_unequal[2],
+                                     x_star_unequal)
+
+delta_lines <- theory_grid |>
+  mutate(`k = 1` = x * mu_1 / sigma^2 - mu_1^2 / (2 * sigma^2) +
+                   log(pi_unequal[1]),
+         `k = 2` = x * mu_2 / sigma^2 - mu_2^2 / (2 * sigma^2) +
+                   log(pi_unequal[2])) |>
+  pivot_longer(-x, names_to = "class", values_to = "delta")
+
+theory_delta_plot <- ggplot(delta_lines,
+                            aes(x = x, y = delta, color = class,
+                                linetype = class)) +
+  geom_line(linewidth = 0.9) +
+  geom_vline(xintercept = x_star_unequal, linetype = "dotted") +
+  scale_color_manual(values = class_colors) +
+  labs(x = "x", y = expression(delta[k](x)), color = "Class",
+       linetype = "Class",
+       title = sprintf("pi_1 = %.1f, pi_2 = %.1f; boundary x* = %.2f",
+                       pi_unequal[1], pi_unequal[2], x_star_unequal))
+```
+:::
+
+::: {.panel-tabset}
+#### Equal priors
+```{r theory-equal-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+theory_equal_plot
+```
+
+#### Unequal priors
+```{r theory-unequal-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+theory_unequal_plot
+```
+
+#### Discriminant functions
+```{r theory-delta-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.2
+theory_delta_plot
+```
+:::
+
+With equal priors the boundary sits at the midpoint,
+$x^* = `r sprintf("%.2f", x_star_equal)`$. Shrinking $\pi_2$ to
+`r pi_unequal[2]` scales the class-$2$ curve down, so the crossing moves right
+to $x^* = `r sprintf("%.2f", x_star_unequal)`$. The third tab plots
+$\delta_1(x)$ and $\delta_2(x)$ for the unequal priors: two straight lines that
+cross at the same $x^*$. A linear discriminant function for each class, with
+the boundary where two of them are equal, is the "linear" in linear
+discriminant analysis.
+
+Had the variances differed, the term $-x^2/(2\sigma_k^2)$, where $\sigma_k^2$
+is the class-$k$ variance, would carry a
+different coefficient in each class, would not drop out, and would make each
+discriminant quadratic in $x$.
+
+### Parameter estimation
+
+The parameters $\pi_k$, $\mu_k$, and $\sigma^2$ are estimated from training
+observations $(x_1, y_1), \ldots, (x_n, y_n)$, here with $x_i$ the scalar
+feature value of observation $i$:
+
+$$\hat\pi_k = \frac{n_k}{n}, \qquad \hat\mu_k = \frac{1}{n_k}\sum_{i:\, y_i = k} x_i, \qquad \hat\sigma^2 = \frac{1}{n - K}\sum_{k=1}^K \sum_{i:\, y_i = k}\left(x_i - \hat\mu_k\right)^2,$$
+
+where
+
+- $n_k$ is the number of training observations in class $k$, so
+$\sum_k n_k = n$,
+- $\sum_{i:\, y_i = k}$ sums over the training observations in class $k$, and
+- $\hat\sigma^2$ is the **pooled variance**: squared deviations from each
+observation's own class mean, summed over all classes and divided by $n - K$.
+
+These are maximum likelihood estimates. Under the generative model the joint
+density of observation $i$ is $P(Y = y_i)\, f_{y_i}(x_i) = \pi_{y_i} f_{y_i}(x_i)$,
+so for independent observations the log-likelihood is
+
+$$\ell(\pi_1, \ldots, \pi_K, \mu_1, \ldots, \mu_K, \sigma^2) = \sum_{k=1}^K n_k \log \pi_k \;+\; \sum_{k=1}^K \sum_{i:\, y_i = k}\left[-\frac{1}{2}\log\left(2\pi\sigma^2\right) - \frac{(x_i - \mu_k)^2}{2\sigma^2}\right].$$
+
+The first sum involves only the priors; maximizing it subject to
+$\sum_k \pi_k = 1$ (with a Lagrange multiplier) gives $\hat\pi_k = n_k/n$. In
+the second, $\mu_k$ appears only in class $k$'s terms, so its maximizer is the
+class-$k$ sample mean. Setting the derivative with respect to $\sigma^2$ to
+zero gives the pooled sum of squares divided by $n$; dividing by $n - K$
+instead, one degree of freedom per estimated mean, makes it unbiased, in the
+same way that $RSS/(n-2)$ replaced $RSS/n$ in simple linear regression.
+`MASS::lda()` uses $n - K$.
+
+Logistic regression maximizes a different likelihood, the conditional one,
+$\prod_{i=1}^n p(x_i)^{y_i}\left[1 - p(x_i)\right]^{1 - y_i}$ (with $y_i$
+coded $0/1$ as in the logistic regression lectures), which has no closed-form
+maximizer. LDA maximizes the joint likelihood of features and
+responses under a stronger assumption — Gaussian features with a shared
+variance — and every estimate is a sample proportion, mean, or variance. Both
+methods end with log-odds linear in $x$; their estimates of $\beta_0$ and
+$\beta_1$ differ because they maximize different likelihoods.
+
+::: {.callout-note collapse="true"}
+### For example,
+LDA's estimates have closed forms, and separation does not prevent them from
+existing, though a singular pooled covariance still would. The previous lecture's completely separated toy data,
+$x = 1, \ldots, 10$ with $y = 1$ exactly when $x > 5$, left logistic
+regression with no finite maximum likelihood estimate. `MASS::lda()`, used
+again in the worked example below, fits LDA to the same data:
+
+```{r toy-lda}
+toy <- tibble(x = 1:10, y = factor(as.numeric(x > 5)))
+toy_lda <- MASS::lda(y ~ x, data = toy)
+toy_lda$means
+```
+
+The class means are `r toy_lda$means[1]` and `r toy_lda$means[2]`, the priors
+are equal, and so the LDA boundary is the midpoint,
+$x^* = `r mean(toy_lda$means)`$.
+:::
+
+## Multiple-feature LDA
+
+### Multivariate Gaussian densities
+
+With $p > 1$ features, $X = (X_1, \ldots, X_p)^\top$ is a random column vector
+whose entries are the features, and $x$ is a $p$-vector value it takes. A
+value $x$ holds the same kind of entries as a row of the model matrix
+$\mathbf{X}$ but without the leading $1$, and it is a column because it is the
+argument of a multivariate density. LDA assumes
+
+$$f_k(x) = \frac{1}{(2\pi)^{p/2}\,|\Sigma|^{1/2}} \exp\left(-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma^{-1} \left(x - \mu_k\right)\right),$$
+
+where
+
+- $\mu_k = E[X \mid Y = k] = (\mu_{k1}, \ldots, \mu_{kp})^\top$ is the
+$p$-vector of feature means in class $k$,
+- $\Sigma = Cov[X \mid Y = k]$ is the $p \times p$ covariance matrix of the
+features, **the same in every class**, with feature variances on its diagonal
+and covariances between pairs of features off it, and
+- $|\Sigma|$ is the determinant of $\Sigma$, which is symmetric and positive
+definite.
+
+Each class's density has contours that are nested ellipses centered at
+$\mu_k$. Sharing
+$\Sigma$ means every class's ellipses have the same shape and orientation and
+differ only in their center.
+
+### Matrix-form discriminant
+
+The derivation follows the one-feature case. Because $\Sigma^{-1}$ is
+symmetric, the scalar $\mu_k^\top \Sigma^{-1} x$ equals its own transpose
+$x^\top \Sigma^{-1} \mu_k$, and the quadratic form expands to
+
+$$\left(x - \mu_k\right)^\top \Sigma^{-1} \left(x - \mu_k\right) = x^\top \Sigma^{-1} x - 2\, x^\top \Sigma^{-1} \mu_k + \mu_k^\top \Sigma^{-1} \mu_k.$$
+
+Then
+
+$$\log\left(\pi_k f_k(x)\right) = \log \pi_k - \frac{p}{2}\log(2\pi) - \frac{1}{2}\log|\Sigma| - \frac{1}{2}x^\top \Sigma^{-1} x + x^\top \Sigma^{-1} \mu_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k.$$
+
+The second, third, and fourth terms do not involve $k$; the fourth only
+because $\Sigma$ is shared. Dropping them,
+
+$$\delta_k(x) = x^\top \Sigma^{-1} \mu_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k + \log \pi_k,$$
+
+which is linear in $x$ and reduces to the one-feature discriminant when
+$\Sigma = \sigma^2$. As before, the classifier assigns the class with the
+largest $\delta_k(x)$, and $p_k(x) = e^{\delta_k(x)} / \sum_l e^{\delta_l(x)}$.
+
+### Linear decision boundary
+
+With $K = 2$, subtracting the two discriminants gives the log posterior odds
+of class $2$,
+
+$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\beta,$$
+
+where
+
+- $\beta = \Sigma^{-1}(\mu_2 - \mu_1)$ is a $p$-vector of slopes, one per
+feature, with no intercept entry, and
+- $\beta_0 = \log(\pi_2/\pi_1) - \frac{1}{2}\left(\mu_2^\top \Sigma^{-1} \mu_2 - \mu_1^\top \Sigma^{-1} \mu_1\right)$
+is the intercept.
+
+This is again the form of a multiple logistic regression with $p$ features.
+The decision boundary $\{x : \beta_0 + x^\top\beta = 0\}$ is a hyperplane in
+the $p$-dimensional feature space — a line when $p = 2$.
+
+The slopes are $\Sigma^{-1}(\mu_2 - \mu_1)$, not $\mu_2 - \mu_1$, so the
+boundary is generally not perpendicular to the segment joining the two means:
+$\Sigma^{-1}$ tilts it according to how the features covary. With equal
+priors it still passes through the midpoint $(\mu_1 + \mu_2)/2$, since
+substituting that point gives
+$\frac{1}{2}\left(\mu_1 + \mu_2\right)^\top\Sigma^{-1}\left(\mu_2 - \mu_1\right) = \frac{1}{2}\left(\mu_2^\top \Sigma^{-1} \mu_2 - \mu_1^\top \Sigma^{-1} \mu_1\right)$.
+
+The figure below uses $p = 2$, $\mu_1 = (-1, 0)^\top$, $\mu_2 = (1, 0)^\top$,
+unit variances, and a correlation of $0.6$ between the two features. The
+ellipses are contours of each $f_k$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r theory-2d}
+#| output: false
+mu2d_1  <- c(-1, 0)
+mu2d_2  <- c( 1, 0)
+Sigma2d <- matrix(c(1, 0.6, 0.6, 1), nrow = 2)
+Sigma2d_inv <- solve(Sigma2d)
+
+dmvnorm2 <- function(x1, x2, mu) {
+  d <- cbind(x1 - mu[1], x2 - mu[2])
+  q <- rowSums((d %*% Sigma2d_inv) * d)
+  exp(-q / 2) / (2 * pi * sqrt(det(Sigma2d)))
+}
+
+grid2d <- expand_grid(x1 = seq(-4, 4, length.out = 200),
+                      x2 = seq(-3.5, 3.5, length.out = 200)) |>
+  mutate(`k = 1` = dmvnorm2(x1, x2, mu2d_1),
+         `k = 2` = dmvnorm2(x1, x2, mu2d_2)) |>
+  pivot_longer(c(`k = 1`, `k = 2`), names_to = "class",
+               values_to = "density")
+
+# Contours at Mahalanobis radii 1 and 2.
+contour_levels <- exp(-c(1, 2)^2 / 2) / (2 * pi * sqrt(det(Sigma2d)))
+
+boundary_2d <- function(pi1, pi2) {
+  beta  <- Sigma2d_inv %*% (mu2d_2 - mu2d_1)
+  beta0 <- log(pi2 / pi1) -
+    0.5 * (t(mu2d_2) %*% Sigma2d_inv %*% mu2d_2 -
+           t(mu2d_1) %*% Sigma2d_inv %*% mu2d_1)
+  # beta0 + beta1 x1 + beta2 x2 = 0  =>  x2 = -(beta0 + beta1 x1) / beta2
+  c(intercept = -beta0[1] / beta[2], slope = -beta[1] / beta[2])
+}
+line_equal   <- boundary_2d(0.5, 0.5)
+line_unequal <- boundary_2d(pi_unequal[1], pi_unequal[2])
+
+means2d <- tibble(class = c("k = 1", "k = 2"),
+                  x1 = c(mu2d_1[1], mu2d_2[1]),
+                  x2 = c(mu2d_1[2], mu2d_2[2]))
+
+theory_2d_base <- ggplot(grid2d, aes(x = x1, y = x2)) +
+  geom_contour(aes(z = density, color = class, linetype = class),
+               breaks = contour_levels, linewidth = 0.8) +
+  geom_point(data = means2d, aes(color = class, shape = class), size = 3) +
+  annotate("segment", x = mu2d_1[1], y = mu2d_1[2],
+           xend = mu2d_2[1], yend = mu2d_2[2],
+           color = "grey50", linewidth = 0.4) +
+  scale_color_manual(values = class_colors) +
+  coord_fixed(xlim = c(-4, 4), ylim = c(-3.5, 3.5)) +
+  labs(x = expression(X[1]), y = expression(X[2]), color = "Class",
+       linetype = "Class", shape = "Class")
+
+theory_2d_densities <- theory_2d_base +
+  labs(title = "Class densities sharing one covariance matrix")
+
+theory_2d_equal <- theory_2d_base +
+  geom_abline(intercept = line_equal["intercept"],
+              slope = line_equal["slope"], linewidth = 0.9) +
+  labs(title = "Boundary with pi_1 = pi_2 = 0.5")
+
+theory_2d_unequal <- theory_2d_base +
+  geom_abline(intercept = line_equal["intercept"],
+              slope = line_equal["slope"], linewidth = 0.5,
+              color = "grey60", linetype = "dotted") +
+  geom_abline(intercept = line_unequal["intercept"],
+              slope = line_unequal["slope"], linewidth = 0.9) +
+  labs(title = sprintf("Boundary with pi_1 = %.1f, pi_2 = %.1f (equal-prior boundary dotted)",
+                       pi_unequal[1], pi_unequal[2]))
+```
+:::
+
+::: {.panel-tabset}
+#### Class densities
+```{r theory-2d-densities-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 5
+theory_2d_densities
+```
+
+#### Equal priors
+```{r theory-2d-equal-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 5
+theory_2d_equal
+```
+
+#### Unequal priors
+```{r theory-2d-unequal-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 5
+theory_2d_unequal
+```
+:::
+
+The two sets of ellipses are translates of one another. With equal priors the
+boundary passes through the midpoint of the grey segment joining the means,
+but it is not perpendicular to that segment: the positive correlation between
+the features tilts it. Shrinking $\pi_2$ to `r pi_unequal[2]` shifts the line
+parallel to itself, away from $\mu_1$ and toward $\mu_2$, because the prior
+enters only $\beta_0$.
+
+### Pooled covariance estimate
+
+The estimates generalize directly. The priors are still $\hat\pi_k = n_k/n$,
+and with $x_i = (x_{i1}, \ldots, x_{ip})^\top$ now the $p$-vector of feature
+values for observation $i$ (again without the leading $1$),
+
+$$\hat\mu_k = \frac{1}{n_k}\sum_{i:\, y_i = k} x_i, \qquad \hat\Sigma = \frac{1}{n - K}\sum_{k=1}^K \sum_{i:\, y_i = k}\left(x_i - \hat\mu_k\right)\left(x_i - \hat\mu_k\right)^\top,$$
+
+where
+
+- $\hat\mu_k$ is the vector of class-$k$ sample means, one per feature, and
+- $\hat\Sigma$ is the **pooled covariance matrix**, the sum of each class's
+matrix of cross-products of deviations from its own mean, divided by $n - K$.
+
+Substituting $\hat\pi_k$, $\hat\mu_k$, and $\hat\Sigma$ into $\delta_k(x)$ gives
+the estimated discriminant $\hat\delta_k(x)$, the estimated posterior
+probabilities
+$\hat p_k(x) = e^{\hat\delta_k(x)} / \sum_l e^{\hat\delta_l(x)}$, and the LDA
+classifier, which assigns each observation to the class with the largest
+$\hat\delta_k(x)$.
+
+## Classifier evaluation
+
+The classification lecture introduced the confusion matrix and the
+sensitivity, specificity, and precision read from it, alongside the error
+rate. This section develops the two-class case in full: the threshold that
+produces a confusion matrix, how sensitivity and specificity trade off as the
+threshold moves, and the ROC curve and AUC that summarize every threshold at
+once.
+
+An error rate counts every mistake the same way. Failing to flag a customer who goes on to default and flagging a
+customer who does not are different mistakes with different costs, and a
+classifier can have a small error rate while making almost every mistake of
+one kind.
+
+### Confusion matrix
+
+With two classes, call the class of interest **positive** and the other
+**negative**. For a classifier that produces an estimated probability
+$\hat p(x)$ of the positive class, a **threshold** $t$ turns probabilities into
+classes: predict positive when $\hat p(x) > t$. The Bayes classifier uses
+$t = 0.5$.
+
+As in the classification lecture, a confusion matrix cross-tabulates the true
+class against the predicted class:
+
+::: {.callout-note collapse="true"}
+### Code
+```{r confusion-template}
+#| output: false
+confusion_template <- tibble(
+  Truth = c("Positive", "Negative"),
+  `Predicted positive` = c("True positive (TP)", "False positive (FP)"),
+  `Predicted negative` = c("False negative (FN)", "True negative (TN)")
+) |>
+  knitr::kable(align = "lcc")
+```
+:::
+
+```{r confusion-template-table}
+#| echo: false
+confusion_template
+```
+
+where
+
+- $TP$ is the number of positive observations predicted positive,
+- $FN$ is the number of positive observations predicted negative,
+- $FP$ is the number of negative observations predicted positive, and
+- $TN$ is the number of negative observations predicted negative.
+
+The diagonal holds the correct classifications, so the error rate is
+$(FP + FN)/n$.
+
+### Sensitivity and specificity
+
+Dividing each row by its total gives two rates that condition on the true
+class:
+
+$$\text{Sensitivity} = \frac{TP}{TP + FN}, \qquad \text{Specificity} = \frac{TN}{TN + FP},$$
+
+where
+
+- **sensitivity**, also called **recall** or the **true positive rate**, is the
+proportion of positive observations the classifier catches, an estimate of
+$P\left(\hat y = \text{positive} \mid Y = \text{positive}\right)$, and
+- **specificity**, also called the **true negative rate**, is the proportion of
+negative observations the classifier correctly leaves alone, an estimate of
+$P\left(\hat y = \text{negative} \mid Y = \text{negative}\right)$.
+
+Their complements are error rates within each true class:
+$1 - \text{sensitivity} = FN/(TP + FN)$ is the **false negative rate**, and
+$1 - \text{specificity} = FP/(TN + FP)$ is the **false positive rate**.
+
+### Classification threshold
+
+The threshold $t = 0.5$ is the Bayes classifier's: if $\hat p(x)$ equalled
+the true $p(x)$, it would minimize the expected error rate. An estimated
+$\hat p(x)$ carries no such guarantee, and even for the Bayes classifier the
+overall error rate need not be the quantity of interest.
+
+Lowering $t$ enlarges the set $\left\{x : \hat p(x) > t\right\}$ of feature
+values classified positive, so every
+observation predicted positive at the old threshold is still predicted
+positive at the new one. Consequently $TP$ and $FP$ can only grow while $FN$
+and $TN$ can only shrink: sensitivity rises or stays the same, and
+specificity falls or stays the same. Raising $t$ does the reverse. No
+threshold improves both, so choosing $t$ means choosing a tradeoff between the
+two kinds of mistake.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+If the two mistakes have known costs, $c_{FN}$ for a missed positive and
+$c_{FP}$ for a false alarm, the expected cost of predicting positive at $x$ is
+$c_{FP}\left[1 - p(x)\right]$ and of predicting negative is $c_{FN}\, p(x)$.
+Predicting positive is the cheaper choice exactly when
+$p(x) > c_{FP}/(c_{FP} + c_{FN})$, so that ratio is the cost-minimizing
+threshold. Equal costs recover $t = 0.5$.
+:::
+
+### ROC curve
+
+The **ROC curve** (receiver operating characteristic curve) plots sensitivity
+against $1 - \text{specificity}$ — the true positive rate against the false
+positive rate — at every threshold. At $t = 1$ nothing is predicted positive,
+giving the point $(0, 0)$; at $t = 0$ everything is, giving $(1, 1)$; and the
+curve traces every tradeoff in between.
+
+For the two-class, one-feature model of the decision-boundary figure, with
+equal priors and class $2$ positive, $p(x) > t$ is equivalent to $x > c$
+for a cutoff $c$ that decreases as $t$ decreases, because the posterior is
+increasing in $x$. Sensitivity is then the area under $f_2$ to the right of
+$c$, and $1 - \text{specificity}$ is the area under $f_1$ to the right of $c$.
+Each tab below moves the threshold and marks where the classifier lands on the
+ROC curve.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r theory-roc}
+#| output: false
+# Equal-prior posterior: log-odds = beta1 * x with beta1 = (mu_2 - mu_1) / sigma^2.
+beta1_theory <- (mu_2 - mu_1) / sigma^2
+cutoff_for <- function(t) qlogis(t) / beta1_theory
+
+roc_theory <- tibble(c = seq(-6, 6, length.out = 600)) |>
+  mutate(fpr = 1 - pnorm(c, mu_1, sigma),
+         tpr = 1 - pnorm(c, mu_2, sigma))
+
+auc_theory_formula <- pnorm((mu_2 - mu_1) / (sigma * sqrt(2)))
+roc_theory_sorted  <- arrange(roc_theory, fpr)
+auc_theory_trap    <- with(roc_theory_sorted,
+                           sum(diff(fpr) * (head(tpr, -1) + tail(tpr, -1)) / 2))
+
+theory_thresholds <- c(0.9, 0.5, 0.1)
+
+threshold_density_plot <- function(t) {
+  c0 <- cutoff_for(t)
+  dens <- theory_grid |>
+    mutate(`k = 1 (negative)` = dnorm(x, mu_1, sigma),
+           `k = 2 (positive)` = dnorm(x, mu_2, sigma)) |>
+    pivot_longer(-x, names_to = "class", values_to = "density")
+  ggplot(dens, aes(x = x, y = density)) +
+    geom_area(data = filter(dens, x > c0),
+              aes(fill = class), alpha = 0.3, position = "identity") +
+    geom_line(aes(color = class, linetype = class), linewidth = 0.9) +
+    geom_vline(xintercept = c0, linetype = "dotted") +
+    scale_color_manual(values = class_colors) +
+    scale_fill_manual(values = class_colors) +
+    labs(x = "x", y = expression(f[k](x)), color = NULL, linetype = NULL,
+         fill = NULL,
+         title = sprintf("t = %.1f, cutoff c = %.2f", t, c0)) +
+    theme(legend.position = "bottom")
+}
+
+threshold_roc_plot <- function(t) {
+  c0 <- cutoff_for(t)
+  pt <- tibble(fpr = 1 - pnorm(c0, mu_1, sigma),
+               tpr = 1 - pnorm(c0, mu_2, sigma))
+  ggplot(roc_theory, aes(x = fpr, y = tpr)) +
+    geom_abline(intercept = 0, slope = 1, color = "grey60",
+                linetype = "dashed") +
+    geom_line(linewidth = 0.9) +
+    geom_point(data = pt, size = 3.5, shape = 21, fill = "white",
+               stroke = 1.2) +
+    coord_fixed() +
+    labs(x = "False positive rate (1 - specificity)",
+         y = "True positive rate (sensitivity)",
+         title = sprintf("Sensitivity %.2f, specificity %.2f",
+                         pt$tpr, 1 - pt$fpr))
+}
+```
+:::
+
+::: {.panel-tabset}
+#### t = 0.9
+```{r theory-roc-09}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 4.5
+#| fig-height: 4
+threshold_density_plot(0.9)
+threshold_roc_plot(0.9)
+```
+
+#### t = 0.5
+```{r theory-roc-05}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 4.5
+#| fig-height: 4
+threshold_density_plot(0.5)
+threshold_roc_plot(0.5)
+```
+
+#### t = 0.1
+```{r theory-roc-01}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 4.5
+#| fig-height: 4
+threshold_density_plot(0.1)
+threshold_roc_plot(0.1)
+```
+:::
+
+Moving from $t = 0.9$ to $t = 0.1$ slides the cutoff left, so the shaded area
+under $f_2$ (sensitivity) and the shaded area under $f_1$ (false positive
+rate) both grow, and the point climbs along the curve toward $(1, 1)$. The
+dashed diagonal is the ROC curve of a classifier that ignores $x$ and
+predicts positive at random: its true and false positive rates are equal at
+every threshold. A useful classifier's curve bows toward the top-left corner,
+where sensitivity is high and the false positive rate is low.
+
+The ROC curve depends on a classifier only through how it *orders* the
+observations. Any strictly increasing transformation of the score — $x$,
+$\hat\delta_2(x) - \hat\delta_1(x)$, or $\hat p(x)$ — sorts the observations
+identically, produces the same sequence of confusion matrices, and so traces
+the same curve.
+
+### AUC
+
+The **AUC** is the area under the ROC curve, a single number summarizing the
+curve over all thresholds at once. It has a probabilistic interpretation.
+Let $S_+$ be the score of a randomly chosen positive observation and $S_-$ the
+score of an independently chosen negative one, and let $g_-$ be the density of
+$S_-$.
+At cutoff $c$ the true positive rate is $P(S_+ > c)$ and the false positive
+rate is $P(S_- > c)$, whose derivative with respect to $c$ is $-g_-(c)$. As
+$c$ runs from $+\infty$ down to $-\infty$ the false positive rate runs from
+$0$ to $1$, so
+
+$$\text{AUC} = \int_0^1 \text{TPR}\; d\,\text{FPR} = \int_{-\infty}^{\infty} P(S_+ > c)\, g_-(c)\, dc = P(S_+ > S_-),$$
+
+where
+
+- $S_+$ and $S_-$ are the classifier's scores for a random positive and a
+random negative observation, and
+- the final equality conditions on $S_- = c$ and integrates over its density.
+
+The AUC is the probability that the classifier scores a randomly chosen
+positive observation above a randomly chosen negative one. A classifier that
+ignores the features has $\text{AUC} = 0.5$; one that ranks every positive
+above every negative has $\text{AUC} = 1$.
+
+In the one-feature Gaussian model the score can be taken as $x$ itself, so
+$S_+ - S_- \sim N(\mu_2 - \mu_1, 2\sigma^2)$ and
+
+$$\text{AUC} = P(S_+ - S_- > 0) = \Phi\left(\frac{\mu_2 - \mu_1}{\sigma\sqrt{2}}\right),$$
+
+where $\Phi$ is the standard normal cumulative distribution function. For the
+curve plotted above this is
+$\Phi\left(`r mu_2 - mu_1`/\sqrt{2}\right) = `r sprintf("%.4f", auc_theory_formula)`$,
+and numerically integrating the plotted curve gives
+`r sprintf("%.4f", auc_theory_trap)`. The AUC grows with the separation of the
+class means measured in standard deviations, and does not depend on the
+priors or the threshold.
+
+With training data the same probability is estimated by comparing every
+positive observation with every negative one,
+
+$$\widehat{\text{AUC}} = \frac{1}{n_+ n_-}\sum_{i:\, y_i = \text{positive}}\ \sum_{j:\, y_j = \text{negative}}\left[\mathrm{I}(s_i > s_j) + \tfrac{1}{2}\mathrm{I}(s_i = s_j)\right],$$
+
+where
+
+- $n_+$ and $n_-$ are the numbers of positive and negative training
+observations,
+- $s_i$ is the classifier's score for observation $i$, and
+- tied scores count as half a correctly ordered pair.
+
+This equals the area under the empirical ROC curve computed by the trapezoid
+rule.
+
+## Credit card default classification
+
+**Question.** Can LDA identify credit card customers who will default from
+their balance and student status, and how does it compare with the logistic
+regressions fit to the same customers in the previous lectures?
+
+**Data.** `ISLR2::Default` records `r format(nrow(Default), big.mark = ",")`
+customers. The response is `default`, with `Yes` the positive class. The
+explanatory variables are `balance`, the customer's monthly credit card
+balance in dollars, and `student`, a two-level factor. The features are
+`balance` itself and the indicator
+$D = \mathrm{I}(\texttt{student} = \texttt{Yes})$.
+
+### Class summaries
+
+The quantities LDA estimates — class proportions, class means, and a common
+spread — can all be computed before fitting anything.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-setup}
+#| output: false
+Default <- Default |>
+  mutate(default01   = as.numeric(default == "Yes"),
+         student01   = as.numeric(student == "Yes"),
+         default_jit = default01 + runif(n(), -0.03, 0.03),
+         student_jit = student01 + runif(n(), -0.2, 0.2))
+
+class_summary <- Default |>
+  group_by(default) |>
+  summarize(n = n(),
+            prop = n() / nrow(Default),
+            mean_balance = mean(balance),
+            sd_balance = sd(balance),
+            prop_student = mean(student01),
+            n_zero = sum(balance == 0),
+            .groups = "drop")
+
+class_summary_table <- class_summary |>
+  transmute(default,
+            n = format(n, big.mark = ","),
+            prop = sprintf("%.4f", prop),
+            mean_balance = format(round(mean_balance), big.mark = ","),
+            sd_balance = format(round(sd_balance), big.mark = ","),
+            prop_student = sprintf("%.3f", prop_student)) |>
+  knitr::kable(col.names = c("Default", "Customers", "Proportion",
+                             "Mean balance (\\$)", "SD of balance (\\$)",
+                             "Proportion students"),
+               align = "cccccc")
+
+summary_of <- function(k, col) class_summary[[col]][class_summary$default == k]
+
+eda_plot <- ggplot(Default, aes(x = balance)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 100,
+                 boundary = 0, fill = "grey70", color = "grey40") +
+  facet_grid(default ~ student,
+             labeller = labeller(default = label_both, student = label_both)) +
+  labs(x = "Credit card balance ($)", y = "Density",
+       title = "ISLR2::Default, balance within each default-by-student group")
+```
+:::
+
+```{r class-summary-table}
+#| echo: false
+class_summary_table
+```
+
+```{r default-eda-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+eda_plot
+```
+
+Only `r format(summary_of("Yes", "n"), big.mark = ",")` customers, a proportion
+of `r sprintf("%.4f", summary_of("Yes", "prop"))`, defaulted. Defaulters carry
+an average balance of
+\$`r format(round(summary_of("Yes", "mean_balance")), big.mark = ",")`
+against \$`r format(round(summary_of("No", "mean_balance")), big.mark = ",")`
+for non-defaulters, and the histograms in the bottom row sit well to the right
+of those in the top row whether or not the customer is a student.
+
+Two aspects of the data strain LDA's assumptions. The standard deviations of
+balance differ between classes,
+\$`r format(round(summary_of("No", "sd_balance")), big.mark = ",")` against
+\$`r format(round(summary_of("Yes", "sd_balance")), big.mark = ",")`, where
+LDA assumes one shared variance. And the non-defaulter histograms have a spike
+at zero — `r format(summary_of("No", "n_zero"), big.mark = ",")` customers
+carry no balance, none of whom defaulted — which no Gaussian density
+reproduces.
+
+Students make up a larger share of defaulters
+(`r sprintf("%.3f", summary_of("Yes", "prop_student"))`) than of
+non-defaulters (`r sprintf("%.3f", summary_of("No", "prop_student"))`).
+
+### Balance alone
+
+`MASS::lda()` takes the same formula interface as `glm()`:
+
+```{r balance-lda}
+balance_lda <- MASS::lda(default ~ balance, data = Default)
+balance_lda
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r lda-by-hand}
+#| output: false
+# Estimates of pi_k, mu_k, Sigma and the implied log posterior odds
+# beta0 + x' beta of the second class, computed from the formulas above.
+lda_by_hand <- function(X, y) {
+  X <- as.matrix(X)
+  classes <- levels(y)
+  n <- nrow(X)
+  K <- length(classes)
+  pi_hat <- as.numeric(table(y)) / n
+  mu_hat <- do.call(rbind, lapply(classes, function(k) {
+    colMeans(X[y == k, , drop = FALSE])
+  }))
+  rownames(mu_hat) <- classes
+  Sigma_hat <- Reduce(`+`, lapply(classes, function(k) {
+    Z <- sweep(X[y == k, , drop = FALSE], 2, mu_hat[k, ])
+    crossprod(Z)
+  })) / (n - K)
+  beta  <- solve(Sigma_hat, mu_hat[2, ] - mu_hat[1, ])
+  beta0 <- log(pi_hat[2] / pi_hat[1]) -
+    0.5 * (sum(mu_hat[2, ] * solve(Sigma_hat, mu_hat[2, ])) -
+           sum(mu_hat[1, ] * solve(Sigma_hat, mu_hat[1, ])))
+  list(pi = pi_hat, mu = mu_hat, Sigma = Sigma_hat,
+       beta0 = beta0, beta = beta)
+}
+
+hand_1 <- lda_by_hand(Default["balance"], Default$default)
+sigma_hat_1 <- sqrt(hand_1$Sigma[1, 1])
+x_star_lda  <- -hand_1$beta0 / hand_1$beta[1]
+
+balance_glm <- glm(default ~ balance, data = Default, family = "binomial")
+b_glm_1     <- coef(balance_glm)
+x_star_glm  <- -b_glm_1[1] / b_glm_1[2]
+
+post_1 <- predict(balance_lda)$posterior[, "Yes"]
+max_diff_1 <- max(abs(post_1 - plogis(hand_1$beta0 +
+                                       hand_1$beta[1] * Default$balance)))
+
+coef_table_1 <- tibble(
+  term = c("Intercept $\\hat\\beta_0$", "`balance` $\\hat\\beta_1$"),
+  lda = c(hand_1$beta0, hand_1$beta[1]),
+  glm = unname(b_glm_1)
+) |>
+  mutate(across(c(lda, glm), \(v) sprintf("%.6f", v))) |>
+  knitr::kable(col.names = c("Coefficient", "LDA", "Logistic regression"),
+               align = "lcc")
+```
+:::
+
+The output lists three things, and the prior probabilities come first.
+
+The **prior probabilities** are $\hat\pi_{\text{No}} = `r sprintf("%.4f", hand_1$pi[1])`$
+and $\hat\pi_{\text{Yes}} = `r sprintf("%.4f", hand_1$pi[2])`$, the class
+proportions in the training data. They are the posterior probabilities LDA
+would assign with no feature information. A classifier that used only them
+would predict `No` for every customer and misclassify the
+`r sprintf("%.2f", 100 * hand_1$pi[2])`% who defaulted; that error rate is the
+baseline any classifier using features has to beat.
+
+The **group means** are $\hat\mu_{\text{No}} = `r format(round(hand_1$mu[1, 1], 2), nsmall = 2)`$
+and $\hat\mu_{\text{Yes}} = `r format(round(hand_1$mu[2, 1], 2), nsmall = 2)`$
+dollars, the mean balances already seen in the class summaries. The pooled
+standard deviation is $\hat\sigma = `r sprintf("%.2f", sigma_hat_1)`$, between
+the two class-specific standard deviations.
+
+The **coefficient of the linear discriminant**,
+`r signif(balance_lda$scaling[1, 1], 4)`, equals
+$1/\hat\sigma = `r signif(1 / sigma_hat_1, 4)`$: `MASS::lda()`
+reports the discriminant direction rescaled so that the discriminant has
+variance $1$ within each class, and with one feature the direction itself is
+just "larger balance points toward `Yes`."
+
+The log posterior odds derived above are more directly interpretable.
+Substituting the estimates into $\beta_0$ and $\beta_1$, and placing the
+coefficients of the simple logistic regression from the earlier lecture
+beside them:
+
+```{r coef-table-1}
+#| echo: false
+coef_table_1
+```
+
+The intercept $\hat\beta_0 = `r sprintf("%.3f", hand_1$beta0)`$ is LDA's
+estimated log posterior odds of default for a customer carrying no balance, a
+posterior probability of
+`r format(signif(plogis(hand_1$beta0), 2), scientific = FALSE)`. Each additional
+\$100 of balance adds `r sprintf("%.3f", 100 * hand_1$beta[1])` to the log
+posterior odds, against `r sprintf("%.3f", 100 * b_glm_1[2])` in the logistic
+regression. Applying the logistic function to
+$\hat\beta_0 + \hat\beta_1 x$ reproduces the posterior probabilities returned
+by `predict()` to within $`r sci(max_diff_1, 1)`$.
+
+The decision boundary is
+$\hat x^* = -\hat\beta_0/\hat\beta_1 = `r format(round(x_star_lda), big.mark = ",")`$
+dollars for LDA and
+`r format(round(x_star_glm), big.mark = ",")` dollars for logistic regression.
+Both lie far above the midpoint of the class means,
+`r format(round(mean(hand_1$mu[, 1])), big.mark = ",")` dollars, for
+different reasons. In LDA's boundary formula the shift comes from the prior
+term
+$\hat\sigma^2\log\left(\hat\pi_{\text{No}}/\hat\pi_{\text{Yes}}\right)/\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$,
+which adds `r format(round(x_star_lda - mean(hand_1$mu[, 1])), big.mark = ",")`
+dollars because $\hat\pi_{\text{Yes}}$ is so small. Logistic regression has
+no priors or class means; its boundary is high because defaults are rare
+among customers at all but the largest balances, so its fitted probability
+reaches $0.5$ only there.
+
+The tabs below build the fitted classifier from its pieces: the Gaussian
+class-conditional densities, the same densities weighted by the priors, the
+two discriminant functions, and the resulting posterior probability.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r balance-tabset}
+#| output: false
+balance_grid <- tibble(balance = seq(0, 2800, length.out = 500))
+
+gauss_curves <- tibble(default = factor(c("No", "Yes"))) |>
+  mutate(mu = hand_1$mu[, 1], prior = hand_1$pi) |>
+  cross_join(balance_grid) |>
+  mutate(f = dnorm(balance, mu, sigma_hat_1),
+         weighted = prior * f,
+         delta = balance * mu / sigma_hat_1^2 - mu^2 / (2 * sigma_hat_1^2) +
+                 log(prior))
+
+gauss_plot <- ggplot(Default, aes(x = balance)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 100, boundary = 0,
+                 fill = "grey80", color = "grey55") +
+  geom_line(data = gauss_curves, aes(y = f, color = default,
+                                     linetype = default),
+            linewidth = 0.9) +
+  facet_wrap(~ default, ncol = 1, labeller = label_both) +
+  scale_color_manual(values = class_colors) +
+  labs(x = "Credit card balance ($)", y = "Density",
+       color = "Default", linetype = "Default",
+       title = "Histograms with fitted N(mu_k, sigma^2) densities")
+
+weighted_default_plot <- ggplot(gauss_curves,
+                                aes(x = balance, y = weighted,
+                                    color = default, linetype = default)) +
+  geom_line(linewidth = 0.9) +
+  geom_vline(xintercept = x_star_lda, linetype = "dotted") +
+  scale_color_manual(values = class_colors) +
+  labs(x = "Credit card balance ($)",
+       y = expression(hat(pi)[k] * hat(f)[k](x)),
+       color = "Default", linetype = "Default",
+       title = "Prior-weighted densities; dotted line at the LDA boundary")
+
+delta_default_plot <- ggplot(gauss_curves,
+                             aes(x = balance, y = delta,
+                                 color = default, linetype = default)) +
+  geom_line(linewidth = 0.9) +
+  geom_vline(xintercept = x_star_lda, linetype = "dotted") +
+  scale_color_manual(values = class_colors) +
+  labs(x = "Credit card balance ($)", y = expression(hat(delta)[k](x)),
+       color = "Default", linetype = "Default",
+       title = "Estimated discriminant functions")
+
+posterior_curves <- balance_grid |>
+  mutate(LDA = plogis(hand_1$beta0 + hand_1$beta[1] * balance),
+         `Logistic regression` = predict(balance_glm,
+                                         newdata = balance_grid,
+                                         type = "response")) |>
+  pivot_longer(-balance, names_to = "model", values_to = "p_hat")
+
+posterior_default_plot <- ggplot(posterior_curves,
+                                 aes(x = balance, y = p_hat)) +
+  geom_point(data = Default, aes(y = default_jit), alpha = 0.08,
+             size = 0.7) +
+  geom_hline(yintercept = 0.5, color = "grey60") +
+  geom_line(aes(color = model, linetype = model), linewidth = 0.9) +
+  scale_color_manual(values = model_colors) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Model", linetype = "Model",
+       title = "Posterior probability of default")
+```
+:::
+
+::: {.panel-tabset}
+#### Gaussian densities
+```{r balance-gauss-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+gauss_plot
+```
+
+#### Prior-weighted densities
+```{r balance-weighted-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+weighted_default_plot
+```
+
+#### Discriminant functions
+```{r balance-delta-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+delta_default_plot
+```
+
+#### Posterior
+```{r balance-posterior-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+posterior_default_plot
+```
+:::
+
+The fitted Gaussian for non-defaulters misses the spike at zero, and the one
+for defaulters, forced to share $\hat\sigma$ with the larger class, is wider
+than their histogram: the two departures the class summaries flagged. Weighting by the priors shrinks the defaulter curve to a
+small bump; it rises above the non-defaulter curve only past the dotted line,
+deep in the right tail where both are small. The discriminant functions are
+two straight lines crossing at that same balance. On the probability scale the
+LDA curve is a logistic curve, slightly flatter than the logistic regression
+fit and crossing $0.5$ a little further right, as the coefficient table
+implied.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The "coefficients of linear discriminants" printed by `MASS::lda()` come from
+R. A. Fisher's original formulation of discriminant analysis, which asks for
+the linear combination of features that maximizes the ratio of
+between-class to within-class variance and makes no Gaussian assumption.
+With $K$ classes that problem yields up to $K - 1$ discriminant directions,
+printed as `LD1`, `LD2`, ..., and normalized to have unit within-class
+variance. With Gaussian classes and a shared covariance matrix, Fisher's
+directions and the Bayes'-theorem discriminants of this lecture produce the
+same classifier.
+:::
+
+### Balance and student
+
+Adding `student` to the formula gives the $p = 2$ model:
+
+```{r additive-lda}
+additive_lda <- MASS::lda(default ~ balance + student, data = Default)
+additive_lda
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r additive-lda-extract}
+#| output: false
+X2 <- model.matrix(~ balance + student, data = Default)[, -1]
+hand_2 <- lda_by_hand(X2, Default$default)
+
+scaling_ratio <- additive_lda$scaling[, 1] / hand_2$beta
+cor_within <- hand_2$Sigma[1, 2] / sqrt(hand_2$Sigma[1, 1] * hand_2$Sigma[2, 2])
+
+additive_glm <- glm(default ~ balance + student, data = Default,
+                    family = "binomial")
+b_glm_2 <- coef(additive_glm)
+
+post_lda_2 <- predict(additive_lda)$posterior[, "Yes"]
+post_glm_2 <- fitted(additive_glm)
+max_diff_2 <- max(abs(post_lda_2 -
+                      plogis(hand_2$beta0 + drop(X2 %*% hand_2$beta))))
+
+coef_table_2 <- tibble(
+  term = c("Intercept $\\hat\\beta_0$", "`balance` $\\hat\\beta_1$",
+           "`studentYes` $\\hat\\beta_2$"),
+  lda = c(hand_2$beta0, hand_2$beta),
+  glm = unname(b_glm_2)
+) |>
+  mutate(across(c(lda, glm), \(v) sprintf("%.6f", v))) |>
+  knitr::kable(col.names = c("Coefficient", "LDA", "Logistic regression"),
+               align = "lcc")
+
+# Decision boundary in the (balance, D) plane:
+# beta0 + beta1 * balance + beta2 * D = 0.
+threshold_at <- function(b0, b1, b2, d) -(b0 + b2 * d) / b1
+x_star_lda_2 <- sapply(0:1, \(d) threshold_at(hand_2$beta0, hand_2$beta[1],
+                                              hand_2$beta[2], d))
+x_star_glm_2 <- sapply(0:1, \(d) threshold_at(b_glm_2[1], b_glm_2[2],
+                                              b_glm_2[3], d))
+
+boundary_lines <- tibble(
+  model = c("LDA", "Logistic regression"),
+  intercept = c(-hand_2$beta0 / hand_2$beta[2], -b_glm_2[1] / b_glm_2[3]),
+  slope = c(-hand_2$beta[1] / hand_2$beta[2], -b_glm_2[2] / b_glm_2[3])
+)
+
+boundary_plot <- ggplot(Default, aes(x = balance, y = student_jit)) +
+  geom_point(aes(color = default, shape = default), alpha = 0.25,
+             size = 0.9) +
+  geom_abline(data = boundary_lines,
+              aes(intercept = intercept, slope = slope, linetype = model),
+              linewidth = 0.9) +
+  scale_color_manual(values = class_colors) +
+  scale_shape_manual(values = c(16, 17)) +
+  scale_y_continuous(breaks = c(0, 1), labels = c("No (0)", "Yes (1)")) +
+  coord_cartesian(ylim = c(-0.35, 1.35)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  labs(x = "Credit card balance ($)", y = "Student indicator D",
+       color = "Default", shape = "Default", linetype = "Boundary",
+       title = "Decision boundaries in the (balance, D) plane")
+
+posterior_grid_2 <- expand_grid(
+  balance = seq(0, 2800, length.out = 400),
+  student = factor(c("No", "Yes"), levels = levels(Default$student))
+)
+posterior_curves_2 <- posterior_grid_2 |>
+  mutate(LDA = predict(additive_lda, newdata = posterior_grid_2)$posterior[, "Yes"],
+         `Logistic regression` = predict(additive_glm,
+                                         newdata = posterior_grid_2,
+                                         type = "response")) |>
+  pivot_longer(c(LDA, `Logistic regression`), names_to = "model",
+               values_to = "p_hat")
+
+posterior_plot_2 <- ggplot(posterior_curves_2, aes(x = balance, y = p_hat)) +
+  geom_point(data = Default, aes(y = default_jit), alpha = 0.08, size = 0.7) +
+  geom_hline(yintercept = 0.5, color = "grey60") +
+  geom_line(aes(color = model, linetype = model), linewidth = 0.9) +
+  facet_wrap(~ student, labeller = label_both) +
+  scale_color_manual(values = model_colors) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
+       color = "Model", linetype = "Model",
+       title = "Posterior probability of default by student status")
+```
+:::
+
+The prior probabilities are unchanged, since they do not depend on the
+features. The group means now form a vector for each class: the `balance`
+column repeats the one-feature means, and the `studentYes` column is the
+class mean of the indicator $D$, which is the proportion of students in that
+class. The coefficients of the linear discriminant are proportional to
+$\hat\beta = \hat\Sigma^{-1}\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$: dividing
+each printed coefficient by the corresponding entry of $\hat\beta$ computed
+from the formulas gives `r sprintf("%.4f", scaling_ratio[1])` for both.
+
+Substituting the estimates into $\beta_0$ and $\beta$, beside the additive
+logistic regression of the multiple logistic regression lecture:
+
+```{r coef-table-2}
+#| echo: false
+coef_table_2
+```
+
+The intercept $\hat\beta_0 = `r sprintf("%.3f", hand_2$beta0)`$ is the log
+posterior odds of default for a non-student with no balance. The `balance`
+slope plays the same role as before. The `studentYes` slope,
+$`r sprintf("%.3f", hand_2$beta[2])`$, is negative: at a fixed balance, LDA
+assigns a student a lower posterior probability of default than a
+non-student. That is the opposite direction from the raw class means, where
+students made up a larger share of defaulters. Multiplying by
+$\hat\Sigma^{-1}$ accounts for the within-class correlation of
+`r sprintf("%.3f", cor_within)` between balance and $D$ — students carry higher
+balances — in the same way that holding balance fixed reversed the sign of the
+student coefficient in logistic regression. Applying the logistic function to
+$\hat\beta_0 + x^\top\hat\beta$ again reproduces `predict()`'s posterior
+probabilities, to within $`r sci(max_diff_2, 1)`$.
+
+$D$ takes only the values $0$ and $1$, so the class-conditional distribution
+of $(\texttt{balance}, D)$ cannot be bivariate Gaussian. `MASS::lda()` fits
+the model regardless, because the estimates are sample means and covariances,
+which can be computed for any numeric column. Whether the resulting classifier is
+useful is a question about its classifications, which the next subsection
+answers.
+
+::: {.panel-tabset}
+#### Decision boundary
+```{r additive-boundary-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.6
+boundary_plot
+```
+
+#### Posterior
+```{r additive-posterior-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+posterior_plot_2
+```
+:::
+
+The boundary is a straight line in the $(\texttt{balance}, D)$ plane, though
+customers occupy only its two horizontal strips. Where the LDA line crosses
+each strip gives a balance threshold for each group:
+\$`r format(round(x_star_lda_2[1]), big.mark = ",")` for non-students and
+\$`r format(round(x_star_lda_2[2]), big.mark = ",")` for students. The
+logistic regression boundary gives
+\$`r format(round(x_star_glm_2[1]), big.mark = ",")` and
+\$`r format(round(x_star_glm_2[2]), big.mark = ",")`. In both models students
+need a higher balance than non-students before being classified as
+defaulters. The posterior tab shows the same comparison on the probability
+scale: in each panel the LDA curve is flatter than the logistic regression
+curve and crosses $0.5$ further right.
+
+### Confusion matrices
+
+Classifying each customer as a defaulter when $\hat p(x) > 0.5$, the LDA
+classifier with `balance` and `student` produces this confusion matrix:
+
+::: {.callout-note collapse="true"}
+### Code
+```{r confusion-lda}
+#| output: false
+confusion_counts <- function(p_hat, t) {
+  truth <- Default$default == "Yes"
+  pred  <- p_hat > t
+  c(TP = sum(truth & pred), FN = sum(truth & !pred),
+    FP = sum(!truth & pred), TN = sum(!truth & !pred))
+}
+
+cm_lda_05 <- confusion_counts(post_lda_2, 0.5)
+
+confusion_lda_table <- tibble(
+  Truth = c("Yes", "No"),
+  `Predicted Yes` = c(cm_lda_05["TP"], cm_lda_05["FP"]),
+  `Predicted No`  = c(cm_lda_05["FN"], cm_lda_05["TN"])
+) |>
+  mutate(Total = `Predicted Yes` + `Predicted No`) |>
+  mutate(across(-Truth, \(v) format(v, big.mark = ","))) |>
+  knitr::kable(align = "lccc")
+
+metrics <- function(cm) {
+  c(error = unname((cm["FP"] + cm["FN"]) / sum(cm)),
+    sensitivity = unname(cm["TP"] / (cm["TP"] + cm["FN"])),
+    specificity = unname(cm["TN"] / (cm["TN"] + cm["FP"])))
+}
+m_lda_05 <- metrics(cm_lda_05)
+```
+:::
+
+```{r confusion-lda-table}
+#| echo: false
+confusion_lda_table
+```
+
+The classifier misclassifies
+`r cm_lda_05["FP"] + cm_lda_05["FN"]` of
+`r format(sum(cm_lda_05), big.mark = ",")` customers, an error rate of
+`r sprintf("%.2f", 100 * m_lda_05["error"])`%, against the
+`r sprintf("%.2f", 100 * hand_1$pi[2])`% of the classifier that predicts `No`
+for everyone. The rows tell a different story. Of the
+`r cm_lda_05["TP"] + cm_lda_05["FN"]` customers who defaulted, it flags only
+`r cm_lda_05["TP"]`, a sensitivity of
+`r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`%. Of the
+`r format(cm_lda_05["TN"] + cm_lda_05["FP"], big.mark = ",")` who did not, it
+correctly leaves alone `r format(cm_lda_05["TN"], big.mark = ",")`, a
+specificity of `r sprintf("%.1f", 100 * m_lda_05["specificity"])`%. The small
+error rate comes almost entirely from the large negative class.
+
+These are training error rates: the customers being classified are the ones
+the model was fit to, so they are optimistic estimates of performance on new
+customers, as the classification lecture discussed. Estimating test error from
+the training data alone is the subject of the resampling unit.
+
+### Threshold choice
+
+A credit card company that wants to catch more of its eventual defaulters can
+lower the threshold. The figure below tracks the overall error rate, the false
+negative rate ($1 - \text{sensitivity}$), and the false positive rate
+($1 - \text{specificity}$) of the LDA classifier as $t$ moves from $0$ to
+$0.5$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r threshold-sweep}
+#| output: false
+t_low <- 0.2
+
+threshold_rates <- tibble(t = seq(0, 0.5, by = 0.005)) |>
+  mutate(m = map(t, \(tt) metrics(confusion_counts(post_lda_2, tt))),
+         `Overall error rate` = map_dbl(m, "error"),
+         `False negative rate` = map_dbl(m, \(v) 1 - v[["sensitivity"]]),
+         `False positive rate` = map_dbl(m, \(v) 1 - v[["specificity"]])) |>
+  select(-m) |>
+  pivot_longer(-t, names_to = "rate", values_to = "value") |>
+  mutate(rate = factor(rate, levels = c("Overall error rate",
+                                        "False negative rate",
+                                        "False positive rate")))
+
+threshold_plot <- ggplot(threshold_rates,
+                         aes(x = t, y = value, color = rate, linetype = rate)) +
+  geom_line(linewidth = 0.9) +
+  geom_vline(xintercept = c(t_low, 0.5), color = "grey60",
+             linetype = "dotted") +
+  scale_color_manual(values = c("black", "#D55E00", "#0072B2")) +
+  labs(x = "Threshold t", y = "Rate", color = NULL, linetype = NULL,
+       title = "LDA (balance + student) error rates by threshold")
+
+# Training error rate at every distinct posterior probability used as t;
+# the error rate only changes when t passes an observation's score.
+min_error_threshold <- function(p_hat) {
+  cand <- sort(unique(p_hat))
+  err  <- map_dbl(cand, \(tt) metrics(confusion_counts(p_hat, tt))[["error"]])
+  c(t = cand[which.min(err)], error = min(err))
+}
+min_err_lda <- min_error_threshold(post_lda_2)
+min_err_glm <- min_error_threshold(post_glm_2)
+
+cm_lda_low <- confusion_counts(post_lda_2, t_low)
+cm_glm_05  <- confusion_counts(post_glm_2, 0.5)
+cm_glm_low <- confusion_counts(post_glm_2, t_low)
+m_lda_low  <- metrics(cm_lda_low)
+m_glm_05   <- metrics(cm_glm_05)
+m_glm_low  <- metrics(cm_glm_low)
+
+compare_table <- tibble(
+  Model = c("LDA", "LDA", "Logistic regression", "Logistic regression"),
+  t = c(0.5, t_low, 0.5, t_low),
+  cm = list(cm_lda_05, cm_lda_low, cm_glm_05, cm_glm_low)
+) |>
+  mutate(TP = map_dbl(cm, "TP"), FN = map_dbl(cm, "FN"),
+         FP = map_dbl(cm, "FP"), TN = map_dbl(cm, "TN"),
+         m = map(cm, metrics),
+         error = map_dbl(m, "error"),
+         sensitivity = map_dbl(m, "sensitivity"),
+         specificity = map_dbl(m, "specificity")) |>
+  select(-cm, -m) |>
+  mutate(across(c(TP, FN, FP, TN), \(v) format(v, big.mark = ",")),
+         across(c(error, sensitivity, specificity),
+                \(v) sprintf("%.4f", v))) |>
+  knitr::kable(col.names = c("Model", "Threshold", "TP", "FN", "FP", "TN",
+                             "Error rate", "Sensitivity", "Specificity"),
+               align = "lcccccccc")
+```
+:::
+
+```{r threshold-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.4
+threshold_plot
+```
+
+As $t$ falls from $0.5$, the false negative rate falls steadily while the
+false positive rate stays near zero until $t$ is small. The overall error rate,
+dominated by the `r format(cm_lda_05["TN"] + cm_lda_05["FP"], big.mark = ",")`
+non-defaulters, follows the false positive rate: nearly flat over most of the
+range, then climbing sharply as $t$ approaches $0$ and almost every customer is
+flagged.
+
+The overall error rate is not smallest at $t = 0.5$. LDA's training error rate
+is lowest near $t = `r sprintf("%.2f", min_err_lda[["t"]])`$, at
+`r sprintf("%.2f", 100 * min_err_lda[["error"]])`%, against
+`r sprintf("%.2f", 100 * m_lda_05["error"])`% at $t = 0.5$. The additive
+logistic regression's is lowest near
+$t = `r sprintf("%.2f", min_err_glm[["t"]])`$, at
+`r sprintf("%.2f", 100 * min_err_glm[["error"]])`%, against
+`r sprintf("%.2f", 100 * m_glm_05["error"])`% at $t = 0.5$. Both
+$\hat p(x)$ are estimates, so the Bayes classifier's threshold carries no
+guarantee for them.
+
+The confusion-matrix counts at $t = 0.5$ and $t = `r t_low`$, for LDA and for
+the additive logistic regression:
+
+```{r compare-table}
+#| echo: false
+compare_table
+```
+
+Lowering the threshold to $t = `r t_low`$ raises LDA's sensitivity from
+`r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`% to
+`r sprintf("%.1f", 100 * m_lda_low["sensitivity"])`%, at the cost of
+specificity falling from `r sprintf("%.1f", 100 * m_lda_05["specificity"])`% to
+`r sprintf("%.1f", 100 * m_lda_low["specificity"])`% and the overall error rate
+rising from `r sprintf("%.2f", 100 * m_lda_05["error"])`% to
+`r sprintf("%.2f", 100 * m_lda_low["error"])`%. At both thresholds logistic
+regression flags more customers as defaulters than LDA does —
+`r cm_glm_05["TP"] + cm_glm_05["FP"]` against
+`r cm_lda_05["TP"] + cm_lda_05["FP"]` at $t = 0.5$ — and so has the higher
+sensitivity and the lower specificity of the two.
+
+### ROC curves and AUC
+
+A comparison at one or two thresholds depends on which thresholds were
+chosen. The ROC curves compare the two classifiers at every threshold.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r roc-default}
+#| output: false
+# Every distinct score is a cutoff; classify positive when score >= cutoff.
+roc_curve <- function(score, positive) {
+  ord <- order(score, decreasing = TRUE)
+  s   <- score[ord]
+  pos <- positive[ord]
+  keep <- c(diff(s) != 0, TRUE)
+  tibble(fpr = c(0, cumsum(!pos)[keep] / sum(!positive)),
+         tpr = c(0, cumsum(pos)[keep] / sum(positive)))
+}
+
+auc_trapezoid <- function(roc) {
+  with(roc, sum(diff(fpr) * (head(tpr, -1) + tail(tpr, -1)) / 2))
+}
+
+auc_pairs <- function(score, positive) {
+  s_pos <- score[positive]
+  s_neg <- score[!positive]
+  mean(outer(s_pos, s_neg, ">")) + 0.5 * mean(outer(s_pos, s_neg, "=="))
+}
+
+is_yes <- Default$default == "Yes"
+scores <- list(
+  "LDA, balance" = post_1,
+  "Logistic regression, balance" = fitted(balance_glm),
+  "LDA, balance + student" = post_lda_2,
+  "Logistic regression, balance + student" = post_glm_2
+)
+
+auc_values <- tibble(model = names(scores)) |>
+  mutate(trapezoid = map_dbl(scores, \(s) auc_trapezoid(roc_curve(s, is_yes))),
+         pairs = map_dbl(scores, \(s) auc_pairs(s, is_yes)))
+
+auc_of <- function(m) auc_values$trapezoid[auc_values$model == m]
+
+auc_table <- auc_values |>
+  mutate(across(c(trapezoid, pairs), \(v) sprintf("%.5f", v))) |>
+  knitr::kable(col.names = c("Model", "AUC (trapezoid rule)",
+                             "AUC (pairwise comparison)"),
+               align = "lcc")
+
+roc_2 <- bind_rows(
+  roc_curve(post_lda_2, is_yes) |> mutate(model = "LDA"),
+  roc_curve(post_glm_2, is_yes) |> mutate(model = "Logistic regression")
+)
+
+threshold_labels <- c("t = 0.5", paste("t =", t_low))
+roc_points <- tibble(
+  model = rep(c("LDA", "Logistic regression"), each = 2),
+  t = factor(rep(threshold_labels, 2), levels = threshold_labels),
+  m = list(m_lda_05, m_lda_low, m_glm_05, m_glm_low)
+) |>
+  mutate(fpr = 1 - map_dbl(m, "specificity"),
+         tpr = map_dbl(m, "sensitivity"))
+
+roc_plot <- ggplot(roc_2, aes(x = fpr, y = tpr)) +
+  geom_abline(intercept = 0, slope = 1, color = "grey60",
+              linetype = "dashed") +
+  geom_line(aes(color = model, linetype = model), linewidth = 0.9) +
+  geom_point(data = roc_points, aes(shape = t, color = model), size = 3,
+             stroke = 1.2) +
+  scale_color_manual(values = model_colors) +
+  scale_shape_manual(values = c(24, 21)) +
+  coord_fixed() +
+  labs(x = "False positive rate (1 - specificity)",
+       y = "True positive rate (sensitivity)",
+       color = "Model", linetype = "Model", shape = "Threshold",
+       title = "ROC curves, balance + student")
+
+# Balance at which the additive models' posterior curves cross, by student
+# status, and the posterior probability there.
+posterior_both <- function(b, s) {
+  nd <- tibble(balance = b,
+               student = factor(s, levels = levels(Default$student)))
+  c(lda = predict(additive_lda, newdata = nd)$posterior[, "Yes"],
+    glm = unname(predict(additive_glm, newdata = nd, type = "response")))
+}
+crossover <- tibble(student = c("No", "Yes")) |>
+  mutate(balance = map_dbl(student, \(s) {
+           uniroot(\(b) diff(posterior_both(b, s)), c(800, 2500))$root
+         }),
+         p = map2_dbl(balance, student, \(b, s) posterior_both(b, s)[["lda"]]))
+cross_of <- function(s, col) crossover[[col]][crossover$student == s]
+
+# A threshold below both crossing probabilities.
+t_below <- 0.1
+n_flag_lda_below <- sum(post_lda_2 > t_below)
+n_flag_glm_below <- sum(post_glm_2 > t_below)
+```
+:::
+
+```{r roc-figure}
+#| echo: false
+#| fig-width: 6.5
+#| fig-height: 5.5
+roc_plot
+```
+
+The two curves lie almost on top of one another and rise steeply near the
+origin, well above the diagonal. The marked points are the four classifiers of
+the previous table. Lowering $t$ from $0.5$ to `r t_low` moves each model up
+and slightly right along its curve. At each of these two thresholds, logistic
+regression's point sits further along its nearly shared curve than LDA's.
+
+The two models' posterior curves cross at a balance of
+\$`r format(round(cross_of("No", "balance")), big.mark = ",")` for
+non-students and \$`r format(round(cross_of("Yes", "balance")), big.mark = ",")`
+for students, where both models give posterior probabilities of
+`r sprintf("%.3f", cross_of("No", "p"))` and
+`r sprintf("%.3f", cross_of("Yes", "p"))`, respectively. Above those balances LDA's flatter
+curve lies below logistic regression's, so a threshold above both crossing
+probabilities is reached by LDA only at a higher balance, and LDA flags fewer
+customers; both marked thresholds are of this kind. Below both crossing
+probabilities the order reverses: at $t = `r t_below`$, LDA flags
+`r format(n_flag_lda_below, big.mark = ",")` customers and logistic regression
+`r format(n_flag_glm_below, big.mark = ",")`. The differences between the two models'
+confusion matrices come from where each model's probabilities place a given
+threshold on the curve, not from a difference in how well the two models order
+the customers.
+
+The AUC of each classifier, computed both as the area under the empirical ROC
+curve and as the proportion of (defaulter, non-defaulter) pairs ordered
+correctly:
+
+```{r auc-table}
+#| echo: false
+auc_table
+```
+
+The two computations agree in every row. With `balance` alone, LDA and
+logistic regression have identical AUCs of
+`r sprintf("%.5f", auc_of("LDA, balance"))`: both posterior probabilities are
+increasing functions of balance, so they order the customers identically and
+trace the same ROC curve. With `balance` and `student`, the two classifiers'
+posterior probabilities weight $D$ differently relative to balance, so their
+orderings differ slightly. Their AUCs,
+`r sprintf("%.5f", auc_of("LDA, balance + student"))` and
+`r sprintf("%.5f", auc_of("Logistic regression, balance + student"))`, differ
+by $`r sci(auc_of("LDA, balance + student") - auc_of("Logistic regression, balance + student"), 2)`$.
+An AUC of
+`r sprintf("%.3f", auc_of("LDA, balance + student"))` means that for a randomly
+chosen defaulter and non-defaulter, the LDA classifier gives the defaulter
+the higher posterior probability about
+`r round(100 * auc_of("LDA, balance + student"))`% of the time.
+
+**Conclusion.** LDA's Gaussian assumptions describe these data poorly — the
+student indicator is not Gaussian and the two classes' balance variances
+differ — yet LDA with `balance` and `student` orders the training customers
+almost exactly as the additive logistic regression does. Its decision
+boundary likewise assigns students a higher balance threshold. At $t = 0.5$
+and $t = `r t_low`$ it flags fewer customers than logistic regression, because
+its flatter posterior curve lies below logistic regression's over the balances
+where those thresholds are crossed. At $t = 0.5$ it
+catches `r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`% of the
+defaulters, and lowering the threshold to `r t_low` raises that to
+`r sprintf("%.1f", 100 * m_lda_low["sensitivity"])`% at a cost of
+`r sprintf("%.1f", 100 * (m_lda_05["specificity"] - m_lda_low["specificity"]))`
+percentage points of specificity.
+
+## Conclusion
+
+A generative classifier models the distribution of the features within each
+class, $f_k(x)$, and the prior probability of each class, $\pi_k$, and
+combines them through Bayes' theorem into the posterior probability
+$p_k(x) = \pi_k f_k(x) / \sum_l \pi_l f_l(x)$. Assigning each observation to
+the class with the largest posterior probability is the Bayes classifier,
+which minimizes the expected error rate; a generative classifier approximates
+it by estimating $\pi_k$ and $f_k$ from training data.
+
+Linear discriminant analysis assumes Gaussian class-conditional densities with
+class-specific means and a covariance matrix shared by every class. Because
+the covariance is shared, the quadratic term in $x$ is the same for every
+class and drops out, leaving discriminant functions $\delta_k(x)$ that are
+linear in $x$ and a decision boundary that is a point, a line, or a
+hyperplane. With two classes the log posterior odds are linear in the
+features — the same form as logistic regression — but the coefficients come
+from closed-form estimates (class proportions, class means, and a pooled
+variance or covariance matrix) that maximize the joint likelihood of features
+and responses, rather than from the iteratively maximized conditional
+likelihood of logistic regression. A smaller prior probability moves the
+boundary toward that class's mean.
+
+A classifier's error rate hides which mistakes it makes. The confusion matrix
+separates them, sensitivity and specificity measure performance within each
+true class, and moving the threshold trades one against the other. The ROC
+curve displays that tradeoff at every threshold, depends only on how a
+classifier orders the observations, and its area, the AUC, is the probability
+that a randomly chosen positive observation is scored above a randomly chosen
+negative one.
+
+The next lecture relaxes LDA's shared covariance assumption. Quadratic
+discriminant analysis gives each class its own covariance matrix, so the
+quadratic term no longer cancels and the boundary curves, and naive Bayes
+replaces the multivariate Gaussian with a product of one-feature densities.
+Together with LDA and logistic regression, these are the classifiers ISLR2
+Chapter 4 compares, and the next lecture adds KNN to that comparison.
