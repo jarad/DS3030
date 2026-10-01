@@ -131,16 +131,21 @@ assumption about its form, and LDA's assumption is that it is Gaussian.
 
 ### Gaussian class-conditional densities
 
-With a single feature ($p = 1$), LDA assumes
+With a single feature ($p = 1$), LDA assumes the statistical model
 
-$$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left(-\frac{(x - \mu_k)^2}{2\sigma^2}\right), \qquad k = 1, \ldots, K,$$
+$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N\left(\mu_k, \sigma^2\right), \qquad k = 1, \ldots, K,$$
 
 where
 
-- $\mu_k = E[X \mid Y = k]$ is the mean of the feature in class $k$,
+- $\mu_k = E[X \mid Y = k]$ is the mean of the feature in class $k$, and
 - $\sigma^2 = Var[X \mid Y = k]$ is the variance of the feature, **the same in
-every class**, and
-- $\pi$ without a subscript is the constant $3.14159\ldots$, unrelated to the
+every class**.
+
+The class-conditional density is therefore the normal density
+
+$$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left(-\frac{(x - \mu_k)^2}{2\sigma^2}\right),$$
+
+where $\pi$ without a subscript is the constant $3.14159\ldots$, unrelated to the
 prior probabilities $\pi_k$.
 
 The classes differ only in where their densities are centered. The shared
@@ -166,7 +171,7 @@ where
 
 The classifier assigns an observation to the class with the largest
 $\delta_k(x)$. Each $\delta_k$ is a linear function of $x$, with slope
-$\mu_k/\sigma^2$ and intercept $\log \pi_k - \mu_k^2/(2\sigma^2)$.
+$\mu_k/\sigma^2$ and intercept $\log \pi_k - \mu_k^2/\left(2\sigma^2\right)$.
 
 The dropped terms are added to every class's $\log\left(\pi_k f_k(x)\right)$,
 so their exponentials are common factors of every $\pi_k f_k(x)$. They cancel
@@ -219,6 +224,12 @@ pi_unequal <- c(0.8, 0.2)
 boundary_1d <- function(pi1, pi2) {
   (mu_1 + mu_2) / 2 + sigma^2 / (mu_2 - mu_1) * log(pi1 / pi2)
 }
+# Plot title "pi_1 = a, pi_2 = b; boundary x* = c" as a plotmath expression.
+prior_title <- function(pi1, pi2, x_star) {
+  bquote(paste(pi[1] == .(sprintf("%.1f", pi1)), ", ",
+               pi[2] == .(sprintf("%.1f", pi2)), "; boundary ",
+               x^"*" == .(sprintf("%.2f", x_star))))
+}
 x_star_equal   <- boundary_1d(0.5, 0.5)
 x_star_unequal <- boundary_1d(pi_unequal[1], pi_unequal[2])
 
@@ -239,9 +250,7 @@ weighted_plot <- function(pi1, pi2, x_star) {
     scale_color_manual(values = class_colors) +
     coord_cartesian(ylim = c(0, 0.33)) +
     labs(x = "x", y = expression(pi[k] * f[k](x)), color = "Class",
-         linetype = "Class",
-         title = sprintf("pi_1 = %.1f, pi_2 = %.1f; boundary x* = %.2f",
-                         pi1, pi2, x_star))
+         linetype = "Class", title = prior_title(pi1, pi2, x_star))
 }
 
 theory_equal_plot   <- weighted_plot(0.5, 0.5, x_star_equal)
@@ -263,8 +272,7 @@ theory_delta_plot <- ggplot(delta_lines,
   scale_color_manual(values = class_colors) +
   labs(x = "x", y = expression(delta[k](x)), color = "Class",
        linetype = "Class",
-       title = sprintf("pi_1 = %.1f, pi_2 = %.1f; boundary x* = %.2f",
-                       pi_unequal[1], pi_unequal[2], x_star_unequal))
+       title = prior_title(pi_unequal[1], pi_unequal[2], x_star_unequal))
 ```
 :::
 
@@ -303,7 +311,7 @@ cross at the same $x^*$. A linear discriminant function for each class, with
 the boundary where two of them are equal, is the "linear" in linear
 discriminant analysis.
 
-Had the variances differed, the term $-x^2/(2\sigma_k^2)$, where $\sigma_k^2$
+Had the variances differed, the term $-x^2/\left(2\sigma_k^2\right)$, where $\sigma_k^2$
 is the class-$k$ variance, would carry a
 different coefficient in each class, would not drop out, and would make each
 discriminant quadratic in $x$.
@@ -375,19 +383,25 @@ With $p > 1$ features, $X = (X_1, \ldots, X_p)^\top$ is a random column vector
 whose entries are the features, and $x$ is a $p$-vector value it takes. A
 value $x$ holds the same kind of entries as a row of the model matrix
 $\mathbf{X}$ but without the leading $1$, and it is a column because it is the
-argument of a multivariate density. LDA assumes
+argument of a multivariate density. LDA assumes the statistical model
 
-$$f_k(x) = \frac{1}{(2\pi)^{p/2}\,|\Sigma|^{1/2}} \exp\left(-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma^{-1} \left(x - \mu_k\right)\right),$$
+$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N_p\left(\mu_k, \Sigma\right), \qquad k = 1, \ldots, K,$$
 
 where
 
+- $N_p$ is the $p$-dimensional multivariate normal distribution,
 - $\mu_k = E[X \mid Y = k] = (\mu_{k1}, \ldots, \mu_{kp})^\top$ is the
-$p$-vector of feature means in class $k$,
+$p$-vector of feature means in class $k$, and
 - $\Sigma = Cov[X \mid Y = k]$ is the $p \times p$ covariance matrix of the
 features, **the same in every class**, with feature variances on its diagonal
-and covariances between pairs of features off it, and
-- $|\Sigma|$ is the determinant of $\Sigma$, which is symmetric and positive
-definite.
+and covariances between pairs of features off it; it is symmetric and
+positive definite.
+
+The class-conditional density is therefore the multivariate normal density
+
+$$f_k(x) = \frac{1}{(2\pi)^{p/2}\,|\Sigma|^{1/2}} \exp\left(-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma^{-1} \left(x - \mu_k\right)\right),$$
+
+where $|\Sigma|$ is the determinant of $\Sigma$.
 
 Each class's density has contours that are nested ellipses centered at
 $\mu_k$. Sharing
@@ -502,7 +516,8 @@ theory_2d_densities <- theory_2d_base +
 theory_2d_equal <- theory_2d_base +
   geom_abline(intercept = line_equal["intercept"],
               slope = line_equal["slope"], linewidth = 0.9) +
-  labs(title = "Boundary with pi_1 = pi_2 = 0.5")
+  labs(title = expression(paste("Boundary with ", pi[1] == 0.5, ", ",
+                                pi[2] == 0.5)))
 
 theory_2d_unequal <- theory_2d_base +
   geom_abline(intercept = line_equal["intercept"],
@@ -510,8 +525,9 @@ theory_2d_unequal <- theory_2d_base +
               color = "grey60", linetype = "dotted") +
   geom_abline(intercept = line_unequal["intercept"],
               slope = line_unequal["slope"], linewidth = 0.9) +
-  labs(title = sprintf("Boundary with pi_1 = %.1f, pi_2 = %.1f (equal-prior boundary dotted)",
-                       pi_unequal[1], pi_unequal[2]))
+  labs(title = bquote(paste("Boundary with ", pi[1] == .(pi_unequal[1]), ", ",
+                            pi[2] == .(pi_unequal[2]),
+                            " (equal-prior boundary dotted)")))
 ```
 :::
 
@@ -681,8 +697,9 @@ equal priors and class $2$ positive, $p(x) > t$ is equivalent to $x > c$
 for a cutoff $c$ that decreases as $t$ decreases, because the posterior is
 increasing in $x$. Sensitivity is then the area under $f_2$ to the right of
 $c$, and $1 - \text{specificity}$ is the area under $f_1$ to the right of $c$.
-Each tab below moves the threshold and marks where the classifier lands on the
-ROC curve.
+The slider below moves the threshold. The left panel shades the areas that
+determine sensitivity and the false positive rate, and the right panel marks
+where the classifier lands on the ROC curve.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -692,7 +709,7 @@ ROC curve.
 beta1_theory <- (mu_2 - mu_1) / sigma^2
 cutoff_for <- function(t) qlogis(t) / beta1_theory
 
-roc_theory <- tibble(c = seq(-6, 6, length.out = 600)) |>
+roc_theory <- tibble(c = seq(-8, 8, length.out = 4000)) |>
   mutate(fpr = 1 - pnorm(c, mu_1, sigma),
          tpr = 1 - pnorm(c, mu_2, sigma))
 
@@ -701,81 +718,85 @@ roc_theory_sorted  <- arrange(roc_theory, fpr)
 auc_theory_trap    <- with(roc_theory_sorted,
                            sum(diff(fpr) * (head(tpr, -1) + tail(tpr, -1)) / 2))
 
-theory_thresholds <- c(0.9, 0.5, 0.1)
+# Everything the slider needs, indexed by t = 0.01, 0.02, ..., 0.99, is
+# computed here and passed to the page, which only looks values up.
+slider_thresholds <- tibble(t = (1:99) / 100) |>
+  mutate(cutoff = cutoff_for(t),
+         fpr = 1 - pnorm(cutoff, mu_1, sigma),
+         tpr = 1 - pnorm(cutoff, mu_2, sigma))
 
-threshold_density_plot <- function(t) {
-  c0 <- cutoff_for(t)
-  dens <- theory_grid |>
-    mutate(`k = 1 (negative)` = dnorm(x, mu_1, sigma),
-           `k = 2 (positive)` = dnorm(x, mu_2, sigma)) |>
-    pivot_longer(-x, names_to = "class", values_to = "density")
-  ggplot(dens, aes(x = x, y = density)) +
-    geom_area(data = filter(dens, x > c0),
-              aes(fill = class), alpha = 0.3, position = "identity") +
-    geom_line(aes(color = class, linetype = class), linewidth = 0.9) +
-    geom_vline(xintercept = c0, linetype = "dotted") +
-    scale_color_manual(values = class_colors) +
-    scale_fill_manual(values = class_colors) +
-    labs(x = "x", y = expression(f[k](x)), color = NULL, linetype = NULL,
-         fill = NULL,
-         title = sprintf("t = %.1f, cutoff c = %.2f", t, c0)) +
-    theme(legend.position = "bottom")
-}
-
-threshold_roc_plot <- function(t) {
-  c0 <- cutoff_for(t)
-  pt <- tibble(fpr = 1 - pnorm(c0, mu_1, sigma),
-               tpr = 1 - pnorm(c0, mu_2, sigma))
-  ggplot(roc_theory, aes(x = fpr, y = tpr)) +
-    geom_abline(intercept = 0, slope = 1, color = "grey60",
-                linetype = "dashed") +
-    geom_line(linewidth = 0.9) +
-    geom_point(data = pt, size = 3.5, shape = 21, fill = "white",
-               stroke = 1.2) +
-    coord_fixed() +
-    labs(x = "False positive rate (1 - specificity)",
-         y = "True positive rate (sensitivity)",
-         title = sprintf("Sensitivity %.2f, specificity %.2f",
-                         pt$tpr, 1 - pt$fpr))
-}
+slider_densities <- theory_grid |>
+  mutate(`k = 1 (negative)` = dnorm(x, mu_1, sigma),
+         `k = 2 (positive)` = dnorm(x, mu_2, sigma)) |>
+  pivot_longer(-x, names_to = "class", values_to = "density")
 ```
 :::
 
-::: {.panel-tabset}
-#### t = 0.9
-```{r theory-roc-09}
+```{r theory-roc-data}
 #| echo: false
-#| layout-ncol: 2
-#| fig-width: 4.5
-#| fig-height: 4
-threshold_density_plot(0.9)
-threshold_roc_plot(0.9)
+ojs_define(slider_thresholds = slider_thresholds,
+           slider_densities  = slider_densities,
+           slider_roc        = select(slice(roc_theory, seq(1, n(), by = 8)), fpr, tpr),
+           slider_colors     = unname(class_colors))
 ```
 
-#### t = 0.5
-```{r theory-roc-05}
-#| echo: false
-#| layout-ncol: 2
-#| fig-width: 4.5
-#| fig-height: 4
-threshold_density_plot(0.5)
-threshold_roc_plot(0.5)
+```{ojs}
+//| label: theory-roc-slider
+//| echo: false
+viewof t = Inputs.range([0.01, 0.99], {value: 0.5, step: 0.01, label: "Threshold t"})
 ```
 
-#### t = 0.1
-```{r theory-roc-01}
-#| echo: false
-#| layout-ncol: 2
-#| fig-width: 4.5
-#| fig-height: 4
-threshold_density_plot(0.1)
-threshold_roc_plot(0.1)
-```
-:::
+```{ojs}
+//| label: theory-roc-slider-plots
+//| echo: false
+{
+  const thresholds = transpose(slider_thresholds);
+  const densities = transpose(slider_densities);
+  const roc = transpose(slider_roc);
+  const now = thresholds[Math.round(t * 100) - 1];
+  const classes = ["k = 1 (negative)", "k = 2 (positive)"];
 
-Moving from $t = 0.9$ to $t = 0.1$ slides the cutoff left, so the shaded area
-under $f_2$ (sensitivity) and the shaded area under $f_1$ (false positive
-rate) both grow, and the point climbs along the curve toward $(1, 1)$. The
+  const densityPlot = Plot.plot({
+    width: 340, height: 300,
+    x: {label: "x"},
+    y: {label: "Density fₖ(x)"},
+    color: {domain: classes, range: slider_colors, legend: true},
+    marks: [
+      Plot.areaY(densities.filter(d => d.x > now.cutoff),
+                 {x: "x", y1: 0, y2: "density", fill: "class", fillOpacity: 0.3}),
+      Plot.line(densities.filter(d => d.class === classes[0]),
+                {x: "x", y: "density", stroke: "class", strokeWidth: 2}),
+      Plot.line(densities.filter(d => d.class === classes[1]),
+                {x: "x", y: "density", stroke: "class", strokeDasharray: "6,4",
+                 strokeWidth: 2}),
+      Plot.ruleX([now.cutoff], {strokeDasharray: "2,3"})
+    ]
+  });
+
+  const rocPlot = Plot.plot({
+    width: 300, height: 300,
+    x: {domain: [0, 1], label: "False positive rate (1 − specificity)"},
+    y: {domain: [0, 1], label: "True positive rate (sensitivity)"},
+    marks: [
+      Plot.line([[0, 0], [1, 1]], {stroke: "gray", strokeDasharray: "4,4"}),
+      Plot.line(roc, {x: "fpr", y: "tpr", strokeWidth: 2}),
+      Plot.dot([now], {x: "fpr", y: "tpr", r: 6, fill: "white", stroke: "black",
+                       strokeWidth: 2})
+    ]
+  });
+
+  return html`<p style="text-align: center"><b>t = ${t.toFixed(2)}</b>,
+    cutoff c = ${now.cutoff.toFixed(2)}; sensitivity = ${now.tpr.toFixed(2)},
+    specificity = ${(1 - now.fpr).toFixed(2)}</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center">
+      ${densityPlot}${rocPlot}
+    </div>`;
+}
+```
+
+Moving the slider from $t = 0.9$ to $t = 0.1$ slides the cutoff left, so the
+shaded area under $f_2$ (sensitivity) and the shaded area under $f_1$ (false
+positive rate) both grow, and the point climbs along the curve toward $(1, 1)$. The
 dashed diagonal is the ROC curve of a classifier that ignores $x$ and
 predicts positive at random: its true and false positive rates are equal at
 every threshold. A useful classifier's curve bows toward the top-left corner,
@@ -813,17 +834,92 @@ ignores the features has $\text{AUC} = 0.5$; one that ranks every positive
 above every negative has $\text{AUC} = 1$.
 
 In the one-feature Gaussian model the score can be taken as $x$ itself, so
-$S_+ - S_- \sim N(\mu_2 - \mu_1, 2\sigma^2)$ and
+$S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$ and
 
-$$\text{AUC} = P(S_+ - S_- > 0) = \Phi\left(\frac{\mu_2 - \mu_1}{\sigma\sqrt{2}}\right),$$
+$$\text{AUC} = P(S_+ - S_- > 0) = \Phi\left(\frac{\Delta}{\sqrt{2}}\right), \qquad \Delta = \frac{\mu_2 - \mu_1}{\sigma},$$
 
-where $\Phi$ is the standard normal cumulative distribution function. For the
-curve plotted above this is
-$\Phi\left(`r mu_2 - mu_1`/\sqrt{2}\right) = `r sprintf("%.4f", auc_theory_formula)`$,
-and numerically integrating the plotted curve gives
-`r sprintf("%.4f", auc_theory_trap)`. The AUC grows with the separation of the
-class means measured in standard deviations, and does not depend on the
-priors or the threshold.
+where
+
+- $\Phi$ is the standard normal cumulative distribution function, and
+- $\Delta$ is the separation of the class means in standard deviations.
+
+For the curve plotted above, $\Delta = `r mu_2 - mu_1`$ and
+$\text{AUC} = \Phi\left(`r mu_2 - mu_1`/\sqrt{2}\right) = `r sprintf("%.5f", auc_theory_formula)`$;
+numerically integrating the plotted curve gives
+`r sprintf("%.5f", auc_theory_trap)`.
+
+The same model gives the ROC curve in closed form. A cutoff $c$ has
+$\text{FPR} = 1 - \Phi\left((c - \mu_1)/\sigma\right)$, so
+$(c - \mu_1)/\sigma = -\Phi^{-1}(\text{FPR})$, and
+$\text{TPR} = \Phi\left((\mu_2 - c)/\sigma\right)$ becomes
+
+$$\text{TPR} = \Phi\left(\Delta + \Phi^{-1}(\text{FPR})\right).$$
+
+The left panel below shades the area under the ROC curve of the previous
+section, the $\Delta = `r mu_2 - mu_1`$ curve in the right panel. The right
+panel draws the ROC curves for several values of $\Delta$, each labeled with its
+AUC. The curve for $\Delta = 0$ is the diagonal.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r auc-figure}
+#| output: false
+auc_delta <- function(delta) pnorm(delta / sqrt(2))
+delta_theory <- (mu_2 - mu_1) / sigma
+deltas <- c(0, 1, delta_theory, 4)
+
+auc_area_plot <- ggplot(roc_theory_sorted, aes(x = fpr, y = tpr)) +
+  geom_area(fill = "grey70", alpha = 0.6) +
+  geom_abline(intercept = 0, slope = 1, color = "grey40",
+              linetype = "dashed") +
+  geom_line(linewidth = 0.9) +
+  annotate("text", x = 0.65, y = 0.3,
+           label = sprintf("AUC = %.5f", auc_theory_trap)) +
+  coord_fixed() +
+  labs(x = "False positive rate (1 - specificity)",
+       y = "True positive rate (sensitivity)",
+       title = "Area under the ROC curve")
+
+# Legend entries as plotmath: Delta = d, AUC = a.
+curve_labels <- parse(text = sprintf('Delta == "%.1f" ~~ AUC == "%.3f"', deltas,
+                                     auc_delta(deltas)))
+auc_curves <- expand_grid(separation = deltas, fpr = seq(0, 1, length.out = 300)) |>
+  mutate(tpr = pnorm(separation + qnorm(fpr)),
+         curve = factor(separation, levels = deltas))
+
+auc_curves_plot <- ggplot(auc_curves, aes(x = fpr, y = tpr, color = curve,
+                                          linetype = curve)) +
+  geom_line(linewidth = 0.9) +
+  scale_color_viridis_d(end = 0.9, labels = curve_labels) +
+  scale_linetype_discrete(labels = curve_labels) +
+  coord_fixed() +
+  labs(x = "False positive rate (1 - specificity)",
+       y = "True positive rate (sensitivity)", color = NULL, linetype = NULL,
+       title = "ROC curves by separation") +
+  theme(legend.position = "inside", legend.position.inside = c(0.97, 0.03),
+        legend.justification = c(1, 0))
+```
+:::
+
+```{r auc-figure-display}
+#| echo: false
+#| layout-ncol: 2
+#| fig-width: 4.5
+#| fig-height: 4.5
+auc_area_plot
+auc_curves_plot
+```
+
+The curves in the right panel are nested: for every false positive rate, a
+larger $\Delta$ gives a larger true positive rate, so one curve lies above
+another exactly when its AUC is larger. The AUC therefore orders these
+classifiers the same way a comparison of true positive rates at any single
+false positive rate would. It grows with the separation of the class means
+measured in standard deviations, from $0.5$ at $\Delta = 0$ toward $1$, and
+does not depend on the priors or the threshold. When two classifiers' ROC
+curves cross instead, each has the higher true positive rate over part of the
+range of false positive rates, and the AUC, which averages the true positive
+rate over all false positive rates, summarizes that disagreement in one number.
 
 With training data the same probability is estimated by comparing every
 positive observation with every negative one,
@@ -1081,7 +1177,8 @@ gauss_plot <- ggplot(Default, aes(x = balance)) +
   scale_color_manual(values = class_colors) +
   labs(x = "Credit card balance ($)", y = "Density",
        color = "Default", linetype = "Default",
-       title = "Histograms with fitted N(mu_k, sigma^2) densities")
+       title = expression(paste("Histograms with fitted ",
+                                N(hat(mu)[k], hat(sigma)^2), " densities")))
 
 weighted_default_plot <- ggplot(gauss_curves,
                                 aes(x = balance, y = weighted,
@@ -1723,4 +1820,4 @@ discriminant analysis gives each class its own covariance matrix, so the
 quadratic term no longer cancels and the boundary curves, and naive Bayes
 replaces the multivariate Gaussian with a product of one-feature densities.
 Together with LDA and logistic regression, these are the classifiers ISLR2
-Chapter 4 compares, and the next lecture adds KNN to that comparison.
+Chapter 4 compares; that lecture also adds KNN to the comparison.

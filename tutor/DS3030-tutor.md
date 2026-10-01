@@ -525,8 +525,13 @@ rate), false negative and false positive rates, why lowering $t$ can only
 raise sensitivity and lower specificity, the **ROC curve** (sensitivity vs.
 $1 -$ specificity over all thresholds, depending only on how a classifier
 orders observations), and **AUC**, derived as $P(S_+ > S_-)$ and, for
-equal-variance Gaussians, $\Phi((\mu_2-\mu_1)/(\sigma\sqrt2))$, with the
-pairwise-comparison estimator. Theory figures use known Gaussian parameters.
+equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$, with the
+pairwise-comparison estimator. For equal-variance Gaussians the ROC curve is
+$\text{TPR} = \Phi(\Delta + \Phi^{-1}(\text{FPR}))$ with
+$\Delta = (\mu_2-\mu_1)/\sigma$, so curves for larger $\Delta$ are nested above
+smaller ones (at each false positive rate) and AUC orders them; for
+crossing ROC curves AUC averages the true positive rate over all false
+positive rates. Theory figures use known Gaussian parameters.
 
 Worked example: `ISLR2::Default` with `MASS::lda()`, first `balance` alone
 (priors interpreted first as the no-feature baseline, group means, pooled
