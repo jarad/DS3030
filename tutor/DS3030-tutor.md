@@ -548,6 +548,60 @@ identical AUCs for the one-feature models and AUC about 0.95 for both
 two-feature models. All rates are training rates; test-error estimation is
 deferred to resampling. QDA and naive Bayes are the next chapter.
 
+### 14. Quadratic Discriminant Analysis and Naive Bayes
+<https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
+
+Two relaxations of LDA's model for $f_k(x)$, then a comparison of every
+classifier so far. **QDA**: $X \mid Y = k \sim N_p(\mu_k, \Sigma_k)$ with a
+class-specific covariance matrix; derivation of
+$\delta_k(x) = -\tfrac12 x^\top\Sigma_k^{-1}x + x^\top\Sigma_k^{-1}\mu_k -
+\tfrac12\mu_k^\top\Sigma_k^{-1}\mu_k - \tfrac12\log|\Sigma_k| + \log\pi_k$
+(the quadratic term and $\log|\Sigma_k|$ no longer cancel), log posterior odds
+quadratic in $x$ (squares and cross-products), a quadratic-curve boundary,
+and for $p = 1$ up to two boundary points with the larger-variance class
+assigned in both tails. Estimates use class-specific sample covariances with
+divisor $n_k - 1$ (invertible only if $n_k > p$). **Bias-variance tradeoff**
+via parameter counts (excluding priors): LDA $Kp + p(p+1)/2$, QDA
+$Kp + Kp(p+1)/2$; figures of repeated LDA/QDA boundaries at small and large
+$n_k$ show LDA's bias and QDA's variance. **Naive Bayes**: features
+conditionally independent given the class, $f_k(x) = \prod_j f_{kj}(x_j)$,
+each one-feature density of its own type (Gaussian for a quantitative
+feature, Bernoulli/categorical probabilities for a binary/categorical one);
+two-class log posterior odds additive,
+$\log(\pi_2/\pi_1) + \sum_j g_j(x_j)$, with no interactions; Gaussian naive
+Bayes is QDA (class-specific variances) or LDA (shared variances) with a
+diagonal covariance matrix; $2Kp$ parameters, sidestepping the curse of
+dimensionality (e.g. $2^p$ cells, $2^p - 1$ free probabilities, for a joint
+pmf of $p$ binary features versus $p$ probabilities). **Comparison**: KNN classification as a neighbor
+vote $\hat p_k(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = k)$ (in
+that section $K$ counts neighbors and the class count is written as 2);
+boundary shapes (linear for logistic regression and LDA, quadratic for QDA,
+quadratic without cross-products for Gaussian naive Bayes, any shape for
+KNN), parametric vs. nonparametric, and how $n$ and $p$ favor flexible vs.
+restricted methods. A simulation study of four scenarios (linear, quadratic,
+independent features with $p = 10$, non-linear sine boundary) shows each
+scenario won by the method whose assumptions are the most restrictive ones
+that still hold — QDA in the quadratic, naive Bayes in the independent, KNN
+in the non-linear, and in the linear scenario LDA, with logistic regression
+(whose model is also correct but uses less of the structure) within a few
+hundredths of a percentage point of it — and
+none winning in every scenario; KNN uses standardized features and fixed $K$ values (no
+tuning, since resampling is not yet taught).
+
+Worked example: `ISLR2::Default` (`balance` and the student indicator $D$),
+split once at random into training and test halves. `MASS::qda()` and
+`e1071::naiveBayes()` fit beside LDA, logistic regression, and KNN
+($K = 1$ and $K$ the smallest odd integer above $\sqrt n$, on standardized
+features). QDA's posterior turns back down at balances beyond the data
+because non-defaulters have the larger balance variance; naive Bayes gives
+students a *positive* log-odds shift at fixed balance (the reverse of
+logistic regression, LDA, and QDA) because conditional independence ignores
+that students carry higher balances, yet its test AUC is close to the
+others'. The four model-based classifiers have similar test error rates and
+nearly identical ROC curves; KNN with $K = 71$ has the lowest AUC, and KNN
+with $K = 1$ has zero training error but a much higher test error,
+illustrating why training error rates are optimistic.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can

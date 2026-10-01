@@ -9,6 +9,8 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.1.0
 Imports:
+    class,
+    e1071,
     hexbin,
     ISLR2,
     MASS,

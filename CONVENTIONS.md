@@ -65,6 +65,11 @@ convention.
   contextual. A passage that uses KNN alongside a class count (e.g. KNN
   classification compared with the generative classifiers) must make clear
   which $K$ is meant rather than introduce a new symbol for either.
+- **$D$ is an indicator (dummy) variable**, e.g.
+  $D = \mathrm{I}(\texttt{student} = \texttt{Yes})$ in the `Default`
+  examples. A diagonal covariance matrix (Gaussian naive Bayes, in
+  `04-classification/60-qda-naive-bayes.qmd`) is therefore written
+  $\Lambda_k = \text{diag}(\sigma_{k1}^2, \ldots, \sigma_{kp}^2)$, not $D_k$.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted
