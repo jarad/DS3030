@@ -129,9 +129,9 @@ mean_variance_plot <- ggplot(hour_groups,
   geom_abline(intercept = 0, slope = 1, linetype = "dashed",
               color = "grey40") +
   geom_point(size = 2.3) +
-  annotate("text", x = 40, y = 12, label = "variance = mean", hjust = 0,
+  annotate("text", x = 100, y = 55, label = "variance = mean", angle = 24,
            color = "grey30") +
-  scale_x_log10() +
+  scale_x_log10(breaks = c(5, 10, 30, 100, 300)) +
   scale_y_log10() +
   scale_color_manual(values = working_colors, labels = working_labels) +
   scale_shape_manual(values = c(16, 17), labels = working_labels) +
@@ -184,8 +184,9 @@ The third tab makes that precise. Each point is the mean and variance of the
 counts in one of the `r nrow(hour_groups)` combinations of hour and
 working-day status. The variance climbs steadily with the mean; on these
 log-log axes the points lie near a line of slope
-`r sprintf("%.2f", mv_slope)`. All `r sum(hour_groups$variance > hour_groups$mean)`
-points lie above the dashed line on which the variance equals the mean.
+`r sprintf("%.2f", mv_slope)`.
+`r if (all(hour_groups$variance > hour_groups$mean)) paste("All", nrow(hour_groups), "points lie") else paste(sum(hour_groups$variance > hour_groups$mean), "of the", nrow(hour_groups), "points lie")`
+above the dashed line on which the variance equals the mean.
 Month, temperature, and weather vary within each group, so part of each
 group's variance is variation those explanatory variables could explain; a
 check that accounts for them comes after a model is fit.
@@ -251,14 +252,20 @@ standard deviation is `r fmt(sd_low, 1)` among hours with fitted values below
 $50$ and `r fmt(sd_high, 1)` among hours with fitted values above $300$, while
 every $t$-test and interval from `lm()` assumes one common variance.
 3. **Additive effects.** Every additive effect — month, temperature, and
-weather — subtracts the same number of riders from every hour, and those
-constant subtractions are what drive the night-time fitted values below zero:
+weather — shifts every hour by the same number of riders. The
+hour-by-working-day terms set each combination's average, so an hour whose
+shift is smaller than average — a winter month, a cold hour, rain — sits the
+same number of riders below its combination's mean at 3 a.m. as at 5 p.m., and
+at night that is enough to push the fit below zero:
 `r fmt(sum(bike$fit_lm < 0 & bike$weather == "clear"))` of the
-`r fmt(n_negative)` negative fitted values are in clear weather. The
-`rain/snow` coefficient, `r fmt(b_lm["weatherrain/snow"], 1)`, removes as many
-riders from an early-morning hour averaging a handful as from a rush hour
-averaging hundreds. Rain plausibly removes a *proportion* of the riders who
-would otherwise ride, which is an effect that multiplies the mean.
+`r fmt(n_negative)` negative fitted values are in clear weather, and their
+median temperature is `r sprintf("%.1f", median(bike$temp_c[bike$fit_lm < 0]))`
+degrees Celsius against `r sprintf("%.1f", median(bike$temp_c))` for all
+hours. The `rain/snow` coefficient, `r fmt(b_lm["weatherrain/snow"], 1)`, is
+one such shift: it removes as many riders from an early-morning hour averaging
+a handful as from a rush hour averaging hundreds. Rain plausibly removes a
+*proportion* of the riders who would otherwise ride, which is an effect that
+multiplies the mean.
 
 A count needs a model whose mean is positive for every value of the
 features, whose effects multiply the mean, and whose variance grows with the
@@ -289,8 +296,7 @@ $\mathbf{X}$ and $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of
 coefficients,
 - $\eta_i$ is the **linear predictor**, as in the logistic regression
 lectures, and
-- $g$ is the **link function**, a monotone function; the three links in this
-lecture also carry the possible values of the mean onto the whole real line.
+- $g$ is the **link function**, a strictly monotone function.
 
 The three parts have names:
 
@@ -365,9 +371,8 @@ counts did.
 A GLM transforms the **mean**, not the response. The regression lectures'
 remedy for a skewed response was to model $\log Y_i$, which describes
 $E[\log Y_i \mid x_i]$ — under normal errors the logarithm of the median of
-$Y_i$ — and fails outright for a count of zero (`bikers` has no zeros, its
-minimum is `r min(bike$bikers)`, so $\log(\texttt{bikers})$ is defined here,
-but a count response in general can be zero). A log link models
+$Y_i$ — and fails outright for a count of zero (`bikers` happens to have
+none, but counts in general can). A log link models
 $\log E[Y_i \mid x_i]$, the logarithm of the mean itself, and is defined for
 any count because it never takes the logarithm of $y_i$.
 
@@ -557,11 +562,9 @@ regression, **iteratively reweighted least squares**: each iteration solves a
 weighted least squares problem whose weights are recomputed from the current
 estimate.
 
-Two consequences of the score equations are used below. The intercept's
-equation makes the fitted means sum to the observed counts,
-$\sum_i \hat\mu_i = \sum_i y_i$. More generally, the equation for a dummy
-variable makes the fitted means average to the observed mean among the
-observations with that dummy equal to $1$; the normal equations of least
+One consequence of the score equations is used below: the equation for a
+dummy variable makes the fitted means average to the observed mean among the
+observations with that dummy equal to $1$, and the normal equations of least
 squares do the same.
 
 ### Inference
@@ -569,11 +572,11 @@ squares do the same.
 Inference repeats the logistic regression lectures. In large samples
 $\hat\beta_j$ is approximately normal, so
 
-$$z = \frac{\hat\beta_j - \beta_j^0}{\text{SE}(\hat\beta_j)}$$
+$$z = \frac{\hat\beta_j - \beta_j^0}{\text{SE}\left(\hat\beta_j\right)}$$
 
 is approximately standard normal under $H_0: \beta_j = \beta_j^0$, where
-$\text{SE}(\hat\beta_j)$ comes from the curvature of $\ell$ at $\hat\beta$. The
-Wald interval $\hat\beta_j \pm z_{1-\alpha/2}\,\text{SE}(\hat\beta_j)$ is
+$\text{SE}\left(\hat\beta_j\right)$ comes from the curvature of $\ell$ at $\hat\beta$. The
+Wald interval $\hat\beta_j \pm z_{1-\alpha/2}\,\text{SE}\left(\hat\beta_j\right)$ is
 returned by `confint.default()`, and exponentiating its endpoints gives an
 interval for the rate ratio $e^{\beta_j}$.
 
@@ -581,7 +584,7 @@ A group of coefficients — every product of an hour dummy with the working-day
 indicator, say — is tested with the drop-in-deviance test. For a count
 response `glm()` reports the residual deviance
 
-$$D = 2\left[\ell_{\text{sat}} - \ell(\hat\beta)\right],$$
+$$D = 2\left[\ell_{\text{sat}} - \ell\left(\hat\beta\right)\right],$$
 
 where
 
@@ -593,10 +596,10 @@ Here $D$ is the deviance, as in the multiple logistic regression lecture, not
 an indicator variable.
 
 $\ell_{\text{sat}}$ does not involve $\beta$, so for a reduced model nested in
-a full one, $G^2 = D_r - D_f = -2\left[\ell(\hat\beta_r) - \ell(\hat\beta_f)\right]$,
+a full one, $G^2 = D_r - D_f = -2\left[\ell\left(\hat\beta_r\right) - \ell\left(\hat\beta_f\right)\right]$,
 the drop-in-deviance statistic of the multiple logistic regression lecture.
 (For a binary response $\ell_{\text{sat}} = 0$, which is why that lecture
-could write $D = -2\ell(\hat\beta)$.) Under $H_0$ that the $k$ dropped
+could write $D = -2\ell\left(\hat\beta\right)$.) Under $H_0$ that the $k$ dropped
 coefficients are zero, $G^2$ is approximately $\chi^2_k$, and
 `anova(reduced, full, test = "Chisq")` performs the test.
 
@@ -607,7 +610,7 @@ $Var[Y_i \mid x_i] = \mu_i$ is determined, and every standard error and
 deviance test above is computed under that variance. **Overdispersion** is
 the failure $Var[Y_i \mid x_i] > \mu_i$.
 
-The **Pearson residual** $(y_i - \hat\mu_i)/\sqrt{\hat\mu_i}$ standardizes a
+The **Pearson residual** $\left(y_i - \hat\mu_i\right)/\sqrt{\hat\mu_i}$ standardizes a
 residual by the Poisson standard deviation. If $Var[Y_i \mid x_i] = \mu_i$,
 then $E\left[(Y_i - \mu_i)^2/\mu_i \mid x_i\right] = 1$, so the average
 squared Pearson residual,
@@ -623,7 +626,7 @@ in $\hat\sigma^2 = RSS/[n - (p+1)]$.
 
 A value well above $1$ is evidence of overdispersion. A plot shows the same
 thing: group the observations by fitted mean, and compare each group's average
-squared residual $(y_i - \hat\mu_i)^2$ with its average $\hat\mu_i$.
+squared residual $\left(y_i - \hat\mu_i\right)^2$ with its average $\hat\mu_i$.
 
 The score equations involve $y_i$ only through $y_i - \mu_i$, never through
 its variance, so when the mean model is right $\hat\beta$ remains a sensible
@@ -635,8 +638,10 @@ $p$-values too small, and confidence intervals too narrow.
 Overdispersion has the same sources as in the problems in logistic regression
 lecture: explanatory variables missing from the model that vary among
 observations with the same $x_i$, and events within one count that are not
-independent — riders who rent together. The remedy within this course is the same: add features that explain the extra
-variation.
+independent — riders who rent together. The remedy within this course, adding
+features that explain the extra variation, addresses only the first source;
+events within one count that are not independent cannot be fixed by a
+feature, and fall under the remedies of the callout below.
 
 ::: {.callout-note collapse="true"}
 ### Beyond this course
@@ -799,6 +804,7 @@ exponential:
 
 ```{r rate-ratio-table}
 #| echo: false
+#| tbl-colwidths: [28, 12, 10, 10, 13, 13, 14]
 rate_ratio_table
 ```
 
@@ -880,8 +886,8 @@ variance_check_plot <- ggplot(variance_bins,
   geom_abline(intercept = 0, slope = 1, linetype = "dashed",
               color = "grey40") +
   geom_point(size = 2.3) +
-  annotate("text", x = 60, y = 22, label = "Poisson: variance = mean",
-           hjust = 0, color = "grey30") +
+  annotate("text", x = 100, y = 55, label = "Poisson: variance = mean",
+           angle = 24, color = "grey30") +
   scale_x_log10() +
   scale_y_log10() +
   labs(x = expression(paste("Average ", hat(mu)[i], " in the bin (log scale)")),
@@ -913,9 +919,11 @@ $1$. The remaining excess plausibly comes from explanatory variables not in
 the model, such as conditions shared by the hours of one day.
 
 If the mean model is right, the fitted means and rate ratios above stand; the
-standard errors,
-$z$-statistics, intervals, and $G^2$, all computed as if $\phi = 1$,
-overstate their precision.
+standard errors and intervals, computed as if $\phi = 1$, understate the
+uncertainty, and the $z$-statistics and $G^2$ overstate the evidence. The
+interaction test's conclusion survives the correction: dividing $G^2$ by
+$\hat\phi$ gives $`r format(round(G2 / phi_full), big.mark = "{,}")`$, still
+`r fmt(G2 / phi_full / k)` times its $`r k`$ degrees of freedom.
 
 ::: {.callout-note collapse="true"}
 ### Beyond this course
@@ -931,11 +939,12 @@ still far from $1$.
 in which hour and working-day status interact and month, temperature, and
 weather multiply the mean. Its fitted means are positive everywhere, and its
 multiplicative weather effect follows the rainy-hour means where linear
-regression's constant subtraction predicts negative counts overnight. Rain or
+regression's constant shifts predict negative counts overnight. Rain or
 snow multiplies the estimated mean count by
 `r sprintf("%.2f", rr_rain)`, and each $5$ degrees Celsius by
 `r sprintf("%.2f", rr_temp_5)`; working and non-working days have different
-hourly profiles. The counts are overdispersed, with $\hat\phi$ near
+hourly profiles, a conclusion that holds even after allowing for
+overdispersion. The counts are overdispersed, with $\hat\phi$ near
 `r round(phi_full)`, so these estimates are usable if the mean model is right,
 while the reported standard errors and intervals are too small.
 
@@ -952,8 +961,8 @@ Poisson regression the Poisson with the log link. Each distribution also fixes
 its variance function: constant, $\mu(1-\mu)$, and $\mu$.
 
 Poisson regression models a count. Its mean $e^{x_i\beta}$ is positive for
-every $\beta$, so $e^{\beta_0}$ is a mean count at the reference values of the
-features and $e^{\beta_j}$ a rate ratio, the factor multiplying the mean count
+every $\beta$, so $e^{\beta_0}$ is the mean count when every feature is zero
+and $e^{\beta_j}$ a rate ratio, the factor multiplying the mean count
 per unit of feature $j$ with the other features held fixed. Its coefficients
 are maximum likelihood estimates; the score equations
 $\sum_i x_{ij}(y_i - \mu_i) = 0$ have the logistic regression form, have no

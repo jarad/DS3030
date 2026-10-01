@@ -612,11 +612,13 @@ illustrating why training error rates are optimistic.
 A count response, and the framework that contains linear, logistic, and
 Poisson regression. Motivation: least squares on hourly bike-rental counts
 gives negative fitted means, residuals that fan out as the mean grows, and
-additive month, temperature, and weather effects that subtract the same number
-of riders from every hour (the cause of the negative night-time fits). A
+additive month, temperature, and weather effects that shift every hour by the
+same number of riders, so an hour whose shift is below average (a winter
+month, a cold hour, rain) sits as far below its hour's mean at night as at
+rush hour and goes negative at night. A
 **generalized linear model** has three components: a distribution for
 $Y_i$ given $x_i$ with mean $\mu_i = E[Y_i \mid x_i]$ (random component), a
-linear predictor $\eta_i = x_i\beta$, and a monotone **link function** $g$
+linear predictor $\eta_i = x_i\beta$, and a strictly monotone **link function** $g$
 with $g(\mu_i) = \eta_i$; for the three links in the chapter, its inverse
 keeps the mean in range. (ISLR2 writes $\eta$ for the link and $\lambda$ for the Poisson mean;
 the notes keep $\eta$ for the linear predictor, write $g$ for the link, and
@@ -651,8 +653,8 @@ binned plot of squared residuals against fitted means; under it the estimates
 remain usable if the mean model is right, but standard errors are too small,
 tests too liberal, and intervals too narrow. Its sources are explanatory
 variables missing from the model and events within one count that are not
-independent; the in-course remedy is adding features that explain the extra
-variation.
+independent; the in-course remedy, adding features that explain the extra
+variation, addresses only the first.
 
 Worked example: `ISLR2::Bikeshare` (8,645 hourly records; `casual` and
 `registered` are components of `bikers` and are never used), with features
@@ -665,7 +667,8 @@ Interpretation reads the intercept
 first (mean count at midnight on a non-working January day, clear, 0 °C),
 then the working-day ratio at the reference hour, the per-5 °C rate ratio
 (about 1.08), and the rain/snow rate ratio (about 0.56). A drop-in-deviance
-test on 23 df rejects a shared hourly profile. The Pearson dispersion is
+test on 23 df rejects a shared hourly profile, and the rejection survives
+dividing $G^2$ by the dispersion estimate. The Pearson dispersion is
 about 11 (about 26 without the interaction), so the counts are overdispersed.
 Multinomial logistic regression is not covered. Cross-validation is the next
 unit.
