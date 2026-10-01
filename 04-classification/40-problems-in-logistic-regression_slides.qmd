@@ -13,7 +13,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/40-problems-in-logistic-regression.qmd @ UNCOMMITTED (working tree on top of d7f27c0; file md5 93e13db08a33c7b735bc205c3bbaa878, matching its _freeze hash) -->
+<!-- derived-from: 04-classification/40-problems-in-logistic-regression.qmd @ 6e953b3 -->
 
 - Complete and quasi-complete separation
 - Log-likelihood with no finite maximizer
