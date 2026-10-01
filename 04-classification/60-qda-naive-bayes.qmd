@@ -485,8 +485,8 @@ Regularized discriminant analysis compromises between the two by shrinking
 each class covariance toward the pooled one,
 $\hat\Sigma_k(\alpha) = \alpha\hat\Sigma_k + (1 - \alpha)\hat\Sigma$, where
 $\alpha = 0$ gives LDA and $\alpha = 1$ gives QDA. The value of $\alpha$ is a
-flexibility dial chosen from the data, as the next unit will choose $K$ for
-KNN.
+flexibility dial chosen from the data, as the next unit will choose the
+number of neighbors for KNN.
 :::
 
 ## Naive Bayes
@@ -634,9 +634,9 @@ nb_boundary_plot
 
 Unlike the class densities of the QDA figure, the naive Bayes ellipses are
 aligned with the feature axes. The naive Bayes boundary is still an ellipse,
-because the variances differ between classes, and since its quadratic has no
-$x_1 x_2$ term it is aligned with the axes too. Ignoring the correlations replaces the long,
-tilted Bayes ellipse with a rounder one: naive Bayes assigns class $1$ to
+because class $2$'s variance is the larger in both features, and since its
+quadratic has no $x_1 x_2$ term it is aligned with the axes too. Ignoring the
+correlations replaces the long, tilted Bayes ellipse with a rounder one: naive Bayes assigns class $1$ to
 part of the upper left where the Bayes classifier assigns class $2$, and
 class $2$ to the lower-left extension of the Bayes ellipse, where the Bayes
 classifier assigns class $1$.
@@ -1025,15 +1025,17 @@ erases that advantage: it averages
 `r pct(mean_error_of("Non-linear", "KNN, K = 1"))`, about the same as the
 model-based methods.
 
-In each scenario the best method is the one whose assumptions are the most
-restrictive ones that still hold: `r winner("Quadratic")` in the quadratic,
-`r winner("Independent, p = 10")` in the independent, and
-`r winner("Non-linear")` in the non-linear scenario. In the linear scenario
-that method is LDA, and logistic regression, whose model is also correct but
-uses less of the structure, is within
+In the quadratic, independent, and non-linear scenarios the best method is the
+one whose assumptions are the most restrictive ones that still hold:
+`r winner("Quadratic")` in the quadratic, `r winner("Independent, p = 10")` in
+the independent, and `r winner("Non-linear")` in the non-linear scenario. In
+the linear scenario both LDA and logistic regression are correct models, and
+their averages differ by only
 `r pp(abs(mean_error_of("Linear", "Logistic regression") - mean_error_of("Linear", "LDA")))`
-percentage points of it: with two features any efficiency gain from LDA is
-that small. None wins in every scenario.
+percentage points, with
+`r if (best_method("Linear") == "LDA") "LDA" else "logistic regression"` ahead:
+with two features, LDA's extra assumption buys essentially nothing. None wins
+in every scenario.
 
 ## Credit card default classification
 
@@ -1304,8 +1306,9 @@ confounding of the multiple logistic regression lecture, which conditional
 independence assumes away.
 
 On the probability scale, the four curves cross $0.5$ at similar balances,
-close to the lower QDA thresholds above, with the naive Bayes curve for
-students shifted toward lower balances. Above
+close to the lower QDA thresholds above, with the naive Bayes curve shifted
+toward lower balances for students and toward higher balances for
+non-students, the two directions of its reversed student term. Above
 that they separate. Logistic regression and LDA continue toward $1$, while
 QDA and naive Bayes, whose balance terms are both quadratic because the two
 classes' balance variances differ, level off below $1$ and then turn down in

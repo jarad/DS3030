@@ -582,10 +582,9 @@ restricted methods. A simulation study of four scenarios (linear, quadratic,
 independent features with $p = 10$, non-linear sine boundary) shows each
 scenario won by the method whose assumptions are the most restrictive ones
 that still hold — QDA in the quadratic, naive Bayes in the independent, KNN
-in the non-linear, and in the linear scenario LDA, with logistic regression
-(whose model is also correct but uses less of the structure) within a few
-hundredths of a percentage point of it — and
-none winning in every scenario; KNN uses standardized features and fixed $K$ values (no
+in the non-linear — while in the linear scenario LDA and logistic regression
+(both correct) essentially tie, within about a hundredth of a percentage
+point, and no method wins in every scenario; KNN uses standardized features and fixed $K$ values (no
 tuning, since resampling is not yet taught).
 
 Worked example: `ISLR2::Default` (`balance` and the student indicator $D$),
@@ -598,7 +597,7 @@ students a *positive* log-odds shift at fixed balance (the reverse of
 logistic regression, LDA, and QDA) because conditional independence ignores
 that students carry higher balances, yet its test AUC is close to the
 others'. The four model-based classifiers have similar test error rates and
-nearly identical ROC curves; KNN with $K = 71$ has the lowest AUC, and KNN
+nearly identical ROC curves; KNN with $K = 71$ has the lowest AUC of the five ROC curves, and KNN
 with $K = 1$ has zero training error but a much higher test error,
 illustrating why training error rates are optimistic.
 
