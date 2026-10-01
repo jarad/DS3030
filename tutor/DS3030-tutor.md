@@ -96,6 +96,11 @@ read consistently with the notes:
   number of classes; treat $C$ there and $K$ later as the same quantity.)
   When KNN classification and a class count appear together, say which $K$
   you mean. A polynomial's degree is $d$.
+- In generalized linear models, $\mu_i = E[Y_i \mid x_i]$ is the mean,
+  $\eta_i = x_i\beta$ the linear predictor, and $g$ the link, with
+  $g(\mu_i) = \eta_i$; ISLR2 instead writes $\eta$ for the link and
+  $\lambda$ for the Poisson mean. $e^{\beta_j}$ in Poisson regression is a
+  **rate ratio**.
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -600,6 +605,70 @@ others'. The four model-based classifiers have similar test error rates and
 nearly identical ROC curves; KNN with $K = 71$ has the lowest AUC of the five ROC curves, and KNN
 with $K = 1$ has zero training error but a much higher test error,
 illustrating why training error rates are optimistic.
+
+### 15. Generalized Linear Models
+<https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
+
+A count response, and the framework that contains linear, logistic, and
+Poisson regression. Motivation: least squares on hourly bike-rental counts
+gives negative fitted means, residuals that fan out as the mean grows, and
+additive month, temperature, and weather effects that subtract the same number
+of riders from every hour (the cause of the negative night-time fits). A
+**generalized linear model** has three components: a distribution for
+$Y_i$ given $x_i$ with mean $\mu_i = E[Y_i \mid x_i]$ (random component), a
+linear predictor $\eta_i = x_i\beta$, and a monotone **link function** $g$
+with $g(\mu_i) = \eta_i$; for the three links in the chapter, its inverse
+keeps the mean in range. (ISLR2 writes $\eta$ for the link and $\lambda$ for the Poisson mean;
+the notes keep $\eta$ for the linear predictor, write $g$ for the link, and
+$\mu_i$ for every mean.) Special cases in one table: linear regression
+(normal, identity link, variance $\sigma^2$), logistic regression (Bernoulli,
+logit link, variance $\mu_i(1-\mu_i)$ with $\mu_i = p(x_i)$), and Poisson
+regression (Poisson, log link, variance $\mu_i$), with
+$Var[Y_i \mid x_i] = \phi V(\mu_i)$ ($\phi = \sigma^2$ for the normal,
+$\phi = 1$ for Bernoulli and Poisson); `glm()` families `gaussian`,
+`binomial`, `poisson`. A GLM transforms the mean, $\log E[Y_i]$, not the
+response, $E[\log Y_i]$.
+
+**Poisson regression**: the Poisson pmf $\mu^y e^{-\mu}/y!$ with mean and
+variance both $\mu$ (derived, plus a slider showing the pmf skewed at small
+$\mu$ and spreading as $\mu$ grows); $\log\mu_i = x_i\beta$, so
+$\mu_i = e^{x_i\beta}$ is positive and features act multiplicatively;
+$e^{\beta_0}$ is the mean count with every feature at zero (reference levels)
+and $e^{\beta_j}$ the **rate ratio**, the factor multiplying the mean count
+per one-unit increase in feature $j$ holding the others fixed (the analogue
+of the odds ratio). Log-likelihood
+$\sum_i [y_i x_i\beta - e^{x_i\beta} - \log(y_i!)]$, score equations
+$\sum_i x_{ij}(y_i - \mu_i) = 0$ (the logistic form; fitted means sum, and
+average within each dummy's level, to the observed counts), no closed form,
+fit by iteratively reweighted least squares. Wald $z$-tests and intervals,
+exponentiated for rate ratios; drop-in-deviance test with the Poisson residual
+deviance $2[\ell_{\text{sat}} - \ell(\hat\beta)]$, whose differences equal
+$-2[\ell(\hat\beta_r) - \ell(\hat\beta_f)]$ as for logistic regression.
+**Overdispersion** ($Var[Y_i \mid x_i] > \mu_i$) is checked with the average
+squared Pearson residual
+$\hat\phi = \sum_i (y_i - \hat\mu_i)^2/\hat\mu_i \,/\, [n - (p+1)]$ and a
+binned plot of squared residuals against fitted means; under it the estimates
+remain usable if the mean model is right, but standard errors are too small,
+tests too liberal, and intervals too narrow. Its sources are explanatory
+variables missing from the model and events within one count that are not
+independent; the in-course remedy is adding features that explain the extra
+variation.
+
+Worked example: `ISLR2::Bikeshare` (8,645 hourly records; `casual` and
+`registered` are components of `bikers` and are never used), with features
+hour as a 24-level factor interacted with working day, month, temperature
+converted to degrees Celsius, and weather with its one-hour `heavy rain/snow`
+level merged into `rain/snow`. A tabset of observed versus fitted hourly
+means by weather and working day shows linear regression going negative
+overnight in rain while Poisson regression scales the profile down.
+Interpretation reads the intercept
+first (mean count at midnight on a non-working January day, clear, 0 °C),
+then the working-day ratio at the reference hour, the per-5 °C rate ratio
+(about 1.08), and the rain/snow rate ratio (about 0.56). A drop-in-deviance
+test on 23 df rejects a shared hourly profile. The Pearson dispersion is
+about 11 (about 26 without the interaction), so the counts are overdispersed.
+Multinomial logistic regression is not covered. Cross-validation is the next
+unit.
 
 ## What has already been assessed
 

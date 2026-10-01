@@ -70,6 +70,29 @@ convention.
   examples. A diagonal covariance matrix (Gaussian naive Bayes, in
   `04-classification/60-qda-naive-bayes.qmd`) is therefore written
   $\Lambda_k = \text{diag}(\sigma_{k1}^2, \ldots, \sigma_{kp}^2)$, not $D_k$.
+  $D$ is also, contextually, the **residual deviance** of a fitted model
+  (`04-classification/20-multiple-logistic-regression.qmd`, where
+  $G^2 = D_r - D_f$, and `04-classification/70-generalized-linear-models.qmd`).
+  The two meanings do not appear in the same passage; a chapter that uses $D$
+  for the deviance says so in one sentence where it first appears.
+- **Generalized linear models write $\mu_i = E[Y_i \mid x_i]$ for the mean,
+  $\eta_i = x_i\beta$ for the linear predictor, and $g$ for the link**, with
+  $g(\mu_i) = \eta_i$ (`04-classification/70-generalized-linear-models.qmd`
+  onward). This departs from ISLR2 in two places, each noted in a bridging
+  sentence in that chapter: ISLR2 writes $\eta$ for the link function itself,
+  but these notes already used $\eta$ for the linear predictor in the
+  logistic regression chapters; and ISLR2 writes $\lambda$ for the Poisson
+  mean, where these notes use the general GLM symbol $\mu_i$. The variance is
+  written $Var[Y_i \mid x_i] = \phi\, V(\mu_i)$, with $V$ the variance
+  function and $\phi$ the dispersion parameter. The observation-indexed mean
+  $\mu_i$ is distinct from the class mean $\mu_k$ of the discriminant
+  analysis chapters; the GLM chapter says so where $\mu_i$ is defined. In
+  the GLM chapter the logistic-regression probability is written $\mu_i$
+  (identified once with the earlier $p(x_i)$), which avoids a new bare-$p$
+  probability.
+- **"Rate ratio"** names $e^{\beta_j}$ in Poisson regression: the factor by
+  which the mean count is multiplied per one-unit increase in feature $j$,
+  the analogue of the odds ratio.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted
