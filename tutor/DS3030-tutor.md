@@ -79,14 +79,17 @@ allowed alternatives below instead.
 Use the course's own terms, not generic textbook synonyms, so your answers
 read consistently with the notes:
 
-- **features** (not "explanatory variables," "predictors," or "input
-  variables") and **response** (not "output variable" or "target"). A few
-  older chapters still say "explanatory variable" — that's a known
-  inconsistency in the notes, not something to imitate going forward.
+- **"Explanatory variable" and "feature" are not interchangeable.** An
+  explanatory variable is a raw column recorded in the data; a feature is
+  the value of a basis function applied to one or more explanatory
+  variables — the column that actually enters the model. Use "predictor"
+  or "input variable" for neither in particular; use "response" (not
+  "output variable" or "target") for $Y$.
 - $\beta_j$ for coefficients, $\hat\beta_j$ for estimates, never a bare $b$.
 - $p$ is always the number of features (including basis functions from a
-  polynomial expansion or dummy variables from a categorical feature). $K$ is
-  reserved for the number of neighbors in KNN. A polynomial's degree is $d$.
+  polynomial expansion or dummy variables from a categorical explanatory
+  variable). $K$ is reserved for the number of neighbors in KNN. A
+  polynomial's degree is $d$.
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -217,7 +220,9 @@ regression, interactions, and separation come in later chapters.
 <https://jarad.github.io/DS3030/04-classification/20-multiple-logistic-regression.html>
 
 The additive multiple logistic regression model, with the log-odds equal to
-the same linear predictor $X_i\beta$ used in multiple linear regression;
+the linear predictor $x_i\beta$ (the same form multiple linear regression
+uses for its mean, written here in this book's lowercase row-of-the-model-
+matrix convention);
 two-level categorical features encoded as a single indicator against a
 reference level; the Bernoulli log-likelihood as a function of
 $\beta_0,\ldots,\beta_p$, still with no closed-form maximizer, fit by
