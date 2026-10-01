@@ -12,13 +12,20 @@ convention.
 
 ## Notation
 
-- **The model matrix is $\mathbf{X}$ (bold).** Bare $X$ is reserved for a
-  scalar explanatory variable or a generic random variable, and students
-  taking this course are simultaneously seeing both uses of $X$ in their
-  first statistical theory course, so the collision is worth resolving with
-  typography rather than context alone. A row of the matrix, $X_i$ or
-  $X_{ij}$, does not need bolding — its subscript already marks it as
-  something other than the whole matrix or a bare scalar.
+- **The model matrix is $\mathbf{X}$ (bold). A row of the matrix is lowercase
+  $x_i$ or $x_{ij}$, unbolded** — e.g. $x_i = (1, x_{i1}, \ldots, x_{ip})$.
+  Bare capital $X$ (or $X_1, \ldots, X_p$, subscripted by *feature* rather
+  than observation) is reserved for a scalar explanatory variable or a
+  generic random variable, and students taking this course are
+  simultaneously seeing that use of $X$ in their first statistical theory
+  course. Lowercase for the row is deliberate, not arbitrary: a row of
+  $\mathbf{X}$ is conditioned on throughout — every assumption and every
+  derivation in this book treats $x_i$ as a known, fixed value, never as a
+  random variable — and lowercase is the standard way to write a fixed value
+  of a random variable. (This reverses an earlier version of this
+  convention, which documented capital $X_i$/$X_{ij}$ for the row; that
+  version was never applied consistently, and lowercase is the better
+  choice for the reason above, not merely the more common one in practice.)
 - **Nested delimiters cycle `()`, then `[]`, then `{}`, then back to `()`**
   for a fourth level, innermost first. A single, non-nested delimiter
   defaults to `()`. Two levels are `[(\cdot)]`; three are `{[(\cdot)]}`.

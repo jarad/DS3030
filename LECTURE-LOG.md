@@ -21,6 +21,7 @@ takes more or fewer days than planned.
 | 2026-09-21 | Mon | 04-classification/10-logistic-regression.qmd | All content up through Coefficient inference (9.2.5); Prediction (9.2.6) held over to Wednesday. Paced deliberately slower than SLR/MLR, as planned. |
 | 2026-09-23 | Wed | 04-classification/10-logistic-regression.qmd, 04-classification/20-multiple-logistic-regression.qmd | Finished Prediction (9.2.6, held over from Monday), then covered all of Multiple Logistic Regression — ahead of the planned pace, which had budgeted the whole day for the multiple logistic regression chapter alone. |
 | 2026-09-25 | Fri | 04-classification/30-flexible-logistic-regression.qmd | All content except the Store-specific price effects worked example, held over to the next class. |
+| 2026-09-28 | Mon | 04-classification/40-problems-in-logistic-regression.qmd | All content except Separation diagnosis and response, which was skipped for time; Muscular dystrophy carrier screening was covered quickly. The Store-specific price effects worked example held over from 09-25 (`04-classification/30-flexible-logistic-regression.qmd`) was not covered and will not be taught this semester. |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -40,11 +41,13 @@ shifted.
 
 | Date | Day | Planned topic | Notes |
 | ---- | --- | -------------- | ----- |
-| 2026-09-28 | Mon | Store-specific price effects (held over from Friday), then Problems in logistic regression, including separation, as time allows | `04-classification/30-flexible-logistic-regression.qmd`, `04-classification/40-problems-in-logistic-regression.qmd`. Multinomial logistic regression is deliberately deferred until after Exam 1 — not scheduled yet |
 | 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |
 | 2026-10-02 | Fri | **Exam 1** | |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |
+
+Multinomial logistic regression is deliberately deferred until after Exam 1
+and is not yet scheduled above.
 
 <!--
 When a planned day happens, move its row up into the Fall 2026 log table with

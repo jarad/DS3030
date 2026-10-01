@@ -32,8 +32,12 @@ about the feature,
 sample, a simpler model, or a fit still usable for prediction away from the
 separated region — and **distinguish** separation from a warning that a single
 extreme observation caused, and
-- **compare** the potential problems of linear regression against their
-logistic regression counterparts and **identify** which do not transfer.
+- **state** linear and logistic regression as distributional statements,
+**identify** the independence, normality, linearity, and constant-variance
+assumptions embedded in each, **distinguish** which of those carry over to
+logistic regression and which do not, and **compare** the potential problems
+of linear regression against their logistic regression counterparts to
+determine which do not transfer.
 :::
 
 ## Separation
@@ -106,7 +110,7 @@ summary(toy_glm)
 
 **The two warnings are the output of the chunk above, not a defect in it.**
 This lecture is about the condition that produces them, so they are left
-visible here and in the second example below rather than suppressed;
+visible here and in both examples that follow rather than suppressed;
 recognizing the exact strings `glm.fit: algorithm did not converge` and
 `glm.fit: fitted probabilities numerically 0 or 1 occurred` is part of what is
 being taught.
@@ -189,51 +193,121 @@ observations sit exactly on the boundary; none sits on the wrong side of it.
 Both conditions break maximum likelihood, and neither is visible in a
 coefficient table without knowing what to look for.
 
-::: {.callout-note collapse="true"}
-### For example,
+In the single-feature examples that follow, $x_i$ reverts to naming the
+scalar feature value rather than the row of $\mathbf{X}$, exactly as it did in
+the opening toy example above.
 
-One tie is enough to turn complete separation into quasi-complete. Complete
-separation needs a gap between the classes; quasi-complete separation does
-not, needing only that no observation falls strictly on the wrong side. Give
-two observations the same feature value and opposite responses, and leave
-everything else separated:
+### Tied feature values
+
+**Question.** The toy data above are completely separated, and `glm()`
+announced the trouble with a convergence warning. Does a quasi-complete
+separation announce itself the same way?
+
+**Data.** Ten observations again, with one tie: two of them share a feature
+value and carry opposite responses, and everything else is arranged as before.
 
 ```{r quasi-data}
 xq <- c(1, 2, 3, 4, 5, 5, 6, 7, 8, 9)
 yq <- c(0, 0, 0, 0, 0, 1, 1, 1, 1, 1)
+quasi <- tibble(xq = xq, yq = yq, class = factor(yq))
 ```
 
-With $b = (-5\beta_1, \beta_1)$ for any $\beta_1 > 0$, the two observations at
-$x = 5$ get a linear predictor of exactly $0$ and every other observation gets
-the sign its response requires, so this is quasi-complete separation.
+- $x_i$ takes the values $1, 2, 3, 4, 5, 5, 6, 7, 8, 9$, with the value $5$
+recorded twice, and
+- $y_i = 0$ for the first five rows and $y_i = 1$ for the last five, so
+the two observations at $x = 5$ carry opposite responses.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r quasi-eda}
+#| output: false
+quasi_eda_plot <- ggplot(quasi, aes(x = xq, y = yq,
+                                    color = class, shape = class)) +
+  geom_vline(xintercept = 5, linetype = "dashed", color = "grey50") +
+  geom_point(size = 3) +
+  scale_x_continuous(breaks = sort(unique(xq))) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "x", y = "y", color = "y", shape = "y",
+       title = "A tie on the boundary")
+```
+:::
+
+```{r quasi-eda-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 2.6
+quasi_eda_plot
+```
+
+The dashed line now passes *through* two observations rather than between the
+classes: one $y = 0$ and one $y = 1$ sit on it. Every other observation is on
+the side its response requires, but there is no gap left to move the line
+into.
+
+One tie is enough to turn complete separation into quasi-complete. Complete
+separation needs a gap between the classes; quasi-complete separation does
+not, needing only that no observation falls strictly on the wrong side. Take
+$b = (-5\beta_1, \beta_1)$ for any $\beta_1 > 0$: the two observations at
+$x = 5$ get a linear predictor of $\beta_1(5 - 5) = 0$, every observation with
+$x_i > 5$ gets $x_i b > 0$, and every observation with $x_i < 5$ gets
+$x_i b < 0$. The weak inequalities hold for all ten observations and the
+strict ones fail for two, which is exactly quasi-complete separation.
+
+Now fit the model.
 
 ```{r quasi-glm}
-#| warning: false
-quasi <- tibble(xq = xq, yq = yq)
 quasi_glm <- glm(yq ~ xq, data = quasi, family = "binomial")
-summary(quasi_glm)$coefficients
+summary(quasi_glm)
 ```
 
+**The single warning is the point of this example.** The completely separated
+fit above raised two — `glm.fit: algorithm did not converge` and `glm.fit:
+fitted probabilities numerically 0 or 1 occurred` — and this fit raises only
+the second. The warning that most nearly settles a diagnosis of separation is
+the one that does not fire here.
+
+::: {.callout-note collapse="true"}
+### Code
 ```{r quasi-extract}
 #| output: false
-quasi_coef <- summary(quasi_glm)$coefficients
+quasi_coef  <- summary(quasi_glm)$coefficients
+quasi_b     <- quasi_coef[, "Estimate"]
+quasi_se    <- quasi_coef[, "Std. Error"]
+quasi_z     <- quasi_coef[, "z value"]
+quasi_p     <- quasi_coef[, "Pr(>|z|)"]
+quasi_ratio <- quasi_b[1] / quasi_b[2]
 ```
-
-The estimates are as unusable as in the completely separated case —
-$\hat\beta_1 = `r sprintf("%.1f", quasi_coef[2, 1])`$ with a standard error of
-`r format(round(quasi_coef[2, 2]), big.mark = ",")` — but this fit reports
-`quasi_glm$converged` as `r quasi_glm$converged`, in
-`r quasi_glm$iter` iterations. The only warning it raises is the
-`fitted probabilities numerically 0 or 1` one, suppressed in this callout;
-there is no convergence warning to go with it. A reported convergence is not
-evidence that an estimate is trustworthy.
-
-The two tied observations are why the residual deviance is
-`r sprintf("%.2f", deviance(quasi_glm))` rather than zero: the fitted
-probability at $x = 5$ is forced to $0.5$, contributing
-$-2 \times 2 \log(0.5) = `r sprintf("%.2f", -4 * log(0.5))`$ no matter how large
-$\beta_1$ grows.
 :::
+
+The estimates are as unusable as in the completely separated case:
+$\hat\beta_1 = `r sprintf("%.2f", quasi_b[2])`$ with a standard error of
+`r format(round(quasi_se[2]), big.mark = ",")`, giving
+$z = `r sprintf("%.3f", quasi_z[2])`$ and a $p$-value of
+$`r sprintf("%.3f", quasi_p[2])`$. The intercept is
+$\hat\beta_0 = `r sprintf("%.2f", quasi_b[1])`$, and
+$\hat\beta_0 / \hat\beta_1 = `r sprintf("%.0f", quasi_ratio)`$
+to machine precision: the iteration is walking out along the family
+$b = (-5\beta_1, \beta_1)$ derived above and stopping at an arbitrary point on
+it.
+
+What the fit reports about itself reads differently from the toy fit, though.
+The number of Fisher scoring iterations is `r quasi_glm$iter`, short of
+`glm()`'s default maximum of `r glm.control()$maxit`, and
+`quasi_glm$converged` is `r quasi_glm$converged`. A reported convergence is
+not evidence that an estimate is trustworthy.
+
+The residual deviance is `r sprintf("%.4f", deviance(quasi_glm))` rather than
+essentially zero, and the two tied observations are why. As $\beta_1$ grows
+the fitted probability at $x = 5$ stays at
+$\text{logistic}(0) = 0.5$, so those two observations contribute
+
+$$-2\left[\log(0.5) + \log(0.5)\right] = `r sprintf("%.4f", -4 * log(0.5))`$$
+
+to the deviance no matter how large $\beta_1$ becomes, while every other
+observation's contribution goes to zero. Under complete separation the
+deviance falls to zero; under quasi-complete separation it falls to whatever
+the boundary ties contribute.
 
 ### Maximum likelihood failure
 
@@ -241,9 +315,7 @@ The simple logistic regression lecture derived the Bernoulli log-likelihood
 
 $$\ell(\beta_0, \beta_1) = \sum_{i=1}^n \left\{ y_i (\beta_0 + \beta_1 x_i) - \log\left(1 + e^{\beta_0 + \beta_1 x_i}\right) \right\},$$
 
-and nothing beyond that is needed to see what goes wrong. With one feature,
-$x_i$ is the scalar feature value again rather than the model-matrix row of the
-definitions above.
+and nothing beyond that is needed to see what goes wrong.
 
 Restrict attention to a one-parameter family of coefficient vectors that all
 place the decision boundary at $x = 5.5$, by setting $\beta_0 = -5.5\beta_1$.
@@ -589,7 +661,7 @@ example meant the estimate did not exist.
 
 ## Separation diagnosis and response
 
-The two examples give the same warning for different reasons, so the warning is
+The examples above give the same warning for different reasons, so the warning is
 where an investigation starts rather than where it ends. What settles the
 question is the coefficient table.
 
@@ -618,8 +690,10 @@ never *exactly* $0$ or $1$: `glm()` clamps them into
 $[`r sci(.Machine$double.eps)`,\ 1 - `r sci(.Machine$double.eps)`]$, so that is
 what a separated observation returns.
 
-Checking `fit$converged` and comparing each $|\hat\beta_j|$ against its
-standard error takes one line and distinguishes the two situations.
+Comparing each $|\hat\beta_j|$ against its standard error takes one line and
+settles the question; `fit$converged` is informative only when it is `FALSE`,
+since a quasi-complete separation can report convergence and still leave no
+usable estimate.
 
 ### Available responses
 
@@ -676,37 +750,153 @@ non-linearity, correlated errors, non-constant variance, outliers,
 high-leverage points, and collinearity. Separation has no counterpart on that
 list: whenever $\mathbf{X}^\top \mathbf{X}$ is invertible, least squares evaluates a formula and
 so cannot fail this way. The six themselves transfer to logistic regression
-unevenly.
+unevenly, and which of them transfer is settled by writing each model as a
+single distributional statement.
 
-### Correlated observations transfer unchanged
+Linear regression is
 
-Correlated errors are the one that transfers with no change at all — the same
-item, under the name **correlated observations**, since logistic regression has
-no $\epsilon_i$ to call correlated. The Bernoulli log-likelihood is a sum over
-observations precisely because they were assumed independent, so responses
-correlated in time or space distort every standard error from `glm()`, for the
-same reason and in the same direction as in linear regression: positively
-correlated observations carry less information than their count suggests, and
-the reported standard errors come out too small.
+$$Y_i \mid x_i \stackrel{ind}{\sim} N\left(x_i\beta, \sigma^2\right), \qquad i = 1, \ldots, n,$$
 
-### Non-constant variance requires no assumption
+where
 
-Linear regression assumes $Var[\epsilon_i] = \sigma^2$ and needs that
+- $Y_i$ is the response for observation $i$,
+- $x_i = (1, x_{i1}, \ldots, x_{ip})$ is the $i$th row of the model matrix
+$\mathbf{X}$, holding the intercept column and the $p$ features,
+- $\beta = (\beta_0, \beta_1, \ldots, \beta_p)^\top$ is the coefficient vector,
+so that $x_i\beta$ is the linear predictor for observation $i$, and
+- $\sigma^2$ is the variance of the response around that linear predictor.
+
+That one line carries four separate assumptions.
+
+- **Independence.** The $\mathrm{ind}$ over the $\sim$ asserts that
+$Y_1, \ldots, Y_n$ are independent of one another given the model matrix.
+- **Constant variance.** $Var[Y_i \mid x_i] = \sigma^2$, and $\sigma^2$ carries
+no $i$ subscript, so every observation has the same variance.
+- **Linearity.** The mean is $E[Y_i \mid x_i] = x_i\beta$, linear in the
+features.
+- **Normality.** The response is normally distributed around its mean. This
+is the one assumption logistic regression does not keep in any form.
+
+Logistic regression replaces the normal distribution with a Bernoulli one and
+the identity link with the logit:
+
+$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left(p(x_i)\right), \qquad \log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta,$$
+
+where
+
+- $p(x_i) = P(Y_i = 1 \mid x_i)$ is the probability of the event for
+observation $i$.
+
+The four assumptions come through the substitution unevenly. Independence is
+still asserted separately and can still fail. Constant variance is not
+assumed at all: $Var[Y_i \mid x_i] = p(x_i)[1 - p(x_i)]$ follows from the
+Bernoulli distribution, and there is no $\sigma^2$ left to place an
+assumption on. Linearity is still assumed, but now of the log-odds rather
+than of the mean. Normality is simply gone — replaced outright by the
+Bernoulli distribution rather than loosened or relocated the way the other
+three are.
+
+### Independence
+
+The Bernoulli log-likelihood is a sum over observations precisely because they
+were assumed independent, so the same failures that break independence in
+linear regression break it here. Logistic regression has no $\epsilon_i$ to
+call correlated, so the item appears under the name **correlated
+observations** rather than correlated errors, but the mechanism is identical:
+positively correlated observations carry less information than their count
+suggests, so every standard error from `glm()` comes out too small.
+
+Three structures generate the correlation.
+
+- **Time.** Observations recorded in sequence, where an observation resembles
+the one before it — a patient measured at successive visits, a stock's daily
+direction.
+- **Space.** Observations recorded at locations, where nearby locations
+resemble one another — counties, plots in a field, weather stations.
+- **Clustering.** Observations grouped into units with no temporal or spatial
+ordering at all — students within schools, patients within hospitals, repeated
+measurements on the same subject. Two observations from the same cluster are
+more alike than two from different clusters.
+
+The remedy available within this course uses machinery already in hand:
+**add features that explain the source of the correlation**. A
+cluster-identifying factor, a time index or trend, or the spatial coordinates
+themselves enter the model matrix like any other column, and once the linear
+predictor accounts for what made two observations alike, the responses can be
+independent given the features even though they were correlated without
+them.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+Adding features works only when the grouping is observed and the model can
+afford a coefficient for it. Three standard alternatives handle the cases
+where it cannot.
+
+**Robust (sandwich) standard errors** leave $\hat\beta$ alone and recompute
+only its variance estimate, using a form that stays valid when the
+independence assumption fails. **Generalized estimating equations (GEE)**
+specify a working correlation structure within each cluster and solve a
+modified score equation. **Mixed-effects (multilevel) models** add a random
+intercept per cluster to the linear predictor, so the correlation is modeled
+rather than corrected for.
+
+All three are covered in a regression or longitudinal-data course; none is
+taught or tested here.
+:::
+
+### Variance
+
+Linear regression assumes $Var[Y_i \mid x_i] = \sigma^2$ and needs that
 assumption checked, usually by looking for a fan shape in a plot of residuals
 against fitted values.
 
-Logistic regression has nothing to check. The simple logistic regression
-lecture established that
+Logistic regression has nothing to check. As the statement above records,
 
-$$Var[Y_i|X_i] = p(X_i)\left[1 - p(X_i)\right]$$
+$$Var[Y_i \mid x_i] = p(x_i)\left[1 - p(x_i)\right]$$
 
 is a consequence of $Y_i$ being Bernoulli, not an extra assumption laid on top
-of the model. The variance is *required* to change with $X_i$, and it is
-determined once $p(X_i)$ is, which is also why the model has no $\sigma^2$
+of the model. The variance is *required* to change with $x_i$, and it is
+determined once $p(x_i)$ is, which is also why the model has no $\sigma^2$
 parameter. A residual plot that fanned out would not be evidence against this
 model.
 
-### Log-odds non-linearity
+There is still a way for the variance to be wrong, and it shows up once the
+data are aggregated. Suppose the $i$th row records $m_i$ trials sharing the
+same feature values and $Y_i$ is the number of successes among them, so the
+model says
+$Y_i \mid x_i \stackrel{ind}{\sim} \text{Binomial}(m_i, p(x_i))$ with variance
+$m_i p(x_i)[1 - p(x_i)]$ — a form this course states but does not fit
+directly, since every worked example so far has $m_i = 1$. **Overdispersion**
+is the observation that the spread of the $Y_i$ around their fitted means
+exceeds that value — often substantially.
+
+Overdispersion is usually a symptom of the failure described in the subsection
+above rather than a separate defect. If the $m_i$ trials in a row are
+positively correlated rather than independent — they came from the same
+school, the same clutch of eggs, the same subject — then the variance of
+their sum is larger than $m_i p(x_i)[1 - p(x_i)]$, because the positive
+within-cluster correlation adds covariance terms that independence would have
+set to zero. Unmodeled features that vary within a row produce the same
+excess.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The standard remedy keeps the mean model
+$\log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta$
+and multiplies the assumed variance by a **dispersion parameter** $\phi$, so
+that $Var[Y_i \mid x_i] = \phi \, m_i p(x_i)[1 - p(x_i)]$. Estimating $\phi$
+from the residuals and inflating every standard error by $\sqrt{\hat\phi}$
+gives a **quasi-binomial** fit, available as `family = "quasibinomial"` in
+`glm()`. Because the variance is no longer that of any Bernoulli or binomial
+distribution, this is a quasi-likelihood rather than a likelihood, and the
+deviance-based tests of the previous lectures are replaced by $F$-tests.
+
+Beta-binomial models and the mixed-effects models named above reach the same
+place by specifying a distribution for the extra variability instead of
+estimating a single multiplier. None of this is taught or tested here.
+:::
+
+### Linearity
 
 What logistic regression does assume is that the *log-odds* are linear in the
 features,
@@ -837,5 +1027,17 @@ down. A `glm.fit` warning on its own does not establish it: a single extreme
 feature value can trigger the same warning while leaving a finite estimate, a
 small standard error, and a large $z$ — the coefficient table, not the
 warning, is what settles the question.
+
+Writing each model as one distributional statement separates what is assumed
+from what follows. Linear regression's $Y_i \mid x_i \stackrel{ind}{\sim} N(x_i\beta, \sigma^2)$
+asserts independence, normality, linearity of the mean, and a common
+variance; logistic regression's Bernoulli version keeps independence and
+linearity — with linearity moved to the log-odds — replaces normality
+outright, and drops constant variance entirely, since the Bernoulli variance
+is determined by $p(x_i)$. Independence is therefore the assumption the two
+models share without modification, failing under time, space, and clustering
+alike, and surfacing as overdispersion once grouped data are aggregated.
+Collinearity, leverage, and outliers carry over as concepts while their least
+squares formulas do not.
 
 That completes what this course covers of logistic regression before Exam 1.

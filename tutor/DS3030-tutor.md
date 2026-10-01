@@ -363,24 +363,36 @@ and separation are *not* covered here.
 ### 12. Problems in Logistic Regression
 <https://jarad.github.io/DS3030/04-classification/40-problems-in-logistic-regression.html>
 
-Separation, the one way maximum likelihood for logistic regression fails that
-has no least-squares counterpart. **Complete (perfect) separation** is defined
-as the existence of a coefficient vector $b$ with $x_i b > 0$ for every
-$y_i = 1$ and $x_i b < 0$ for every $y_i = 0$; **quasi-complete separation**
-weakens those to $\ge$ and $\le$ with equality for at least one observation.
-Derivation of why it breaks estimation: restricting the Bernoulli
+Two halves: **separation**, the one way maximum likelihood for logistic
+regression fails that has no least-squares counterpart, and a revisit of the
+linear regression problem list through each model written as a single
+**distributional statement**.
+
+**Complete (perfect) separation** is defined as the existence of a coefficient
+vector $b$ with $x_i b > 0$ for every $y_i = 1$ and $x_i b < 0$ for every
+$y_i = 0$ — a condition on the *data*, saying some $b$ works, not a statement
+about $\hat\beta$, which under it does not exist. **Quasi-complete separation**
+weakens those to $\ge$ and $\le$ with equality for at least one observation, so
+some observations sit exactly on the boundary and none sits on the wrong side.
+Derivation of why either breaks estimation: restricting the Bernoulli
 log-likelihood to a one-parameter family whose boundary is fixed gives
 $d\ell/d\beta_1 = \sum_i (x_i - c)(y_i - p_i) > 0$ for every finite $\beta_1$,
 so $\ell$ has a supremum of $0$ that it attains only in the limit and no finite
 maximizer exists. What `glm()` prints in that case is an arbitrary point along
 a divergent path, with standard errors from a curvature that is flattening to
-zero.
+zero. A figure of fitted curves at $\beta_1 = 0.5, 1, 2, 5$ along that family,
+plus a table and plot of $\ell(\beta_1)$ flattening against $0$, carry the
+argument visually.
 
 Diagnostics demonstrated: the warnings `glm.fit: algorithm did not converge`
-and `glm.fit: fitted probabilities numerically 0 or 1 occurred`; a coefficient
-absurd on its feature's scale; a standard error far larger than the coefficient
-itself, so a perfectly predictive feature returns $z \approx 0$ and a $p$-value
-near $1$; a near-zero residual deviance; fitted probabilities numerically
+(close to conclusive; it did not fire in this chapter's quasi-complete example) and
+`glm.fit: fitted probabilities numerically 0 or 1 occurred` (always present
+under separation, but not conclusive on its own); a coefficient absurd on its
+feature's scale; a standard error far larger than the coefficient itself, so a
+perfectly predictive feature returns $z \approx 0$ and a $p$-value near $1$; a
+residual deviance essentially zero under complete separation and small but
+non-zero under quasi-complete separation, where it settles at exactly what the
+tied boundary observations contribute; fitted probabilities numerically
 indistinguishable from $0$ or $1$ (never *exactly* $0$ or $1$ — `glm()` clamps
 them into $[\varepsilon, 1-\varepsilon]$ for
 $\varepsilon =$ `.Machine$double.eps` $\approx 2.2\times10^{-16}$);
@@ -388,34 +400,79 @@ $\varepsilon =$ `.Machine$double.eps` $\approx 2.2\times10^{-16}$);
 model (drop or merge the offending feature or level), or use the fit only for
 what it still supports — the decision boundary may be fine even when the
 coefficient is meaningless. Penalized estimation (Firth, ridge/lasso, Bayesian
-priors) appears only inside a "Beyond this course" callout.
+priors) is named only inside a "Beyond this course" callout.
 
 Worked examples: (1) a constructed $n = 10$ dataset, `x <- 1:10` and
-`y <- as.numeric(x > 5)`, which fails to converge and returns
-$\hat\beta_1 \approx 44.7$ with a standard error of about $61{,}000$; a
-collapsed callout adds a tied-observation dataset showing quasi-complete
-separation that *does* report convergence while still being unusable. (2)
-`Sleuth3::ex2012`, 120 women screened for Duchenne muscular dystrophy carrier
-status from serum creatine kinase (`CK`) — a real example that raises the
-`fitted probabilities` warning but is **not** separated: the groups overlap
-heavily, the fit converges, and $\hat\beta_1 \approx 0.051$ (SE $\approx
-0.011$) is entirely usable; the warning comes from one woman with `CK` = 925
-whose fitted probability is clamped to $1-\varepsilon$. The lesson is that
-the warning starts an investigation rather than settling one.
+`y <- as.numeric(x > 5)`, completely separated: it fails to converge (stopping
+at `glm()`'s iteration cap), raises *both* warnings, returns
+$\hat\beta_1 \approx 44.7$ with a standard error of about $61{,}000$, and has a
+residual deviance of essentially zero. (2) A second constructed $n = 10$
+dataset with one **tied feature value** — $x = 5$ recorded twice with opposite
+responses — which is quasi-complete rather than complete: it raises only the
+`fitted probabilities` warning, reports `converged` as `TRUE` after 21
+iterations, yet still returns $\hat\beta_1 \approx 19.6$ with a standard error
+of about $7{,}900$ and $\hat\beta_0/\hat\beta_1 = -5$ to machine precision,
+walking out along the family $b = (-5\beta_1, \beta_1)$. Its residual deviance
+is $2.7726 = -4\log(0.5)$, contributed entirely by the two tied observations,
+whose fitted probability stays at $0.5$ however large $\beta_1$ grows. The
+point: a reported convergence is not evidence that an estimate is
+trustworthy. (3) `Sleuth3::ex2012`, 120 women screened for Duchenne muscular
+dystrophy carrier status from serum creatine kinase (`CK`) — a real example
+that raises the `fitted probabilities` warning but is **not** separated: the
+groups overlap heavily, the fit converges, and $\hat\beta_1 \approx 0.051$
+(SE $\approx 0.011$) is entirely usable; the warning comes from one woman with
+`CK` = 925 whose fitted probability is clamped to $1-\varepsilon$. The lesson
+is that the warning starts an investigation rather than settling one, and the
+coefficient table is what settles it.
 
-Closes with a short comparison against the six potential problems of the
-flexibility chapter: correlated errors transfer unchanged; non-constant
-variance is *not* a separate assumption to check, since
-$Var[Y_i|X_i] = p(X_i)[1-p(X_i)]$ follows from the Bernoulli model;
-non-linearity of the log-odds is what the flexible logistic regression chapter
-already addressed; collinearity, leverage, and outliers carry over in substance
-but their GLM-specific diagnostics are flagged "Beyond this course." That
-callout works one instructive case: the `CK` = 925 woman has the *largest*
-leverage under the least squares hat matrix but the *smallest* leverage and
-Cook's distance in the logistic fit, because GLM leverage is weighted by
-$\hat p_i(1-\hat p_i)$, which is about $2\times10^{-19}$ where the curve has
-saturated — a saturated observation cannot pull the fit. Multinomial
-(multi-class) logistic regression is still not covered.
+The second half writes linear regression as
+$Y_i \mid x_i \stackrel{ind}{\sim} N(x_i\beta, \sigma^2)$ and reads four
+assumptions off that one line — independence, constant variance, linearity of
+the mean, and normality — then substitutes the Bernoulli distribution and the
+logit link, $Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}(p(x_i))$ with
+$\log(p(x_i)/(1-p(x_i))) = x_i\beta$, to see which survive: independence and
+linearity carry over (linearity now of the log-odds), normality is replaced
+outright by the Bernoulli distribution, and constant variance is dropped
+entirely. Separation itself has no counterpart on the flexibility chapter's
+six-problem list, since least squares evaluates a formula whenever
+$\mathbf{X}^\top\mathbf{X}$ is invertible. Three subsections follow, covering
+the three assumptions that carry over in some form (independence,
+variance, linearity); normality has no subsection of its own since it is
+simply gone.
+
+- **Independence** transfers unchanged, but with no $\epsilon_i$ to call
+  correlated the item is renamed **correlated observations**; positively
+  correlated observations carry less information than their count suggests, so
+  `glm()` standard errors come out too small. Three structures generate it:
+  time, space, and **clustering** (students within schools, patients within
+  hospitals, repeated measures on a subject — grouping with no temporal or
+  spatial ordering). The remedy taught here uses machinery already in hand:
+  add features (a cluster factor, a time index, spatial coordinates) that
+  explain the source of the correlation, so responses are independent given
+  the features.
+- **Variance** is *not* an assumption in logistic regression:
+  $Var[Y_i|x_i] = p(x_i)[1-p(x_i)]$ follows from the Bernoulli distribution,
+  is required to change with $x_i$, and leaves no $\sigma^2$ to check, so a
+  fanning residual plot is not evidence against the model. What can go wrong
+  appears once data are aggregated: with $Y_i \sim \text{Binomial}(m_i,
+  p(x_i))$, **overdispersion** is spread around the fitted means exceeding
+  $m_i p(x_i)[1-p(x_i)]$. It is usually a symptom of the independence failure
+  above — dependent trials within a row add covariance terms — or of
+  unmodeled features varying within a row.
+- **Linearity** is still assumed, now of the log-odds; the flexible logistic
+  regression chapter is where it was addressed (interactions, polynomials,
+  step functions), and it is checked by fitting the more flexible model and
+  testing the added coefficients.
+
+Collinearity, leverage, and outliers carry over in substance — inflated
+$\text{SE}(\hat\beta_j)$, disproportionate pull, a response disagreeing with
+the rest of the data — but their least-squares arithmetic (the hat matrix,
+studentized residuals, Cook's distance) does not, since those were defined
+through a least squares fit rather than an iteratively maximized likelihood.
+GLM analogues of all three, and the alternatives for correlated observations
+and overdispersion, are named only inside "Beyond this course" callouts and
+are neither taught nor tested. Multinomial (multi-class) logistic regression
+is still not covered.
 
 ## What has already been assessed
 

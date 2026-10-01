@@ -18,7 +18,7 @@ fmt_p <- function(p) {
 After this lecture you should be able to
 
 - **write** the multiple logistic regression model in its probability and
-log-odds forms using the linear predictor $X_i\beta$, and **encode** a
+log-odds forms using the linear predictor $x_i\beta$, and **encode** a
 two-level categorical feature as an indicator against a reference level,
 - **interpret** $\beta_j$ as a change in log-odds and $e^{\beta_j}$ as an odds
 ratio *holding every other feature fixed*, and **distinguish** that from the
@@ -295,18 +295,18 @@ statements.
 
 ## Multiple logistic regression model
 
-Let $X_{i1}, \ldots, X_{ip}$ be the $p$ features recorded on observation $i$.
+Let $x_{i1}, \ldots, x_{ip}$ be the $p$ features recorded on observation $i$.
 The **multiple logistic regression** model is
 
-$$p(X_i) = P(Y_i = 1|X_i) = \frac{e^{\beta_0 + \beta_1 X_{i1} + \cdots + \beta_p X_{ip}}}{1 + e^{\beta_0 + \beta_1 X_{i1} + \cdots + \beta_p X_{ip}}},$$
+$$p(x_i) = P(Y_i = 1|x_i) = \frac{e^{\beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}}{1 + e^{\beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}}},$$
 
 where
 
-- $p(X_i)$ is the probability the event occurs for observation $i$,
-- $X_{ij}$ is the value of feature $j$ for observation $i$, and
+- $p(x_i)$ is the probability the event occurs for observation $i$,
+- $x_{ij}$ is the value of feature $j$ for observation $i$, and
 - $\beta_0, \beta_1, \ldots, \beta_p$ are the regression coefficients.
 
-The same algebra as in the previous lecture — form $1 - p(X_i)$, divide, take
+The same algebra as in the previous lecture — form $1 - p(x_i)$, divide, take
 logarithms — puts the model in its log-odds form,
 
 $$\log\left(\frac{p(X)}{1 - p(X)}\right) = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p.$$
@@ -315,15 +315,15 @@ The right side is exactly the linear predictor of the multiple linear
 regression lecture. Using that lecture's model matrix notation together with
 the linear predictor $\eta$ of the previous lecture,
 
-- $X_i = (1, X_{i1}, \ldots, X_{ip})$ is the $i$th row of the $n \times (p+1)$
+- $x_i = (1, x_{i1}, \ldots, x_{ip})$ is the $i$th row of the $n \times (p+1)$
 model matrix $\mathbf{X}$,
 - $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of coefficients, and
 - $\eta = \mathbf{X}\beta$ is the $n$-vector of linear predictors, with $i$th element
-$\eta_i = X_i\beta$,
+$\eta_i = x_i\beta$,
 
 the model is
 
-$$p(X_i) = \text{logistic}(X_i\beta) = \frac{e^{X_i\beta}}{1 + e^{X_i\beta}}.$$
+$$p(x_i) = \text{logistic}(x_i\beta) = \frac{e^{x_i\beta}}{1 + e^{x_i\beta}}.$$
 
 So multiple logistic regression is multiple linear regression's linear
 predictor passed through the logistic function. Everything the linear predictor
@@ -332,7 +332,7 @@ features, polynomial terms, step functions — is available here unchanged,
 because none of it touches the logistic function wrapped around it.
 
 The model above is **additive**: each feature contributes its own term
-$\beta_j X_{ij}$ to $\eta_i$, and no term involves two features at once.
+$\beta_j x_{ij}$ to $\eta_i$, and no term involves two features at once.
 
 ### Maximum likelihood estimation
 
