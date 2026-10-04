@@ -552,7 +552,9 @@ compares empirical ROC curves of three LDA classifiers fit to one simulated
 data set from the two-feature model ($X_1$ only, $X_2$ only, both), where
 the two-feature curve lies on or above both single-feature curves; when curves
 cross, each has the higher true positive rate over part of the range of
-false positive rates and AUC averages over that disagreement.
+false positive rates, so the classifier with the larger AUC can still be the
+worse one over the false positive rates that matter for a given
+application.
 
 Worked example: `ISLR2::Default` with `MASS::lda()` on the two quantitative
 explanatory variables, `balance` and `income` (income in dollars as
@@ -581,10 +583,18 @@ positive rate because non-defaulters dominate. $t = 0.5$ is the Bayes
 classifier's threshold but need not minimize an *estimated* classifier's
 error rate (LDA's training error is lowest somewhat below $0.5$). ROC curves
 for LDA and logistic regression nearly coincide; the one-feature models have
-identical AUCs, and LDA's flatter posterior means it flags fewer customers
-than logistic regression at high thresholds and more at low ones. All rates
-are training rates; test-error estimation is deferred to resampling. QDA and
-naive Bayes are the next chapter.
+identical AUCs, and LDA's flatter posterior means it flags a subset of
+logistic regression's customers at high thresholds and a superset at low
+ones. Income adds little to classification beyond balance (at $t = 0.2$ it
+slightly raises the training error) although it is a real predictor in the
+logistic regression. A short "Student strata" subsection fits LDA (balance + income) separately
+to students and non-students and compares it with logistic regression fully
+interacted with student status (shown to equal separate per-stratum logistic
+regressions); students default more often and their boundaries sit at higher
+balances, but the extra flexibility barely changes training error or AUC, and
+its training rates are the more optimistic because it estimates twice as
+many parameters. All rates are training rates; test-error estimation is
+deferred to resampling. QDA and naive Bayes are the next chapter.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
