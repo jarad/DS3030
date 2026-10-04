@@ -573,8 +573,7 @@ each class (about $-0.16$). The fitted income slope is positive although
 defaulters' mean income is slightly lower, because $\hat\Sigma^{-1}$ adjusts
 income for balance; the boundary is a nearly vertical line in the
 (balance, income) plane, and logistic regression's lies slightly left of
-LDA's. Income adds little beyond balance (AUC about 0.948 to 0.949; similar
-error rates). Confusion matrix of the two-feature LDA at $t = 0.5$ (error
+LDA's. Confusion matrix of the two-feature LDA at $t = 0.5$ (error
 about 2.8%, sensitivity about 23%, specificity about 99.8%) and at
 $t = 0.2$ (sensitivity about 57%); an interactive threshold figure with
 checkboxes plots the overall error rate, sensitivity, specificity, and false
@@ -585,15 +584,20 @@ error rate (LDA's training error is lowest somewhat below $0.5$). ROC curves
 for LDA and logistic regression nearly coincide; the one-feature models have
 identical AUCs, and LDA's flatter posterior means it flags a subset of
 logistic regression's customers at high thresholds and a superset at low
-ones. Income adds little to classification beyond balance (at $t = 0.2$ it
-slightly raises the training error) although it is a real predictor in the
-logistic regression. A short "Student strata" subsection fits LDA (balance + income) separately
-to students and non-students and compares it with logistic regression fully
-interacted with student status (shown to equal separate per-stratum logistic
-regressions); students default more often and their boundaries sit at higher
-balances, but the extra flexibility barely changes training error or AUC, and
-its training rates are the more optimistic because it estimates twice as
-many parameters. All rates are training rates; test-error estimation is
+ones. Income adds little to classification beyond balance (AUC about 0.948
+to 0.949; at $t = 0.2$ it slightly raises the training error and lowers
+sensitivity), although it is a real predictor in the logistic regression. A short "Student strata" subsection first tabulates the strata (students
+default more often and have far lower incomes), then fits LDA (balance +
+income) separately to students and non-students and compares it with
+logistic regression fully interacted with student status (shown to equal
+separate per-stratum logistic regressions). Because each stratum's priors are
+its own default rates, the stratum posteriors share one scale, so a pooled
+AUC is meaningful. Students' larger prior alone would lower their LDA
+threshold, but their threshold is higher because students in both classes
+carry higher balances (the confounding of the multiple logistic regression
+chapter), and it stays higher at equal incomes. The extra flexibility barely
+changes training error or AUC, and with twice as many parameters its training
+rates understate its test error rates by more. All rates are training rates; test-error estimation is
 deferred to resampling. QDA and naive Bayes are the next chapter.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
