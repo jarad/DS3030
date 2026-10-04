@@ -170,9 +170,11 @@ If $\sigma_2 > \sigma_1$, the coefficient of $x^2$ is positive, the log
 posterior odds grow without bound in both directions, and the class with the
 larger variance is assigned in both tails.
 
-The figure below uses $\mu_1 = 0$, $\mu_2 = 1$, and equal priors. Each curve is
-$\pi_k f_k(x)$, so the classifier switches classes wherever the curves cross;
-dotted vertical lines mark the boundary points.
+The figure below uses $\mu_1 = 0$, $\mu_2 = 1$, and equal priors; the first tab
+gives both classes $\sigma = 1$, and the second $\sigma_1 = 0.7$ and
+$\sigma_2 = 1.5$. Each curve is $\pi_k f_k(x)$, so the classifier switches
+classes wherever the curves cross; dotted vertical lines mark the boundary
+points.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -363,7 +365,8 @@ $n_k > p$.
 ### Bias-variance tradeoff
 
 QDA's flexibility costs parameters. Not counting the $K - 1$ free priors,
-which every generative classifier estimates,
+which every generative classifier estimates (the previous lecture's count of
+8 for LDA with balance and income included its one free prior),
 
 $$\text{LDA: } Kp + \frac{p(p+1)}{2}, \qquad \text{QDA: } Kp + K\,\frac{p(p+1)}{2},$$
 
@@ -402,9 +405,10 @@ varies from one training set to the next: variance.
 
 The figure below draws repeated training sets from the two classes of the
 previous figure, fits LDA and QDA to each, and overlays the fitted boundaries
-(thin grey) on the Bayes decision boundary (thick dashed), which is the QDA
-boundary computed from the true parameters. The first tab uses small training
-sets and the second large ones.
+(thin grey) on the Bayes decision boundary (thick black, long dashes), which is
+the QDA boundary computed from the true parameters, in two panels, LDA on the
+left and QDA on the right. The first tab uses small training sets and the
+second large ones.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -448,13 +452,13 @@ variability_plot <- function(nk) {
     geom_contour(aes(z = p_hat - 0.5, group = rep), breaks = 0,
                  color = "grey55", linewidth = 0.35) +
     geom_contour(data = grid_2d, aes(z = qda), breaks = 0, color = "black",
-                 linewidth = 1.1, linetype = "dashed") +
+                 linewidth = 1.1, linetype = "longdash") +
     facet_wrap(~ method) +
     coord_fixed(xlim = c(-3.5, 5.5), ylim = c(-3.5, 4), expand = FALSE) +
     labs(x = expression(X[1]), y = expression(X[2]),
          title = bquote(paste(.(n_boundary_reps), " fitted boundaries, ",
                               n[k] == .(nk),
-                              " per class; Bayes boundary dashed")))
+                              " per class; Bayes boundary long-dashed")))
 }
 variability_small <- variability_plot(n_k_small)
 variability_large <- variability_plot(n_k_large)
@@ -1022,8 +1026,8 @@ correlation, averages `r pct(mean_error_of("Linear", "Naive Bayes"))`.
 beats logistic regression's
 `r pct(mean_error_of("Quadratic", "Logistic regression"))` and LDA's
 `r pct(mean_error_of("Quadratic", "LDA"))`: the linear methods' bias outweighs
-QDA's variance. Naive Bayes, curved but missing the cross-product, falls between
-at `r pct(mean_error_of("Quadratic", "Naive Bayes"))`.
+QDA's variance. Naive Bayes, curved but missing the cross-product, falls
+between them, at `r pct(mean_error_of("Quadratic", "Naive Bayes"))`.
 - **Independent, $p = 10$.** Naive Bayes, whose assumption holds exactly,
 averages `r pct(mean_error_of("Independent, p = 10", "Naive Bayes"))` with
 `r 2 * 2 * 10` parameters. QDA's model also contains the truth, but it
@@ -1033,10 +1037,8 @@ dimensions to search for neighbors, averages
 `r pct(mean_error_of("Independent, p = 10", knn_sim_name))` with
 $K = `r k_sim`$.
 - **Non-linear.** No model-based method can represent a sine curve, and all
-four average between
-`r pct(min(sapply(method_levels[1:4], \(m) mean_error_of("Non-linear", m))))`
-and
-`r pct(max(sapply(method_levels[1:4], \(m) mean_error_of("Non-linear", m))))`.
+four average
+`r nl <- pct(range(sapply(method_levels[1:4], \(m) mean_error_of("Non-linear", m)))); if (nl[1] == nl[2]) paste("about", nl[1]) else paste("between", nl[1], "and", nl[2])`.
 KNN with $K = `r k_sim`$ averages
 `r pct(mean_error_of("Non-linear", knn_sim_name))`. With $K = 1$ its variance
 erases that advantage: it averages
@@ -1076,8 +1078,8 @@ last subsection.
 
 ### Training and test sets
 
-The previous lecture's error rates were training error rates, optimistic
-because each customer helped fit the model that classified it. Here, as in the
+The previous lecture's error rates were training error rates, optimistic on
+average because each customer helped fit the model that classified it. Here, as in the
 classification lecture's bias-variance script, the customers are split at
 random into halves; every model is fit to the training half and evaluated on
 the test half, whose customers it never saw.
@@ -1300,6 +1302,8 @@ pooled <- Reduce(`+`, map(c("No", "Yes"), \(k) {
 mean_diff <- c(diff(default_nb$tables$balance[, 1]), income_gap)
 lda_income_slope <- 1000 * solve(pooled, mean_diff)[2]
 raises <- function(v) if (v > 0) "raises" else "lowers"
+# Two significant digits without rounding a small value to 0.0000.
+small_num <- function(v) format(signif(v, 2), scientific = FALSE)
 ```
 :::
 
@@ -1330,16 +1334,18 @@ and `r dollar_text(cross_at("NB", 2)[3])`. These second branches lie beyond the
 largest training balance, `r dollar_text(max(train$balance))`, and past them
 each model's posterior probability falls back below $0.5$.
 
-Naive Bayes drops the within-class correlation, so its income term follows
-only the raw difference in mean income: defaulters' mean training income is
-`r dollar_text(abs(income_gap))` `r if (income_gap > 0) "higher" else "lower"`
-than non-defaulters', and at the median income each additional \$1,000
-`r raises(nb_income_slope)` naive Bayes's log posterior odds by
-`r sprintf("%.4f", abs(nb_income_slope))`. LDA's income slope, adjusted for
-balance through the pooled within-class covariance as the
-[previous lecture](50-lda.qmd#balance-and-income) explained,
-`r raises(lda_income_slope)` them by `r sprintf("%.4f", abs(lda_income_slope))`
-per \$1,000, `r if (sign(nb_income_slope) == sign(lda_income_slope)) "the same direction" else "the opposite direction"`.
+Naive Bayes drops the within-class correlation, so its income term compares
+the two classes' income distributions without adjusting for balance:
+defaulters' mean training income is `r dollar_text(abs(income_gap))`
+`r if (income_gap > 0) "higher" else "lower"` than non-defaulters', and at the
+median income each additional \$1,000 `r raises(nb_income_slope)` naive
+Bayes's log posterior odds by `r small_num(abs(nb_income_slope))`. The term is
+slightly curved, because the two classes' income standard deviations differ.
+LDA's income slope, adjusted for balance through the pooled within-class
+covariance as the [previous lecture](50-lda.qmd#balance-and-income)
+explained, `r raises(lda_income_slope)` them by
+`r small_num(abs(lda_income_slope))` per \$1,000,
+`r if (sign(nb_income_slope) == sign(lda_income_slope)) "the same direction" else "the opposite direction"`.
 
 ### Test performance
 
@@ -1391,9 +1397,32 @@ performance <- map(names(scores_test), \(m) rates(scores_train[[m]], scores_test
   list_rbind(names_to = "model")
 perf_of <- function(m, col) performance[[col]][performance$model == m]
 model_based <- performance |> slice(1:4)
-n_train_above <- sum(model_based$train_error > model_based$test_error)
-
 pct2 <- function(v) sprintf("%.2f%%", 100 * v)
+n_train_above <- sum(model_based$train_error > model_based$test_error)
+defaulter_counts <- sprintf("%d defaulters (%s) and the test half %d (%s)",
+                            n_defaults[["train"]], pct2(mean(yes_train)),
+                            n_defaults[["test"]], pct2(mean(yes_test)))
+optimism_text <- if (n_train_above == 0) {
+  paste0("No model-based classifier has a training error rate above its test ",
+         "error rate, as optimism predicts; the training half drew ",
+         defaulter_counts, ".")
+} else if (n_train_above < 4) {
+  paste0("Training error rates are optimistic on average, but on a single ",
+         "split chance can outweigh that: ",
+         c("one of the four model-based classifiers has",
+           "two of the four model-based classifiers have",
+           "three of the four model-based classifiers have")[n_train_above],
+         " a training error rate above the test error rate.")
+} else {
+  paste0("Training error rates are optimistic on average, but on a single ",
+         "split chance can outweigh that: all four model-based classifiers ",
+         "have a training error rate above their test error rate",
+         if (n_defaults[["train"]] > n_defaults[["test"]]) {
+           paste0(", perhaps because the training half drew ",
+                  defaulter_counts, ".")
+         } else ".")
+}
+
 performance_table <- performance |>
   select(-flagged) |>
   mutate(across(train_error:specificity, pct2), auc = sprintf("%.4f", auc)) |>
@@ -1401,62 +1430,78 @@ performance_table <- performance |>
                              "Test sensitivity", "Test specificity", "Test AUC"),
                align = "lccccc")
 
-# Naive Bayes against QDA, as signed differences described in words.
-direction <- function(d) if (d > 0) "higher" else "lower"
-nb_error_diff <- perf_of("Naive Bayes", "test_error") - perf_of("QDA", "test_error")
-nb_auc_diff   <- perf_of("Naive Bayes", "auc") - perf_of("QDA", "auc")
-# The prose says KNN with the larger K has a lower test AUC than every
-# model-based classifier, KNN with K = 1 the worst test error rate, and
-# logistic regression flags the most test customers and has the highest
-# sensitivity of the model-based classifiers.
-top <- function(col) model_based$model[which.max(model_based[[col]])]
-stopifnot(perf_of(knn_default_name, "auc") < min(model_based$auc),
-          perf_of("KNN, K = 1", "test_error") == max(performance$test_error),
-          top("flagged") == "Logistic regression",
-          top("sensitivity") == "Logistic regression")
+# Naive Bayes against QDA, from the rates as displayed in the table.
+nb_error_diff <- round(perf_of("Naive Bayes", "test_error") - perf_of("QDA", "test_error"), 4)
+nb_auc_diff   <- round(perf_of("Naive Bayes", "auc"), 4) - round(perf_of("QDA", "auc"), 4)
+nb_error_text <- if (nb_error_diff == 0) "the same as QDA's" else
+  paste(sprintf("%.2f", 100 * abs(nb_error_diff)), "percentage points",
+        if (nb_error_diff > 0) "higher" else "lower", "than QDA's")
+nb_auc_text <- if (nb_auc_diff == 0) "the same as QDA's" else
+  paste(sprintf("%.4f", abs(nb_auc_diff)), if (nb_auc_diff > 0) "higher" else "lower")
+nb_cost <- if (nb_error_diff <= 0 && nb_auc_diff >= 0) "does not hurt naive Bayes" else
+  "costs naive Bayes little"
+
+# Model-based classifiers with the highest sensitivity and the most customers
+# flagged, named in prose (ties listed together).
+model_label <- c(`Logistic regression` = "logistic regression", LDA = "LDA",
+                 QDA = "QDA", `Naive Bayes` = "naive Bayes")
+and_list <- function(x) {
+  if (length(x) == 1) x else paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
+}
+top_models <- function(col) {
+  v <- round(model_based[[col]], 6)
+  unname(model_label[model_based$model[v == max(v)]])
+}
+sens_top <- top_models("sensitivity")
+flag_top <- top_models("flagged")
+top_text <- paste0(
+  if (length(sens_top) == 1) paste0("The highest sensitivity is ", sens_top, "'s") else
+    paste("The highest sensitivity is shared by", and_list(sens_top)),
+  if (identical(sens_top, flag_top) && length(flag_top) == 1) {
+    paste0(", which flags the most test customers, ", max(model_based$flagged), ".")
+  } else {
+    paste0("; ", and_list(flag_top), if (length(flag_top) == 1) " flags" else " flag",
+           " the most test customers, ", max(model_based$flagged), ".")
+  })
+
+# KNN's place among the classifiers, stated only when it holds.
+knn1_worst <- perf_of("KNN, K = 1", "test_error") == max(performance$test_error)
+knn_auc_lowest <- perf_of(knn_default_name, "auc") < min(model_based$auc)
 ```
 :::
 
 KNN uses balance and income, each standardized by its training mean and
 standard deviation, with $K = 1$ and $K = `r k_default`$, the smallest odd
-integer above $\sqrt{`r format(nrow(train), big.mark = "{,}")`}$. Every
-classifier is evaluated at threshold $0.5$ (for KNN, a majority vote), with
-the training error rate computed on the customers each model was fit to.
+integer above $\sqrt{`r format(nrow(train), big.mark = "{,}")`}$. The table
+gives each classifier's training error rate, and its test error rate,
+sensitivity, and specificity at threshold $0.5$ (for KNN, a majority vote),
+and its test AUC; the training error rate is computed on the customers each
+model was fit to.
 
 ```{r performance-table}
 #| echo: false
 performance_table
 ```
 
-Training error rates are optimistic in expectation, but on a single split
-chance can outweigh that: the training half drew `r n_defaults["train"]`
-defaulters (`r pct2(mean(yes_train))`) and the test half
-`r n_defaults["test"]` (`r pct2(mean(yes_test))`), and
-`r c("none of the four", "one of the four", "two of the four", "three of the four", "all four")[n_train_above + 1]`
-model-based classifiers have a training error rate above their test error
-rate. KNN with $K = 1$ shows the optimism plainly:
-its training error rate is `r pct2(perf_of("KNN, K = 1", "train_error"))`,
-since each training customer is its own nearest neighbor, against a test
-error rate of `r pct2(perf_of("KNN, K = 1", "test_error"))`, the worst in the
-table.
+`r optimism_text` KNN with $K = 1$ shows the optimism plainly: its training
+error rate is `r pct2(perf_of("KNN, K = 1", "train_error"))`, since each
+training customer is its own nearest neighbor, against a test error rate of
+`r pct2(perf_of("KNN, K = 1", "test_error"))``r if (knn1_worst) ", the worst in the table" else ""`.
 
-The four model-based classifiers have test error rates between
-`r pct2(min(model_based$test_error))` and
-`r pct2(max(model_based$test_error))`, against the
+The four model-based classifiers have test error rates
+`r te <- pct2(range(model_based$test_error)); if (te[1] == te[2]) paste("of", te[1]) else paste("between", te[1], "and", te[2])`,
+against the
 `r pct2(mean(yes_test))` of predicting `No` for every test customer. They
 differ more in sensitivity, from
 `r sprintf("%.1f%%", 100 * min(model_based$sensitivity))` to
 `r sprintf("%.1f%%", 100 * max(model_based$sensitivity))`, a difference of
 `r round(n_defaults["test"] * diff(range(model_based$sensitivity)))` of the
-`r n_defaults["test"]` test defaulters. The highest sensitivity is logistic
-regression's, which flags the most test customers,
-`r perf_of("Logistic regression", "flagged")`. Their test AUCs range only from
-`r sprintf("%.4f", min(model_based$auc))` to
+`r n_defaults["test"]` test defaulters. `r top_text` Their test AUCs range
+only from `r sprintf("%.4f", min(model_based$auc))` to
 `r sprintf("%.4f", max(model_based$auc))`. With the within-class correlation
-this small, dropping it costs naive Bayes little: its test error rate is
-`r if (nb_error_diff == 0) "the same as QDA's" else paste(sprintf("%.2f", 100 * abs(nb_error_diff)), "percentage points", direction(nb_error_diff), "than QDA's")`,
-and its AUC `r if (nb_auc_diff == 0) "is the same" else paste("is", sprintf("%.4f", abs(nb_auc_diff)), direction(nb_auc_diff))`.
-KNN with $K = `r k_default`$ has a lower test AUC than any of them,
+this small, dropping it `r nb_cost`: its test error rate is
+`r nb_error_text`, and its AUC is `r nb_auc_text`. KNN with
+$K = `r k_default`$ has `r if (knn_auc_lowest) "a lower test AUC than any of them" else "a test AUC"`,
 `r sprintf("%.4f", perf_of(knn_default_name, "auc"))`.
 
 ### Student strata
@@ -1536,22 +1581,26 @@ Stratifying changes no model's test error rate by more than
 by more than `r sprintf("%.4f", max_auc_change)`. (The interacted logistic
 regression reproduces separate per-stratum logistic regressions, to within
 $`r sci(max_diff_int)`$ on the training set.) Each stratified model estimates
-twice as many parameters, `r 2 * n_par_qda` means and covariances against
+twice as many parameters, `r 2 * n_par_qda` means and covariance entries against
 `r n_par_qda` for QDA (priors not counted, as in the parameter-count table)
 and `r length(coef(interacted_glm))` coefficients against
 `r length(coef(default_glm))` for logistic regression, which tends to make its
-training error rate more optimistic; the test rates are the fair comparison,
-and they come from a single split.
+training error rate more optimistic; the test rates are the fair comparison.
 
 **Conclusion.** The data show the departure from LDA that QDA is built for, a
 smaller balance spread among defaulters, and within-class correlations small
 enough that naive Bayes's independence assumption nearly holds. Yet changing
-LDA's model makes almost no difference to classifying new customers: the four
-model-based classifiers have nearly the same test error rates and AUCs, and
-within the training balances the curvature of QDA and naive Bayes moves their
-boundaries little from LDA's and logistic regression's. KNN with the larger $K$ ranks test customers less well than any
-model-based classifier, and KNN with $K = 1$ shows how far a training error
-rate can understate a test error rate. Separate models for students and
+LDA's model does little for classifying new customers: the four model-based
+classifiers have nearly the same test error rates and AUCs, differing mainly
+in how many customers each flags at $t = 0.5$, from
+`r min(model_based$flagged)` to `r max(model_based$flagged)`, and so in
+sensitivity, from `r sprintf("%.1f%%", 100 * min(model_based$sensitivity))` to
+`r sprintf("%.1f%%", 100 * max(model_based$sensitivity))`. Within the training
+balances the curvature of QDA and naive Bayes moves their boundaries little
+from LDA's and logistic regression's.
+`r if (knn_auc_lowest) "KNN with the larger $K$ ranks test customers less well than any model-based classifier, and KNN" else "KNN"`
+with $K = 1$ shows how far a training error rate can understate a test error
+rate. Separate models for students and
 non-students double the parameters without meaningfully changing the test
 results.
 
@@ -1562,7 +1611,7 @@ a covariance matrix $\Sigma_k$ for each class. The quadratic term
 $-\frac{1}{2}x^\top\Sigma_k^{-1}x$ and the term
 $-\frac{1}{2}\log\left|\Sigma_k\right|$ no longer cancel between classes, so
 the discriminant functions and the log posterior odds are quadratic in $x$,
-the decision boundary is a quadratic curve, and with one feature the class
+the decision boundary is a quadratic curve or surface, and with one feature the class
 with the larger variance is assigned in both tails. Each $\Sigma_k$ is
 estimated by its class's sample covariance matrix, which requires $n_k > p$.
 
@@ -1582,8 +1631,8 @@ need not change its classifications: it agrees with the Bayes classifier
 wherever its estimated posterior probability falls on the same side of the
 threshold as the true one.
 
-Logistic regression and LDA produce linear boundaries, QDA and naive Bayes
-quadratic ones, and KNN boundaries of any shape. Which classifier has the
+Logistic regression and LDA produce linear boundaries, QDA and Gaussian naive
+Bayes quadratic ones, and KNN boundaries of any shape. Which classifier has the
 lowest test error rate depends on how closely its assumptions match the
 data-generating process and on the sizes of $n$ and $p$; no method is best
 in every setting. Comparing classifiers requires test data the models were

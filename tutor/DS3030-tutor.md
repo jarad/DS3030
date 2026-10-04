@@ -601,8 +601,9 @@ chapter), and it stays higher at equal incomes. The extra flexibility barely
 changes training error or AUC, and the stratified models, with twice as many
 parameters, tend to have more optimistic training rates.
 
-All rates are training rates; test-error estimation is
-deferred to resampling. QDA and naive Bayes are the next chapter.
+All rates are training rates; estimating test error from
+the training data alone is deferred to resampling. QDA and naive Bayes are the next chapter,
+which evaluates on held-out customers.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
@@ -657,22 +658,23 @@ $\texttt{balance}^2$ is negative, so its posterior crosses 0.5 twice at a
 fixed income, the second crossing far beyond the training balances (naive
 Bayes's too); its boundary depends on income as well as balance. Naive
 Bayes, having dropped the within-class correlation, gives income a term that
-follows only the raw class difference in mean income, unlike LDA's
+compares the classes' income distributions without adjusting for balance
+(slightly curved, since the class income SDs differ), unlike LDA's
 correlation-adjusted income slope. On the test set the four
 model-based classifiers have nearly identical error rates and AUCs (naive
-Bayes close to QDA), KNN with $K = 71$ has a lower test AUC than any of them,
-and KNN with $K = 1$ has zero training error but the worst test error,
-illustrating why training error rates are optimistic. A final **student
+Bayes close to QDA), differing mainly in how many customers each flags at
+$t = 0.5$ and so in sensitivity; KNN with $K = 71$ has a lower test AUC than
+any of them, and KNN with $K = 1$ has zero training error but a much higher
+test error, illustrating why training error rates are optimistic. A final **student
 strata** subsection fits QDA separately to students and non-students and
 compares it with the single QDA, the additive logistic regression, and the
 logistic regression with every coefficient interacted with student status
 (shown numerically to equal separate per-stratum logistic fits); stratifying
 doubles the parameters (priors not counted, as in the chapter's
 parameter-count table) without meaningfully changing test error rates or
-AUCs. The chapter stresses that training error rates are optimistic in
-expectation, though on a single split chance can outweigh that (here the
-training half drew more defaulters), that test rates are the fair
-comparison, and that a single split is one draw.
+AUCs. The chapter stresses that training error rates are optimistic on
+average, though on a single split chance can outweigh that, that test rates
+are the fair comparison, and that a single split is one draw.
 
 ### 15. Generalized Linear Models
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
