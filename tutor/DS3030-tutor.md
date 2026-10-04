@@ -635,21 +635,30 @@ in the non-linear — while in the linear scenario LDA and logistic regression
 point, and no method wins in every scenario; KNN uses standardized features and fixed $K$ values (no
 tuning, since resampling is not yet taught).
 
-Worked example: `ISLR2::Default` (`balance` and the student indicator $D$;
-the LDA chapter used `balance` and `income`, and this chapter returns to the
-student indicator because naive Bayes models a categorical feature directly),
-split once at random into training and test halves. `MASS::qda()` and
-`e1071::naiveBayes()` fit beside LDA, logistic regression, and KNN
-($K = 1$ and $K$ the smallest odd integer above $\sqrt n$, on standardized
-features). QDA's posterior turns back down at balances beyond the data
-because non-defaulters have the larger balance variance; naive Bayes gives
-students a *positive* log-odds shift at fixed balance (the reverse of
-logistic regression, LDA, and QDA) because conditional independence ignores
-that students carry higher balances, yet its test AUC is close to the
-others'. The four model-based classifiers have similar test error rates and
-nearly identical ROC curves; KNN with $K = 71$ has the lowest AUC of the five ROC curves, and KNN
-with $K = 1$ has zero training error but a much higher test error,
-illustrating why training error rates are optimistic.
+Worked example: `ISLR2::Default` with `balance` and `income` as the two
+features, the same features as the LDA chapter, split once at random into
+training and test halves. A scatterplot with each class's normal-theory
+ellipse shows what the methods respond to: balance is less spread out among
+defaulters (the QDA motivation), income is about equally spread, the
+within-class balance-income correlations are small (so naive Bayes's
+independence assumption nearly holds), and income is bimodal because students
+have much lower incomes. `MASS::qda()` and `e1071::naiveBayes()` fit beside
+LDA, logistic regression, and KNN ($K = 1$ and $K$ the smallest odd integer
+above $\sqrt n$, on standardized features). QDA's coefficient of
+$\texttt{balance}^2$ is negative, so its posterior crosses 0.5 twice at a
+fixed income, the second crossing far beyond the training balances; its
+boundary depends on income as well as balance. On the test set the four
+model-based classifiers have nearly identical error rates and AUCs (naive
+Bayes close to QDA), KNN with $K = 71$ has a lower test AUC than any of them,
+and KNN with $K = 1$ has zero training error but the worst test error,
+illustrating why training error rates are optimistic. A final **student
+strata** subsection fits QDA separately to students and non-students and
+compares it with the single QDA, the additive logistic regression, and the
+logistic regression with every coefficient interacted with student status
+(shown numerically to equal separate per-stratum logistic fits); stratifying
+doubles the parameters without meaningfully changing test error rates or
+AUCs, and the chapter stresses that training rates are optimistic, test
+rates are the fair comparison, and a single split is one draw.
 
 ### 15. Generalized Linear Models
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>

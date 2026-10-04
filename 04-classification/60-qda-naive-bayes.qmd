@@ -24,6 +24,18 @@ dmvnorm2 <- function(x1, x2, mu, Sigma) {
   exp(-q / 2) / (2 * pi * sqrt(det(Sigma)))
 }
 
+# Renders a number in LaTeX scientific notation for use inside $...$.
+sci <- function(x, digits = 1) {
+  if (x == 0) return("0")
+  e <- floor(log10(abs(x)))
+  m <- signif(x / 10^e, digits)
+  if (abs(m) >= 10) {
+    m <- m / 10
+    e <- e + 1
+  }
+  sprintf("%s \\times 10^{%d}", format(m), e)
+}
+
 # Smallest odd integer greater than sqrt(n): a fixed rule of thumb for the
 # number of neighbors that does not look at any test data. Odd, so a
 # two-class vote cannot tie.
@@ -1039,41 +1051,39 @@ in every scenario.
 
 ## Credit card default classification
 
-**Question.** The previous lecture found LDA's shared-covariance assumption
-strained in the credit card data, using balance and income. This lecture
-returns to balance and student status, the features of the multiple logistic
-regression lecture, because naive Bayes can model a categorical feature
-directly instead of treating it as Gaussian. Do QDA and naive Bayes, which change LDA's model in different directions,
-classify new customers more accurately than LDA and logistic regression, and
-how does KNN compare?
+**Question.** Do QDA and naive Bayes, which change LDA's model in different
+directions, classify new credit card customers more accurately than LDA and
+logistic regression, and how does KNN compare?
+
+These customers were analyzed in the logistic regression lectures and, with
+`balance` and `income`, in the previous lecture, which found LDA's
+assumptions strained. This lecture keeps those two features, evaluates every
+classifier on customers it was not fit to, and ends with separate models for
+students and non-students.
 
 **Data.** `ISLR2::Default` records `r format(nrow(Default), big.mark = ",")`
 customers. The response is `default`, with `Yes` the positive class. The
 explanatory variables are `balance`, the monthly credit card balance in
-dollars, and `student`. The features are `balance` and the indicator
-$D = \mathrm{I}(\texttt{student} = \texttt{Yes})$.
+dollars, and `income`, the customer's income in dollars; the features are the
+explanatory variables themselves. Student status defines the strata of the
+last subsection.
 
 ### Training and test sets
 
 The previous lecture's error rates were training error rates, optimistic
 because each customer helped fit the model that classified it. Here, as in the
 classification lecture's bias-variance script, the customers are split at
-random into two halves. Every model is fit to the training half, and its
-error rate, sensitivity, specificity, and AUC are computed on the test half,
-whose customers the model never saw.
+random into halves; every model is fit to the training half and evaluated on
+the test half, whose customers it never saw.
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r default-split}
 #| output: false
-Default <- Default |>
-  mutate(D = as.numeric(student == "Yes"))
-
 # Its own seed, so the split does not depend on the simulation above.
 set.seed(20261001)
 train_id <- sample(nrow(Default), nrow(Default) / 2)
-train <- Default[train_id, ] |>
-  mutate(default_jit = as.numeric(default == "Yes") + runif(n(), -0.03, 0.03))
+train <- Default[train_id, ]
 test  <- Default[-train_id, ]
 
 n_defaults <- c(train = sum(train$default == "Yes"),
@@ -1083,39 +1093,45 @@ n_defaults <- c(train = sum(train$default == "Yes"),
 
 Each half holds `r format(nrow(train), big.mark = ",")` customers, with
 `r n_defaults["train"]` defaulters in the training set and
-`r n_defaults["test"]` in the test set. A single split is one random draw: a
-different split would give somewhat different test error rates, and averaging
-over many splits is a topic of the resampling unit.
+`r n_defaults["test"]` in the test set. A different split would give somewhat
+different test error rates; averaging over many splits is a topic of the
+resampling unit.
 
 ### Class summaries
 
-QDA allows a different covariance matrix in each class, and naive Bayes
-assumes balance and $D$ are independent within each class. The training data
-show, before anything is fit, whether either matters.
+The figure below plots income against balance for the training customers,
+defaulters and non-defaulters distinguished by color and shape, with each
+class's 95% normal-theory ellipse, the contour of a Gaussian density with that
+class's sample mean and covariance matrix.
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r default-summaries}
 #| output: false
+dollars <- function(v) paste0("\\$", format(round(v), big.mark = ","))
+# Axis labels such as $60,000, without the scales package.
+dollar_labels <- function(v) ifelse(is.na(v), NA, paste0("$", format(v, big.mark = ",", scientific = FALSE, trim = TRUE)))
+
 class_summary <- train |>
   group_by(default) |>
-  summarize(sd_balance = sd(balance),
-            mean_balance_student = mean(balance[D == 1]),
-            mean_balance_nonstudent = mean(balance[D == 0]),
-            cor_balance_D = cor(balance, D),
-            .groups = "drop")
-
+  summarize(sd_balance = sd(balance), sd_income = sd(income),
+            cor_balance_income = cor(balance, income), .groups = "drop")
 summary_of <- function(k, col) class_summary[[col]][class_summary$default == k]
+student_income <- function(s) median(train$income[train$student == s])
 
-eda_plot <- ggplot(train, aes(x = balance, color = student,
-                              linetype = student)) +
-  geom_density(linewidth = 0.9, bounds = c(0, Inf), key_glyph = "path") +
-  facet_wrap(~ default, ncol = 1, labeller = label_both, scales = "free_y") +
+# Defaulters are drawn last so they are not hidden under non-defaulters.
+eda_scatter <- ggplot(arrange(train, default), aes(x = balance, y = income)) +
+  geom_point(aes(color = default, shape = default), alpha = 0.35, size = 0.8) +
+  stat_ellipse(aes(color = default, linetype = default), type = "norm",
+               level = 0.95, linewidth = 0.9) +
   scale_color_manual(values = class_colors) +
-  labs(x = "Credit card balance ($)", y = "Density", color = "Student",
-       linetype = "Student",
-       title = "Training set: balance by student status within each class") +
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+  scale_shape_manual(values = c(16, 17)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  scale_x_continuous(labels = dollar_labels) +
+  scale_y_continuous(labels = dollar_labels) +
+  labs(x = "Credit card balance ($)", y = "Income ($)", color = "Default",
+       shape = "Default", linetype = "Default",
+       title = "Training set, with each class's 95% normal-theory ellipse")
 ```
 :::
 
@@ -1123,32 +1139,35 @@ eda_plot <- ggplot(train, aes(x = balance, color = student,
 #| echo: false
 #| fig-width: 7
 #| fig-height: 4.5
-eda_plot
+eda_scatter
 ```
 
-The standard deviation of balance is
-\$`r format(round(summary_of("No", "sd_balance")), big.mark = ",")` among
+The defaulters' ellipse is centered at higher balances and is narrower in the
+balance direction: the standard deviation of balance is
+`r dollars(summary_of("No", "sd_balance"))` among non-defaulters and
+`r dollars(summary_of("Yes", "sd_balance"))` among defaulters, a difference
+QDA can represent and LDA cannot. Income is about equally spread in the two
+classes, with standard deviations of `r dollars(summary_of("No", "sd_income"))`
+and `r dollars(summary_of("Yes", "sd_income"))`.
+
+Within each class balance and income are weakly correlated, with
+$r = `r sprintf("%.3f", summary_of("No", "cor_balance_income"))`$ among
 non-defaulters and
-\$`r format(round(summary_of("Yes", "sd_balance")), big.mark = ",")` among
-defaulters, a difference QDA can represent and LDA cannot.
+$r = `r sprintf("%.3f", summary_of("Yes", "cor_balance_income"))`$ among
+defaulters, so the two ellipses are only slightly tilted and the naive Bayes
+assumption of within-class independence is nearly met. In both classes the
+points are densest in two horizontal bands, the bimodal income of the
+previous lecture's histograms. The lower band is mostly students: in the training set
+students' median income is `r dollars(student_income("Yes"))`, against
+`r dollars(student_income("No"))` for non-students. No Gaussian density, in
+QDA or naive Bayes, has two modes.
 
-Within each class, the student curve sits to the right of the non-student
-curve. Among defaulters, students carry an average balance of
-\$`r format(round(summary_of("Yes", "mean_balance_student")), big.mark = ",")`
-against
-\$`r format(round(summary_of("Yes", "mean_balance_nonstudent")), big.mark = ",")`
-for non-students, and the within-class correlation between balance and $D$ is
-`r sprintf("%.3f", summary_of("No", "cor_balance_D"))` among non-defaulters
-and `r sprintf("%.3f", summary_of("Yes", "cor_balance_D"))` among defaulters.
-Balance and student status are not independent within either class, so the
-naive Bayes assumption fails.
-
-### QDA fit
+### QDA and naive Bayes fits
 
 `MASS::qda()` takes the same formula as `MASS::lda()`:
 
 ```{r default-qda}
-default_qda <- MASS::qda(default ~ balance + student, data = train)
+default_qda <- MASS::qda(default ~ balance + income, data = train)
 default_qda
 ```
 
@@ -1156,67 +1175,76 @@ default_qda
 ### Code
 ```{r default-qda-extract}
 #| output: false
-# QDA balance thresholds for each student group: the posterior crosses 0.5
-# once inside the observed range and once far above it.
-qda_posterior_at <- function(b, s) {
-  nd <- tibble(balance = b, student = factor(s, levels = c("No", "Yes")))
-  predict(default_qda, newdata = nd)$posterior[, "Yes"]
+# Coefficient of balance^2 in QDA's log posterior odds of Yes:
+# -1/2 times the (balance, balance) entry of Sigma_Yes^{-1} - Sigma_No^{-1}.
+Sigma_inv <- map(c(No = "No", Yes = "Yes"), \(k) {
+  solve(cov(train[train$default == k, c("balance", "income")]))
+})
+balance_sq_coef <- -0.5 * (Sigma_inv$Yes - Sigma_inv$No)[1, 1]
+
+# Balances at which QDA's posterior crosses 0.5 at a fixed income.
+qda_gap <- function(b, inc) {
+  predict(default_qda, newdata = tibble(balance = b, income = inc))$posterior[, "Yes"] - 0.5
 }
-qda_thresholds <- tibble(student = c("No", "Yes")) |>
-  mutate(lower = map_dbl(student, \(s) {
-           uniroot(\(b) qda_posterior_at(b, s) - 0.5, c(1000, 2600))$root
-         }),
-         upper = map_dbl(student, \(s) {
-           uniroot(\(b) qda_posterior_at(b, s) - 0.5, c(2700, 10000))$root
-         }))
-threshold_of <- function(s, col) qda_thresholds[[col]][qda_thresholds$student == s]
-dollars <- function(v) paste0("\\$", format(round(v), big.mark = ","))
+income_levels <- quantile(train$income, c(0.25, 0.5, 0.75))
+qda_cross <- map(income_levels, \(inc) {
+  b <- seq(0, 10000, by = 10)
+  j <- which(diff(sign(qda_gap(b, inc))) != 0)
+  map_dbl(j, \(i) uniroot(qda_gap, b[c(i, i + 1)], inc = inc)$root)
+})
+cross_at <- function(i) map_dbl(qda_cross, i)
+# The prose describes two crossings, the second beyond the training data.
+stopifnot(balance_sq_coef < 0, all(lengths(qda_cross) == 2),
+          all(cross_at(2) > max(train$balance)))
 ```
 :::
 
 The output reports the prior probabilities and the class means of balance and
-of $D$, the same priors and means LDA reports. The covariance matrices are
-not printed; they are the two class-specific sample covariance matrices of
-$(\texttt{balance}, D)$.
+income, the same priors and means LDA reports. The covariance matrices are
+not printed; they are the two class-specific sample covariance matrices whose
+ellipses appear in the scatterplot.
 
-Because non-defaulters have the larger balance variance given student status,
-QDA's posterior probability of default eventually falls as balance grows: for
-non-students it crosses $0.5$ at `r dollars(threshold_of("No", "lower"))` and
-again at `r dollars(threshold_of("No", "upper"))` (for students,
-`r dollars(threshold_of("Yes", "lower"))` and
-`r dollars(threshold_of("Yes", "upper"))`), the second crossing far beyond the
-largest training balance of `r dollars(max(train$balance))`.
+Because balance varies less among defaulters at a given income, the
+coefficient of $\texttt{balance}^2$ in QDA's log posterior odds is negative,
+$`r sci(balance_sq_coef, 2)`$, and QDA's posterior probability of default
+eventually falls as balance grows. At the lower quartile, median, and upper
+quartile of income, `r dollars(income_levels[1])`,
+`r dollars(income_levels[2])`, and `r dollars(income_levels[3])`, the
+posterior crosses $0.5$ at balances of `r dollars(cross_at(1)[1])`,
+`r dollars(cross_at(1)[2])`, and `r dollars(cross_at(1)[3])`, and again at
+`r dollars(cross_at(2)[1])`, `r dollars(cross_at(2)[2])`, and
+`r dollars(cross_at(2)[3])`, beyond the largest training balance of
+`r dollars(max(train$balance))`: the boundary depends on income as well as
+balance, and it has a second branch at high balances.
 
-### Naive Bayes fit
-
-`e1071::naiveBayes()` models a numeric explanatory variable as Gaussian and a
-factor with a probability for each level, so `balance` gets a Gaussian density
-and `student` a Bernoulli one in each class:
+`e1071::naiveBayes()` models each numeric explanatory variable with a
+Gaussian density in each class:
 
 ```{r default-nb}
-default_nb <- e1071::naiveBayes(default ~ balance + student, data = train)
+default_nb <- e1071::naiveBayes(default ~ balance + income, data = train)
 default_nb
 ```
 
 The **A-priori probabilities** are $\hat\pi_k$, the same as QDA's. Under
-**Conditional probabilities**, the `balance` table gives each class's mean
-(first column) and standard deviation (second column), the Gaussian
-$\hat\mu_{kj}$ and $\hat\sigma_{kj}$. The `student` table gives
-$\hat\theta_{kj}$, the proportion of students and non-students within each
-class.
+**Conditional probabilities**, the `balance` and `income` tables give each
+class's mean (first column) and standard deviation (second column),
+$\hat\mu_{kj}$ and $\hat\sigma_{kj}$: QDA's estimates with the within-class
+covariance set to zero. The balance variances differ between classes, so
+naive Bayes's balance term is quadratic too.
 
-### Posterior probabilities
+### Decision boundaries
 
-Logistic regression and LDA are refit to the same training half for
-comparison. The table below gives each model's difference in log posterior
-odds of default between a student and a non-student with the same balance.
+With LDA and logistic regression refit to the training half, the figure draws
+all four models' decision boundaries over the training customers,
+non-defaulters as grey circles and defaulters as black triangles, shading
+balances beyond the largest training balance.
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r default-compare-fits}
 #| output: false
-default_lda <- MASS::lda(default ~ balance + student, data = train)
-default_glm <- glm(default ~ balance + student, data = train,
+default_lda <- MASS::lda(default ~ balance + income, data = train)
+default_glm <- glm(default ~ balance + income, data = train,
                    family = "binomial")
 
 posterior_all <- function(newdata) {
@@ -1228,93 +1256,49 @@ posterior_all <- function(newdata) {
                                  type = "raw")[, "Yes"])
 }
 
-shift_balances <- c(1000, 1500, 2000)
-shift_grid <- expand_grid(balance = shift_balances,
-                          student = factor(c("No", "Yes")))
-student_shift <- bind_cols(shift_grid, posterior_all(shift_grid)) |>
-  pivot_longer(-c(balance, student), names_to = "model",
-               values_to = "p_hat") |>
-  mutate(log_odds = qlogis(p_hat)) |>
-  select(-p_hat) |>
-  pivot_wider(names_from = student, values_from = log_odds) |>
-  mutate(shift = Yes - No)
+boundary_grid <- expand_grid(
+  balance = seq(0, 4500, length.out = 181),
+  income = seq(min(Default$income), max(Default$income), length.out = 121))
 
-shift_of <- function(m, b) {
-  student_shift$shift[student_shift$model == m & student_shift$balance == b]
-}
-
-student_shift_table <- student_shift |>
-  select(model, balance, shift) |>
-  mutate(balance = paste0("Balance \\$", format(balance, big.mark = ",")),
-         shift = sprintf("%.3f", shift)) |>
-  pivot_wider(names_from = balance, values_from = shift) |>
-  mutate(model = factor(model, levels = names(model_colors))) |>
-  arrange(model) |>
-  knitr::kable(col.names = c("Model", paste0("Balance \\$",
-                                             format(shift_balances,
-                                                    big.mark = ","))),
-               align = "lccc")
-
-posterior_grid <- expand_grid(balance = seq(0, 4500, length.out = 451),
-                              student = factor(c("No", "Yes")))
-posterior_curves <- bind_cols(posterior_grid, posterior_all(posterior_grid)) |>
-  pivot_longer(-c(balance, student), names_to = "model",
+boundary_curves <- bind_cols(boundary_grid, posterior_all(boundary_grid)) |>
+  pivot_longer(-c(balance, income), names_to = "model",
                values_to = "p_hat") |>
   mutate(model = factor(model, levels = names(model_colors)))
 
-posterior_plot <- ggplot(posterior_curves, aes(x = balance, y = p_hat)) +
+# Training customers under each model's 0.5 contour.
+boundaries_figure <- ggplot(mapping = aes(x = balance, y = income)) +
   annotate("rect", xmin = max(train$balance), xmax = Inf, ymin = -Inf,
-           ymax = Inf, fill = "grey85") +
-  geom_point(data = train, aes(y = default_jit), alpha = 0.08, size = 0.7) +
-  geom_hline(yintercept = 0.5, color = "grey60") +
-  geom_line(aes(color = model, linetype = model), linewidth = 0.9) +
-  facet_wrap(~ student, labeller = label_both) +
+           ymax = Inf, fill = "grey92") +
+  geom_point(data = arrange(train, default), aes(shape = default, fill = default),
+             color = "grey40", stroke = 0.2, size = 1.1, alpha = 0.6) +
+  geom_contour(data = boundary_curves, aes(z = p_hat, color = model,
+                                           linetype = model),
+               breaks = 0.5, linewidth = 0.9) +
+  scale_shape_manual(values = c(21, 24)) +
+  scale_fill_manual(values = c("grey70", "black")) +
   scale_color_manual(values = model_colors) +
   scale_linetype_manual(values = model_linetypes) +
-  scale_y_continuous(breaks = c(0, 0.5, 1)) +
-  labs(x = "Credit card balance ($)", y = "P(default = Yes)",
-       color = "Model", linetype = "Model",
-       title = "Posterior probability of default; shading beyond the largest training balance")
+  scale_x_continuous(labels = dollar_labels) +
+  scale_y_continuous(labels = dollar_labels) +
+  labs(x = "Credit card balance ($)", y = "Income ($)", shape = "Default",
+       fill = "Default", color = "Model", linetype = "Model",
+       title = "Decision boundaries; shading beyond the largest training balance")
 ```
 :::
 
-```{r student-shift-table}
+```{r default-boundary-figure}
 #| echo: false
-student_shift_table
+#| fig-width: 7.5
+#| fig-height: 4.5
+boundaries_figure
 ```
 
-```{r default-posterior-figure}
-#| echo: false
-#| fig-width: 8
-#| fig-height: 3.8
-posterior_plot
-```
-
-Logistic regression, LDA, and QDA all give a student lower log posterior
-odds of default than a non-student with the same balance: logistic
-regression by `r sprintf("%.3f", -shift_of("Logistic regression", shift_balances[1]))`
-and LDA by `r sprintf("%.3f", -shift_of("LDA", shift_balances[1]))` at every
-balance, and QDA by an amount that depends on balance, from
-`r sprintf("%.3f", -shift_of("QDA", shift_balances[1]))` at
-`r dollars(shift_balances[1])` to
-`r sprintf("%.3f", -shift_of("QDA", shift_balances[3]))` at
-`r dollars(shift_balances[3])`, because QDA's
-quadratic includes a product of balance and $D$. Naive Bayes reverses the
-sign, adding `r sprintf("%.3f", shift_of("Naive Bayes", shift_balances[1]))` at every
-balance. Its student term uses only the within-class proportions of students,
-which are higher among defaulters, and cannot see that students are more often defaulters because they carry
-higher balances, which the balance term already counts. This is the
-confounding of the multiple logistic regression lecture, which conditional
-independence assumes away.
-
-On the probability scale, the four curves cross $0.5$ at similar balances,
-close to the lower QDA thresholds above, with the naive Bayes curve shifted
-toward lower balances for students and toward higher balances for
-non-students, the two directions of its reversed student term. Above
-that they separate. Logistic regression and LDA continue toward $1$, while
-QDA and naive Bayes, whose balance terms are both quadratic because the two
-classes' balance variances differ, level off below $1$ and then turn down in
-the shaded region beyond the data.
+The LDA and logistic regression boundaries are nearly vertical lines, so
+income barely moves either model's balance threshold. Within the training
+balances, the QDA and naive Bayes boundaries run close to those lines. Each
+also has a second branch beyond the training balances, at the second
+crossings computed for QDA above, past which its posterior probability falls
+back below $0.5$.
 
 ### Test performance
 
@@ -1324,11 +1308,10 @@ the shaded region beyond the data.
 #| output: false
 k_default <- odd_above_sqrt(nrow(train))
 
-# KNN on standardized features, with the training means and SDs used for both
-# sets. Returns the vote proportion for "Yes" at each target row.
+# KNN vote proportion for "Yes", on features standardized by training means/SDs.
 standardize <- function(d) {
   cbind((d$balance - mean(train$balance)) / sd(train$balance),
-        (d$D - mean(train$D)) / sd(train$D))
+        (d$income - mean(train$income)) / sd(train$income))
 }
 knn_yes <- function(target, K) {
   fit <- class::knn(standardize(train), standardize(target), train$default,
@@ -1337,143 +1320,181 @@ knn_yes <- function(target, K) {
 }
 
 knn_default_name <- paste0("KNN, K = ", k_default)
-scores_train <- posterior_all(train) |>
-  mutate(`KNN, K = 1` = knn_yes(train, 1),
-         "{knn_default_name}" := knn_yes(train, k_default))
-scores_test <- posterior_all(test) |>
-  mutate(`KNN, K = 1` = knn_yes(test, 1),
-         "{knn_default_name}" := knn_yes(test, k_default))
-
-roc_curve <- function(score, positive) {
-  ord  <- order(score, decreasing = TRUE)
-  s    <- score[ord]
-  pos  <- positive[ord]
-  keep <- c(diff(s) != 0, TRUE)
-  tibble(fpr = c(0, cumsum(!pos)[keep] / sum(!positive)),
-         tpr = c(0, cumsum(pos)[keep] / sum(positive)))
+all_scores <- function(d) {
+  posterior_all(d) |>
+    mutate(`KNN, K = 1` = knn_yes(d, 1), "{knn_default_name}" := knn_yes(d, k_default))
 }
-auc_pairs <- function(score, positive) {
-  s_pos <- score[positive]
-  s_neg <- score[!positive]
-  mean(outer(s_pos, s_neg, ">")) + 0.5 * mean(outer(s_pos, s_neg, "=="))
-}
+scores_train <- all_scores(train)
+scores_test  <- all_scores(test)
 
+# AUC as the proportion of (defaulter, non-defaulter) pairs ordered correctly.
+auc_pairs <- function(s, pos) {
+  mean(outer(s[pos], s[!pos], ">")) + 0.5 * mean(outer(s[pos], s[!pos], "=="))
+}
 yes_train <- train$default == "Yes"
 yes_test  <- test$default == "Yes"
 
-performance <- tibble(model = names(scores_test)) |>
-  mutate(train_error = map_dbl(model, \(m) {
-           mean((scores_train[[m]] > 0.5) != yes_train)
-         }),
-         test_error = map_dbl(model, \(m) {
-           mean((scores_test[[m]] > 0.5) != yes_test)
-         }),
-         sensitivity = map_dbl(model, \(m) {
-           mean(scores_test[[m]][yes_test] > 0.5)
-         }),
-         specificity = map_dbl(model, \(m) {
-           mean(scores_test[[m]][!yes_test] <= 0.5)
-         }),
-         auc = map_dbl(model, \(m) auc_pairs(scores_test[[m]], yes_test)))
-
+rates <- function(p_train, p_test) {
+  tibble(train_error = mean((p_train > 0.5) != yes_train),
+         test_error  = mean((p_test > 0.5) != yes_test),
+         sensitivity = mean(p_test[yes_test] > 0.5),
+         specificity = mean(p_test[!yes_test] <= 0.5),
+         auc         = auc_pairs(p_test, yes_test))
+}
+performance <- map(names(scores_test), \(m) rates(scores_train[[m]], scores_test[[m]])) |>
+  set_names(names(scores_test)) |>
+  list_rbind(names_to = "model")
 perf_of <- function(m, col) performance[[col]][performance$model == m]
+model_based <- performance |> slice(1:4)
 
+pct2 <- function(v) sprintf("%.2f%%", 100 * v)
 performance_table <- performance |>
-  mutate(across(c(train_error, test_error, sensitivity, specificity),
-                \(v) sprintf("%.2f%%", 100 * v)),
-         auc = sprintf("%.4f", auc)) |>
+  mutate(across(train_error:specificity, pct2), auc = sprintf("%.4f", auc)) |>
   knitr::kable(col.names = c("Model", "Training error", "Test error",
-                             "Test sensitivity", "Test specificity",
-                             "Test AUC"),
+                             "Test sensitivity", "Test specificity", "Test AUC"),
                align = "lccccc")
 
-roc_models <- c("Logistic regression", "LDA", "QDA", "Naive Bayes",
-                knn_default_name)
-roc_test <- map(roc_models, \(m) {
-  roc_curve(scores_test[[m]], yes_test) |> mutate(model = m)
-}) |>
-  bind_rows() |>
-  mutate(model = factor(model, levels = roc_models))
-
-roc_colors    <- setNames(unname(model_colors), roc_models)
-roc_linetypes <- setNames(unname(model_linetypes), roc_models)
-
-roc_plot <- ggplot(roc_test, aes(x = fpr, y = tpr, color = model,
-                                 linetype = model)) +
-  geom_abline(intercept = 0, slope = 1, color = "grey60",
-              linetype = "dashed") +
-  geom_line(linewidth = 0.8) +
-  scale_color_manual(values = roc_colors) +
-  scale_linetype_manual(values = roc_linetypes) +
-  coord_fixed() +
-  labs(x = "False positive rate (1 - specificity)",
-       y = "True positive rate (sensitivity)", color = "Model",
-       linetype = "Model", title = "Test-set ROC curves, balance + student")
+# Naive Bayes against QDA, as signed differences described in words.
+direction <- function(d) if (d > 0) "higher" else "lower"
+nb_error_diff <- perf_of("Naive Bayes", "test_error") - perf_of("QDA", "test_error")
+nb_auc_diff   <- perf_of("Naive Bayes", "auc") - perf_of("QDA", "auc")
+# The prose says KNN with the larger K has a lower test AUC than every
+# model-based classifier, and KNN with K = 1 the worst test error rate.
+stopifnot(perf_of(knn_default_name, "auc") < min(model_based$auc),
+          perf_of("KNN, K = 1", "test_error") == max(performance$test_error))
 ```
 :::
 
-KNN uses balance and $D$, each standardized by its training mean and standard
-deviation (the binary $D$ like the quantitative balance), with $K = 1$ and
-$K = `r k_default`$, the smallest odd integer above
-$\sqrt{`r format(nrow(train), big.mark = "{,}")`}$. Every classifier is
-evaluated at threshold $0.5$ (for KNN, a majority vote), with the training
-error rate computed on the customers each model was fit to:
+KNN uses balance and income, each standardized by its training mean and
+standard deviation, with $K = 1$ and $K = `r k_default`$, the smallest odd
+integer above $\sqrt{`r format(nrow(train), big.mark = "{,}")`}$. Every
+classifier is evaluated at threshold $0.5$ (for KNN, a majority vote), with
+the training error rate computed on the customers each model was fit to.
 
 ```{r performance-table}
 #| echo: false
 performance_table
 ```
 
-```{r roc-figure}
-#| echo: false
-#| fig-width: 6.5
-#| fig-height: 5.5
-roc_plot
-```
-
-The training error rates are optimistic. KNN with $K = 1$ makes a training
-error rate of `r sprintf("%.2f%%", 100 * perf_of("KNN, K = 1", "train_error"))`,
-since each training customer is its own nearest neighbor, but a test error
-rate of `r sprintf("%.2f%%", 100 * perf_of("KNN, K = 1", "test_error"))`,
-`r if (perf_of("KNN, K = 1", "test_error") == max(performance$test_error)) "the worst in the table" else "far above its training error rate"`.
+The training error rates are optimistic. KNN with $K = 1$ has a training
+error rate of `r pct2(perf_of("KNN, K = 1", "train_error"))`, since each
+training customer is its own nearest neighbor, but a test error rate of
+`r pct2(perf_of("KNN, K = 1", "test_error"))`, the worst in the table.
 
 The four model-based classifiers have test error rates between
-`r sprintf("%.2f%%", 100 * min(performance$test_error[1:4]))` and
-`r sprintf("%.2f%%", 100 * max(performance$test_error[1:4]))`, against the
-`r sprintf("%.2f%%", 100 * mean(yes_test))` of predicting `No` for every
-test customer. They differ more in sensitivity, from
-`r sprintf("%.1f%%", 100 * min(performance$sensitivity[1:4]))` to
-`r sprintf("%.1f%%", 100 * max(performance$sensitivity[1:4]))`, which with
-`r n_defaults["test"]` test defaulters is a difference of
-`r round(n_defaults["test"] * (max(performance$sensitivity[1:4]) - min(performance$sensitivity[1:4])))`
-customers. Their ROC curves are nearly indistinguishable, and their test AUCs
-range only from `r sprintf("%.4f", min(performance$auc[1:4]))` to
-`r sprintf("%.4f", max(performance$auc[1:4]))`. Naive Bayes, despite the
-failed independence assumption and the wrong sign on student status, orders
-the test customers almost as well as the others, with AUC
-`r sprintf("%.4f", perf_of("Naive Bayes", "auc"))`: balance dominates every
-model's ordering, and the student term moves a customer's log posterior
-odds far less than the range of balance does. KNN with
-$K = `r k_default`$ has the lowest AUC of the five curves,
+`r pct2(min(model_based$test_error))` and
+`r pct2(max(model_based$test_error))`, against the
+`r pct2(mean(yes_test))` of predicting `No` for every test customer. They
+differ more in sensitivity, from
+`r sprintf("%.1f%%", 100 * min(model_based$sensitivity))` to
+`r sprintf("%.1f%%", 100 * max(model_based$sensitivity))`, a difference of
+`r round(n_defaults["test"] * diff(range(model_based$sensitivity)))` of the
+`r n_defaults["test"]` test defaulters. Their test AUCs range only from
+`r sprintf("%.4f", min(model_based$auc))` to
+`r sprintf("%.4f", max(model_based$auc))`. With the within-class correlation
+this small, dropping it costs naive Bayes little: its test error rate is
+`r if (nb_error_diff == 0) "the same as QDA's" else paste(sprintf("%.2f", 100 * abs(nb_error_diff)), "percentage points", direction(nb_error_diff), "than QDA's")`,
+and its AUC `r if (nb_auc_diff == 0) "is the same" else paste("is", sprintf("%.4f", abs(nb_auc_diff)), direction(nb_auc_diff))`.
+KNN with $K = `r k_default`$ has a lower test AUC than any of them,
 `r sprintf("%.4f", perf_of(knn_default_name, "auc"))`.
 
-**Conclusion.** Relaxing LDA's shared covariance (QDA) or replacing its joint
-Gaussian with independent features (naive Bayes) makes no practical
-difference to classifying credit card default: on the test set the four
-model-based error rates lie within
-`r sprintf("%.2f", 100 * (max(performance$test_error[1:4]) - min(performance$test_error[1:4])))`
-percentage points of each other, and their AUCs within
-`r sprintf("%.3f", max(performance$auc[1:4]) - min(performance$auc[1:4]))`.
-With two features and a boundary close
-to a single balance threshold, the linear methods are not biased enough for
-the extra flexibility to pay. The curvature of QDA and naive Bayes matters
-only at the largest balances, where they level off below $1$, and naive Bayes
-misstates the effect of student status while still
-ordering customers almost as well as the other three, because balance carries
-most of the information. KNN with $K = `r k_default`$ has the lowest AUC of
-the five curves, and with $K = 1$ its
-`r sprintf("%.2f%%", 100 * perf_of("KNN, K = 1", "train_error"))` training
-error rate is no guide to its test error rate.
+### Student strata
+
+QDA with `balance` and `income` is now fit separately to the training set's
+`r format(sum(train$student == "No"), big.mark = ",")` non-students and
+`r format(sum(train$student == "Yes"), big.mark = ",")` students, beside the
+logistic regression whose intercept and slopes all interact with student
+status; every customer is scored by its own stratum's model.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r strata}
+#| output: false
+strata <- c(No = "No", Yes = "Yes")
+train_by <- map(strata, \(s) filter(train, student == s))
+strata_qda <- map(train_by, \(d) MASS::qda(default ~ balance + income, data = d))
+strata_glm <- map(train_by, \(d) glm(default ~ balance + income, data = d,
+                                     family = "binomial"))
+interacted_glm <- glm(default ~ (balance + income) * student, data = train,
+                      family = "binomial")
+
+# Score every customer with its own stratum's model.
+by_stratum <- function(d, score) {
+  p <- numeric(nrow(d))
+  for (s in strata) p[d$student == s] <- score(s, d[d$student == s, ])
+  p
+}
+qda_strat <- function(d) by_stratum(d, \(s, ds) predict(strata_qda[[s]], ds)$posterior[, "Yes"])
+max_diff_int <- max(abs(fitted(interacted_glm) - by_stratum(train, \(s, ds) {
+  predict(strata_glm[[s]], ds, type = "response")
+})))
+glm_int <- function(d) predict(interacted_glm, newdata = d, type = "response")
+
+strata_rates <- list(
+  "QDA, single fit" = rates(scores_train$QDA, scores_test$QDA),
+  "QDA, by student stratum" = rates(qda_strat(train), qda_strat(test)),
+  "Logistic regression, additive" = rates(scores_train$`Logistic regression`,
+                                          scores_test$`Logistic regression`),
+  "Logistic regression, interacted with student" =
+    rates(glm_int(train), glm_int(test))
+) |>
+  list_rbind(names_to = "model")
+strata_table <- strata_rates |>
+  select(-specificity) |>
+  mutate(across(train_error:sensitivity, pct2), auc = sprintf("%.4f", auc)) |>
+  knitr::kable(col.names = c("Model", "Training error", "Test error",
+                             "Test sensitivity", "Test AUC"), align = "lcccc")
+# Largest change in test error rate and test AUC from stratifying either
+# model: rows 2 and 4 are the stratified versions of rows 1 and 3.
+max_error_change <- max(abs(diff(strata_rates$test_error)[c(1, 3)]))
+max_auc_change   <- max(abs(diff(strata_rates$auc)[c(1, 3)]))
+# QDA estimates K - 1 priors, K p means, and K p (p + 1) / 2 covariances.
+n_par_qda <- (2 - 1) + count_qda(2, 2)
+stratum_rate <- function(s) mean(train_by[[s]]$default == "Yes")
+```
+:::
+
+The table gives each model's training error rate, and its test error rate,
+sensitivity, and AUC at $t = 0.5$.
+
+```{r strata-table}
+#| echo: false
+strata_table
+```
+
+Fitting the logistic regression with every coefficient interacted with
+student status is the same as fitting separate logistic regressions to the
+two strata: on the training set the two give the same fitted probabilities,
+to within $`r sci(max_diff_int)`$.
+
+In the training set students default more often, `r sprintf("%.2f", 100 * stratum_rate("Yes"))`% against
+`r sprintf("%.2f", 100 * stratum_rate("No"))`%, so the stratified QDA gives
+them a larger prior for `Yes`. Naive Bayes could instead take `student` as a third
+feature with its own Bernoulli density, without a separate fit per stratum.
+
+Stratifying changes no model's test error rate by more than
+`r sprintf("%.2f", 100 * max_error_change)` percentage points or its test AUC
+by more than `r sprintf("%.4f", max_auc_change)`. Each stratified model
+estimates twice as many parameters — `r 2 * n_par_qda` against
+`r n_par_qda` for QDA, and `r length(coef(interacted_glm))` against
+`r length(coef(default_glm))` for logistic regression — which makes its
+training error rate the more optimistic; the test rates are the fair
+comparison, and they come from a single split.
+
+**Conclusion.** The data show the departure from LDA that QDA is built for, a
+smaller balance spread among defaulters, and within-class correlations small
+enough that naive Bayes's independence assumption nearly holds. Yet changing
+LDA's model makes no practical difference to classifying new customers: the
+four model-based test error rates lie within
+`r sprintf("%.2f", 100 * diff(range(model_based$test_error)))` percentage
+points of each other and their AUCs within
+`r sprintf("%.3f", diff(range(model_based$auc)))`, and the curvature of QDA
+and naive Bayes shows only beyond the training balances. KNN with
+$K = `r k_default`$ has a lower test AUC than any model-based classifier, and
+with $K = 1$ its `r pct2(perf_of("KNN, K = 1", "train_error"))` training error
+rate is no guide to its test error rate. Separate models for students and
+non-students double the parameters without changing any test error rate by
+more than `r sprintf("%.2f", 100 * max_error_change)` percentage points.
 
 ## Conclusion
 
