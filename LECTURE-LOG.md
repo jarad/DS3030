@@ -58,3 +58,25 @@ the file(s) actually covered and what really happened, then delete it from
 this table. Add new planned rows here as the semester's pacing becomes clear
 further out; there's no need to plan the whole remaining semester at once.
 -->
+
+## Notes for the next offering
+
+Revisions to make before this material is taught again. These are edits to
+chapters that are already published to students, so they wait until after
+the semester in which they were noted.
+
+- The classification index: the original classification chapter
+  (`02-learning/30-classification.qmd`) and the logistic regression chapters
+  write $C$ (and $c$) for the number of classes and the class index, while
+  `04-classification/50-lda.qmd` onward writes $K$ and $k$. Consider changing
+  the earlier chapters to $K$ and $k$ so the notation is the same across the
+  unit (noted 2026-10-04; confirm which index the instructor meant before
+  editing).
+- Bracket nesting: four displays in `03-regression/10-slr.qmd`,
+  `03-regression/20-mlr.qmd` and the logistic chapters write
+  `\exp\left(...\right)` with parentheses inside, which the settled rule in
+  `CONVENTIONS.md` (outer bracket of a function argument is square when
+  parentheses are nested inside) would change to `\exp\left[...\right]`.
+- Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
+  has a callout headed `### Two questions, two verdicts`, which is not one of
+  the three fixed callout headings in `CONVENTIONS.md`.

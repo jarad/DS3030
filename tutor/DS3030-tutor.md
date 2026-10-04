@@ -497,61 +497,83 @@ First generative classifier. Contrasts logistic regression, which models
 $P(Y = k \mid X = x)$ directly, with modeling the **class-conditional
 density** $f_k(x)$ and **prior probability** $\pi_k = P(Y = k)$ and reversing
 the conditioning by Bayes' theorem, $p_k(x) = \pi_k f_k(x) / \sum_l \pi_l
-f_l(x)$; here $X$ is treated as random, unlike every earlier chapter. Classes
-are indexed $k = 1, \ldots, K$ as in ISLR2. The **Bayes classifier** (assign
-the class with the largest posterior) is shown to minimize the error rate,
-with $K = 2$ reducing to a $0.5$ threshold.
+f_l(x) \propto \pi_k f_k(x)$; here $X$ is treated as random, unlike every
+earlier chapter. Classes are indexed $k = 1, \ldots, K$ as in ISLR2. A
+classifier is an assignment rule $\hat y(x)$; the **Bayes classifier**
+assigns $\arg\max_k p_k(x)$ ($K = 2$: $p_2(x) > 0.5$), and because the
+conditional error probability is $1 - p_{\hat y(x)}(x)$ it minimizes the
+error at every $x$ and hence overall (the **Bayes error rate**).
 
 One feature: Gaussian $f_k$ with class means $\mu_k$ and a **shared**
-variance $\sigma^2$; derivation of the discriminant
-$\delta_k(x) = x\mu_k/\sigma^2 - \mu_k^2/(2\sigma^2) + \log\pi_k$ (the
-$x^2$ term cancels only because $\sigma^2$ is shared), recovery of
-$p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$, the log posterior odds
-$\beta_0 + \beta_1 x$ (logistic regression's form, estimated differently),
-and the boundary
-$x^* = (\mu_1+\mu_2)/2 + \sigma^2\log(\pi_1/\pi_2)/(\mu_2-\mu_1)$, which
-moves toward the rarer class's mean. Estimates $\hat\pi_k = n_k/n$, class
-sample means, and pooled variance with divisor $n - K$, derived from the
-**joint** likelihood $\prod_i \pi_{y_i} f_{y_i}(x_i)$ (closed form, so
-separation does not prevent them from existing, though a singular pooled
-covariance does) versus logistic regression's conditional
-likelihood. Multiple features: $x$ a column $p$-vector (no leading 1),
-multivariate Gaussian with mean vectors $\mu_k$ and shared covariance
-$\Sigma$, $\delta_k(x) = x^\top\Sigma^{-1}\mu_k -
-\tfrac12\mu_k^\top\Sigma^{-1}\mu_k + \log\pi_k$, a hyperplane boundary
+variance $\sigma^2$; derivation of the discriminant written as intercept plus
+slope, $\delta_k(x) = \left[\log\pi_k - \mu_k^2/(2\sigma^2)\right] +
+(\mu_k/\sigma^2)\,x$ (the dropped terms, including the $x^2$ term, are free
+of $k$ only because $\sigma^2$ is shared), recovery of $p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$, the
+log posterior odds $\beta_0 + \beta_1 x$ (logistic regression's form,
+estimated differently), and the boundary
+$x^* = (\mu_1+\mu_2)/2 + \sigma^2\log(\pi_1/\pi_2)/(\mu_2-\mu_1)$, where the
+prior-weighted curves $\pi_k f_k(x)$ cross, which moves toward the rarer
+class's mean. Estimates $\hat\pi_k = n_k/n$ and class sample means
+(maximum likelihood) and pooled variance with divisor $n - K$ (the maximum
+likelihood estimate rescaled to be unbiased), from the **joint** likelihood
+$\prod_i \pi_{y_i} f_{y_i}(x_i)$ (closed form, so separation does not
+prevent them from existing, though a singular pooled covariance does) versus
+logistic regression's conditional likelihood. Multiple features: $x$ a
+column $p$-vector (no leading 1), multivariate Gaussian with mean vectors
+$\mu_k$ and shared covariance $\Sigma$,
+$\delta_k(x) = \left(\log\pi_k - \tfrac12\mu_k^\top\Sigma^{-1}\mu_k\right) +
+x^\top\Sigma^{-1}\mu_k$, a hyperplane boundary $\beta_0 + x^\top\beta = 0$
 with slopes $\beta = \Sigma^{-1}(\mu_2 - \mu_1)$ (not perpendicular to the
 segment joining the means), and the pooled covariance estimate $\hat\Sigma$.
+The two-feature figure (means differing in both features, correlation 0.6)
+draws contours of $\pi_k f_k$ at fixed heights for equal and unequal priors:
+the boundary passes through the crossings of same-height contours, and a
+smaller prior shrinks that class's contours and shifts the boundary parallel
+toward its mean.
 
 Evaluation vocabulary, extending the classification chapter's confusion
-matrix to the two-class case in full: positive/negative class, threshold
-$t$, confusion matrix (TP, FN, FP, TN; truth in rows), error rate,
-**sensitivity** (recall, true positive rate), **specificity** (true negative
-rate), false negative and false positive rates, why lowering $t$ can only
-raise sensitivity and lower specificity, the **ROC curve** (sensitivity vs.
-$1 -$ specificity over all thresholds, depending only on how a classifier
-orders observations), and **AUC**, derived as $P(S_+ > S_-)$ and, for
-equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$, with the
-pairwise-comparison estimator. For equal-variance Gaussians the ROC curve is
-$\text{TPR} = \Phi(\Delta + \Phi^{-1}(\text{FPR}))$ with
-$\Delta = (\mu_2-\mu_1)/\sigma$, so curves for larger $\Delta$ are nested above
-smaller ones (at each false positive rate) and AUC orders them; for
-crossing ROC curves AUC averages the true positive rate over all false
-positive rates. Theory figures use known Gaussian parameters.
+matrix: positive/negative class, threshold $t$, confusion matrix (TP, FN, FP,
+TN; truth in rows), error rate, **sensitivity** (recall, true positive rate),
+**specificity** (true negative rate), false negative and false positive
+rates. With $K$ classes the confusion matrix is $K \times K$ with entries
+$n_{kj}$, the error rate is $1 - \sum_k n_{kk}/n$, sensitivity
+$n_{kk}/\sum_j n_{kj}$ and specificity
+$\sum_{l\ne k}\sum_{j\ne k} n_{lj} / \sum_{l\ne k}\sum_j n_{lj}$ are
+computed one class versus the rest, and the threshold $t = 0.5$ generalizes
+to "assign the largest posterior" (multi-class ROC/AUC is only a
+"Beyond this course" pointer; multinomial logistic regression is not
+covered in this course). Why lowering $t$ can only raise sensitivity and lower
+specificity; the **ROC curve** (sensitivity vs. $1 -$ specificity over all
+thresholds, depending only on how a classifier orders observations); and
+**AUC**, derived as $P(S_+ > S_-)$ and, for equal-variance Gaussians,
+$\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$, with the pairwise-comparison
+estimator. AUC ranks classifiers without choosing a threshold: a figure
+compares empirical ROC curves of three LDA classifiers fit to one simulated
+data set from the two-feature model ($X_1$ only, $X_2$ only, both), where
+the two-feature curve lies on or above both single-feature curves; when curves
+cross, each has the higher true positive rate over part of the range of
+false positive rates and AUC averages over that disagreement.
 
-Worked example: `ISLR2::Default` with `MASS::lda()`, first `balance` alone
-(priors interpreted first as the no-feature baseline, group means, pooled
-$\hat\sigma$, LDA-implied $\hat\beta_0, \hat\beta_1$ beside the logistic
-regression's, boundary near \$2,009 vs. \$1,937), then `balance + student`
-(negative student slope via $\hat\Sigma^{-1}$, matching the confounding
-reversal of the multiple logistic regression chapter; the 0/1 indicator
-cannot be Gaussian). Confusion matrix at $t = 0.5$ (error 2.75%,
-sensitivity about 24%, specificity about 99.8%) and at $t = 0.2$ (sensitivity
-about 59%), with the point that $t = 0.5$ is the Bayes classifier's threshold
-but need not minimize an *estimated* classifier's error rate (here the
-training error is lowest somewhat below $0.5$); ROC curves for LDA and logistic regression nearly coincide, with
-identical AUCs for the one-feature models and AUC about 0.95 for both
-two-feature models. All rates are training rates; test-error estimation is
-deferred to resampling. QDA and naive Bayes are the next chapter.
+Worked example: `ISLR2::Default` with `MASS::lda()`, opening with a brief recap of what the logistic regression chapters
+found and histograms of balance by
+default class. First `balance` alone (priors interpreted first as the
+no-feature error rate to beat, group means, pooled $\hat\sigma$,
+LDA-implied $\hat\beta_0, \hat\beta_1$ beside the logistic regression's,
+boundary near \$2,009 vs. \$1,937), then `balance + student` after
+default-by-student histograms (negative student slope via
+$\hat\Sigma^{-1}$, matching the confounding reversal of the multiple logistic
+regression chapter; the 0/1 indicator cannot be Gaussian). Confusion matrix
+at $t = 0.5$ (error 2.75%, sensitivity about 24%, specificity about 99.8%)
+and at $t = 0.2$ (sensitivity about 59%); an interactive threshold figure
+with checkboxes plots the overall error rate, true positive rate, and false
+positive rate against $t$, with the overall error rate tracking the false
+positive rate because non-defaulters dominate. $t = 0.5$ is the Bayes
+classifier's threshold but need not minimize an *estimated* classifier's
+error rate (here the training error is lowest somewhat below $0.5$); ROC
+curves for LDA and logistic regression nearly coincide, with identical AUCs
+for the one-feature models and AUC about 0.95 for both two-feature models.
+All rates are training rates; test-error estimation is deferred to
+resampling. QDA and naive Bayes are the next chapter.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
@@ -735,6 +757,21 @@ review touching the scale on which logistic coefficients live, what an
 interaction coefficient does and does not measure, a property of the fitted
 probabilities implied by the score equations, and the consequence of swapping
 which class is the event.
+
+**Homework 6** (generative classifiers, classifier evaluation, Poisson
+regression): deriving the log posterior odds of a naive Bayes classifier with
+non-Gaussian features, estimating its parameters, and the effect of redundant
+features; comparing logistic regression, LDA, QDA, naive Bayes, and KNN on a
+held-out test set by error rate, sensitivity, specificity, ROC curves, and AUC,
+relating the results to each method's assumptions, and choosing a threshold to
+meet a sensitivity target; a simulation of how training-set size shifts the
+LDA-versus-QDA tradeoff; choosing a classifier for described settings; a
+Poisson regression with rate ratios, Wald intervals and tests, a
+drop-in-deviance test, and an overdispersion check, with a critique of an
+overstated claim; a true/false conceptual review touching AUC versus
+thresholds, the role of the priors, training error of nested classifiers,
+conditional independence, the error rate of a trivial classifier, and what
+overdispersion does and does not affect.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable
