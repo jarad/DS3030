@@ -100,7 +100,7 @@ from class to class.
 
 The class-conditional density is therefore
 
-$$f_k(x) = \frac{1}{(2\pi)^{p/2}\left|\Sigma_k\right|^{1/2}} \exp\left(-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma_k^{-1} \left(x - \mu_k\right)\right),$$
+$$f_k(x) = \frac{1}{(2\pi)^{p/2}\left|\Sigma_k\right|^{1/2}} \exp\left[-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma_k^{-1} \left(x - \mu_k\right)\right],$$
 
 where $\left|\Sigma_k\right|$ is the determinant of $\Sigma_k$. Each class's
 contours are still ellipses centered at $\mu_k$, but now each class's
@@ -567,7 +567,7 @@ when $x_j$ changes from $0$ to $1$.
 When every $f_{kj}$ is Gaussian, the product of $p$ independent normal
 densities is a multivariate normal density with a diagonal covariance matrix:
 
-$$\prod_{j=1}^p \frac{1}{\sqrt{2\pi}\,\sigma_{kj}}\exp\left(-\frac{\left(x_j - \mu_{kj}\right)^2}{2\sigma_{kj}^2}\right) = \frac{1}{(2\pi)^{p/2}\left|\Lambda_k\right|^{1/2}}\exp\left(-\frac{1}{2}\left(x - \mu_k\right)^\top \Lambda_k^{-1}\left(x - \mu_k\right)\right),$$
+$$\prod_{j=1}^p \frac{1}{\sqrt{2\pi}\,\sigma_{kj}}\exp\left[-\frac{\left(x_j - \mu_{kj}\right)^2}{2\sigma_{kj}^2}\right] = \frac{1}{(2\pi)^{p/2}\left|\Lambda_k\right|^{1/2}}\exp\left[-\frac{1}{2}\left(x - \mu_k\right)^\top \Lambda_k^{-1}\left(x - \mu_k\right)\right],$$
 
 where
 

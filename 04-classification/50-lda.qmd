@@ -143,7 +143,7 @@ every class**.
 
 The class-conditional density is therefore the normal density
 
-$$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left(-\frac{(x - \mu_k)^2}{2\sigma^2}\right),$$
+$$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left[-\frac{(x - \mu_k)^2}{2\sigma^2}\right],$$
 
 where $\pi$ without a subscript is the constant $3.14159\ldots$, unrelated to the
 prior probabilities $\pi_k$.
@@ -399,7 +399,7 @@ positive definite.
 
 The class-conditional density is therefore the multivariate normal density
 
-$$f_k(x) = \frac{1}{(2\pi)^{p/2}\,|\Sigma|^{1/2}} \exp\left(-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma^{-1} \left(x - \mu_k\right)\right),$$
+$$f_k(x) = \frac{1}{(2\pi)^{p/2}\,|\Sigma|^{1/2}} \exp\left[-\frac{1}{2}\left(x - \mu_k\right)^\top \Sigma^{-1} \left(x - \mu_k\right)\right],$$
 
 where $|\Sigma|$ is the determinant of $\Sigma$.
 

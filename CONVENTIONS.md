@@ -31,9 +31,16 @@ convention.
   defaults to `()`. Two levels are `[(\cdot)]`; three are `{[(\cdot)]}`.
   Never repeat the same bracket at two nested levels, and never use a level's
   bracket out of cycle order. Example: $E[(Y - \hat f(X))^2]$, not
-  $E\{[Y-\hat f(X)]^2\}$ and not $E(Y-\hat f(X))^2$. This governs $E[\cdot]$,
-  $Var[\cdot]$, $Bias[\cdot]$ and any other nested mathematical expression —
-  it is a general typesetting rule, not one specific to expectation notation.
+  $E\{[Y-\hat f(X)]^2\}$ and not $E(Y-\hat f(X))^2$. This governs any nested
+  mathematical expression, including a function's argument such as
+  $\exp\left[-\tfrac{1}{2}\left(x-\mu\right)^2/\sigma^2\right]$.
+  **The one exception is the expectation-type operators $E[\cdot]$,
+  $Var[\cdot]$, $Cov[\cdot]$, and $Bias[\cdot]$: their own brackets are
+  always square, at any depth, so $Var[E[Y \mid X]]$ is correct as written.**
+  Groupings inside one of these brackets still follow the cycle from $()$
+  (so $E[(Y - \hat f(X))^2]$), and a grouping that contains one, which must
+  sit outside the $[\cdot]$ it holds, takes $\{\cdot\}$:
+  $\left\{E[Y_i \mid x_i]\right\}^2$.
 - **The indicator function is $\mathrm{I}(\cdot)$**, upright, never plain
   italic $I(\cdot)$ — it names a function, not a variable.
 - **"Reference," not "baseline,"** for the category or bin a set of dummy
