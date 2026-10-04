@@ -52,7 +52,7 @@ chosen negative one.
 ## Generative classifiers
 
 Logistic regression models the conditional probability $P(Y = k \mid X = x)$
-directly. Its likelihood is the conditional distribution of the response given
+of each class $k = 1, \ldots, K$ directly. Its likelihood is the conditional distribution of the response given
 the features, and the distribution of the features themselves never enters it.
 
 A **generative classifier** takes the other route. It models how the features
@@ -1167,8 +1167,8 @@ from `balance` and `student`, and the
 [Flexible Logistic Regression](30-flexible-logistic-regression.qmd) lecture
 added interactions, including one between `balance` and `income`.
 
-**Data.** `ISLR2::Default` records `r format(nrow(Default), big.mark = ",")`
-customers. The response is `default`, with `Yes` the positive class. The
+**Data.** `ISLR2::Default` is a simulated data set of
+`r format(nrow(Default), big.mark = ",")` credit card customers. The response is `default`, with `Yes` the positive class. The
 explanatory variables are `balance`, the customer's monthly credit card
 balance in dollars, and `income`, the customer's income in dollars, the two
 quantitative explanatory variables; they are used because LDA models each
@@ -1346,9 +1346,9 @@ coef_table_1
 ```
 
 The first tab below shows the fitted Gaussian class-conditional densities
-over each class's histogram. The second and third show the same densities
-weighted by the estimated priors and the two estimated discriminant
-functions, each with a dotted line at LDA's boundary. The fourth shows the
+over each class's histogram. The second shows the same densities weighted by
+the estimated priors, and the third the two estimated discriminant functions,
+each with a dotted line at LDA's boundary. The fourth shows the
 posterior probability of default from LDA and from logistic regression, with
 each customer's jittered outcome and a grey line at $0.5$.
 
@@ -1462,8 +1462,8 @@ would predict `No` for every customer and misclassify the
 `r sprintf("%.2f", 100 * hand_1$pi[2])`% who defaulted; that error rate is the
 one any classifier using features has to beat.
 
-The **group means** are $\hat\mu_{\text{No}} = `r format(round(hand_1$mu[1, 1], 2), nsmall = 2)`$
-and $\hat\mu_{\text{Yes}} = `r format(round(hand_1$mu[2, 1], 2), nsmall = 2)`$
+The **group means** are $\hat\mu_{\text{No}} = `r gsub(",", "{,}", format(round(hand_1$mu[1, 1], 2), nsmall = 2, big.mark = ","))`$
+and $\hat\mu_{\text{Yes}} = `r gsub(",", "{,}", format(round(hand_1$mu[2, 1], 2), nsmall = 2, big.mark = ","))`$
 dollars, the mean balances of the class summary table. The pooled
 standard deviation is $\hat\sigma = `r sprintf("%.2f", sigma_hat_1)`$, between
 the two class-specific standard deviations. In the Gaussian densities tab, the
@@ -1491,16 +1491,15 @@ $\hat\beta_0 + \hat\beta_1 x$ reproduces the posterior probabilities returned
 by `predict()` to within $`r sci(max_diff_1, 1)`$.
 
 The decision boundary is
-$\hat x^* = -\hat\beta_0/\hat\beta_1 = `r format(round(x_star_lda), big.mark = ",")`$
-dollars for LDA and
-`r format(round(x_star_glm), big.mark = ",")` dollars for logistic regression.
-Both lie far above the midpoint of the class means,
-`r format(round(mean(hand_1$mu[, 1])), big.mark = ",")` dollars, for
-different reasons. In LDA's boundary formula the shift comes from the prior
+$\hat x^* = -\hat\beta_0/\hat\beta_1 = \$`r gsub(",", "{,}", format(round(x_star_lda), big.mark = ","))`$
+for LDA and \$`r format(round(x_star_glm), big.mark = ",")` for logistic
+regression. Both lie far above the midpoint of the class means,
+\$`r format(round(mean(hand_1$mu[, 1])), big.mark = ",")`, for different
+reasons. In LDA's boundary formula the shift comes from the prior
 term
 $\hat\sigma^2\log\left(\hat\pi_{\text{No}}/\hat\pi_{\text{Yes}}\right)/\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$,
-which adds `r format(round(x_star_lda - mean(hand_1$mu[, 1])), big.mark = ",")`
-dollars because $\hat\pi_{\text{Yes}}$ is so small. The prior-weighted
+which adds \$`r format(round(x_star_lda - mean(hand_1$mu[, 1])), big.mark = ",")`
+because $\hat\pi_{\text{Yes}}$ is so small. The prior-weighted
 densities tab shows the effect: weighting by the priors shrinks the defaulter
 curve to a small bump that rises above the non-defaulter curve only past the
 dotted line at $\hat x^*$, deep in the right tail where both are small. The
@@ -2214,9 +2213,8 @@ strata_summary_table
 
 Students default more often than non-students,
 `r sprintf("%.2f", 100 * strata_summary_of("Yes", "rate"))`% against
-`r sprintf("%.2f", 100 * strata_summary_of("No", "rate"))`%, and their median
-income is far lower, \$`r dollars(strata_summary_of("Yes", "median_income"))`
-against \$`r dollars(strata_summary_of("No", "median_income"))`.
+`r sprintf("%.2f", 100 * strata_summary_of("No", "rate"))`%, and, as noted
+above, their median income is far lower.
 
 Below, LDA with `balance` and `income` is fit separately to the non-students
 and the students, so its priors, class means, and pooled covariance can all
@@ -2224,9 +2222,8 @@ differ by stratum. Beside it is the logistic regression in which the
 intercept and both slopes interact with student status. Each customer is
 scored by the model for its own stratum. Because each stratum's priors are
 its own default rates, each posterior estimates the probability of default
-given balance, income, and student status, so the two strata's posteriors
-share one scale and the table's AUC is that of a single classifier using all
-three.
+given balance, income, and student status, so posteriors from the two strata
+are on one scale and can be compared with each other.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -2263,7 +2260,7 @@ strata_metrics <- imap(list(
 strata_of <- function(m, col) strata_metrics[[col]][strata_metrics$model == m]
 strata_table <- strata_metrics |>
   mutate(error = sprintf("%.4f", error), auc = sprintf("%.5f", auc)) |>
-  knitr::kable(col.names = c("Model", "Error rate (t = 0.5)", "AUC"),
+  knitr::kable(col.names = c("Model", "Error rate at $t = 0.5$", "AUC"),
                align = "lcc")
 
 # Each stratum's boundary from each model, with its balance threshold at the
@@ -2358,6 +2355,29 @@ student status is the same as fitting separate logistic regressions to the
 two strata: the two give the same fitted probabilities, to within
 $`r sci(max_diff_int, 1)`$.
 
+The extra flexibility barely changes the classifications. Stratifying LDA
+moves its training error rate from
+`r sprintf("%.2f", 100 * strata_of("LDA, single fit", "error"))`% to
+`r sprintf("%.2f", 100 * strata_of("LDA, by student stratum", "error"))`% and
+its AUC from `r sprintf("%.4f", strata_of("LDA, single fit", "auc"))` to
+`r sprintf("%.4f", strata_of("LDA, by student stratum", "auc"))`; interacting
+the logistic regression with student status moves its error rate from
+`r sprintf("%.2f", 100 * strata_of("Logistic regression, additive", "error"))`%
+to
+`r sprintf("%.2f", 100 * strata_of("Logistic regression, interacted with student", "error"))`%
+and its AUC from
+`r sprintf("%.4f", strata_of("Logistic regression, additive", "auc"))` to
+`r sprintf("%.4f", strata_of("Logistic regression, interacted with student", "auc"))`.
+The AUC compares defaulters with non-defaulters across strata as well as
+within them, which is meaningful because the two strata's posteriors share
+that scale. These are training rates, and the stratified models estimate twice as many
+parameters — `r 2 * n_par_lda` against `r n_par_lda` for LDA (one prior,
+four means, and three covariance entries per fit), and
+`r length(coef(interacted_glm))` against `r length(coef(additive_glm))` for
+logistic regression — so their training rates tend to understate their test
+error rates by more; whether stratifying helps on new customers is a question for
+test data.
+
 At each stratum's median income, LDA's balance threshold is
 \$`r dollars(strata_value("No", "threshold"))` for non-students and
 \$`r dollars(strata_value("Yes", "threshold"))` for students, and logistic
@@ -2367,7 +2387,7 @@ regression's is
 the incomes each stratum actually has, logistic regression's boundary lies to
 the left of LDA's.
 
-The students' larger prior for `Yes` alone would lower their LDA threshold,
+The students' larger prior for `Yes` alone would lower their LDA threshold
 by \$`r dollars(prior_shift)`. Their threshold is higher nonetheless because
 students in both classes carry higher balances: non-defaulting students
 average \$`r dollars(class_mean("Yes", "No"))` against
@@ -2382,27 +2402,6 @@ income: over the incomes both strata have,
 \$`r dollars(overlap[1])` to \$`r dollars(overlap[2])`, it exceeds the
 non-students' by between \$`r dollars(min(threshold_gap))` and
 \$`r dollars(max(threshold_gap))`.
-
-The extra flexibility barely changes the classifications. Stratifying LDA
-moves its training error rate from
-`r sprintf("%.2f", 100 * strata_of("LDA, single fit", "error"))`% to
-`r sprintf("%.2f", 100 * strata_of("LDA, by student stratum", "error"))`% and
-its AUC from `r sprintf("%.4f", strata_of("LDA, single fit", "auc"))` to
-`r sprintf("%.4f", strata_of("LDA, by student stratum", "auc"))`; interacting
-the logistic regression with student status moves its error rate from
-`r sprintf("%.2f", 100 * strata_of("Logistic regression, additive", "error"))`%
-to
-`r sprintf("%.2f", 100 * strata_of("Logistic regression, interacted with student", "error"))`%
-and its AUC from
-`r sprintf("%.4f", strata_of("Logistic regression, additive", "auc"))` to
-`r sprintf("%.4f", strata_of("Logistic regression, interacted with student", "auc"))`.
-These are training rates, and the stratified models estimate twice as many
-parameters — `r 2 * n_par_lda` against `r n_par_lda` for LDA (one prior,
-four means, and three covariance entries per fit), and
-`r length(coef(interacted_glm))` against `r length(coef(additive_glm))` for
-logistic regression — so their training rates understate their test error
-rates by more; whether stratifying helps on new customers is a question for
-test data.
 
 **Conclusion.** LDA's Gaussian assumptions fit these data imperfectly —
 balance has a spike at zero and a smaller spread among defaulters, and income

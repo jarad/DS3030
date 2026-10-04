@@ -586,7 +586,9 @@ identical AUCs, and LDA's flatter posterior means it flags a subset of
 logistic regression's customers at high thresholds and a superset at low
 ones. Income adds little to classification beyond balance (AUC about 0.948
 to 0.949; at $t = 0.2$ it slightly raises the training error and lowers
-sensitivity), although it is a real predictor in the logistic regression. A short "Student strata" subsection first tabulates the strata (students
+sensitivity), although it is a real predictor in the logistic regression.
+
+A short "Student strata" subsection first tabulates the strata (students
 default more often and have far lower incomes), then fits LDA (balance +
 income) separately to students and non-students and compares it with
 logistic regression fully interacted with student status (shown to equal
@@ -596,8 +598,10 @@ AUC is meaningful. Students' larger prior alone would lower their LDA
 threshold, but their threshold is higher because students in both classes
 carry higher balances (the confounding of the multiple logistic regression
 chapter), and it stays higher at equal incomes. The extra flexibility barely
-changes training error or AUC, and with twice as many parameters its training
-rates understate its test error rates by more. All rates are training rates; test-error estimation is
+changes training error or AUC, and the stratified models, with twice as many
+parameters, tend to have more optimistic training rates.
+
+All rates are training rates; test-error estimation is
 deferred to resampling. QDA and naive Bayes are the next chapter.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
