@@ -554,26 +554,37 @@ the two-feature curve lies on or above both single-feature curves; when curves
 cross, each has the higher true positive rate over part of the range of
 false positive rates and AUC averages over that disagreement.
 
-Worked example: `ISLR2::Default` with `MASS::lda()`, opening with a brief recap of what the logistic regression chapters
-found and histograms of balance by
-default class. First `balance` alone (priors interpreted first as the
-no-feature error rate to beat, group means, pooled $\hat\sigma$,
+Worked example: `ISLR2::Default` with `MASS::lda()` on the two quantitative
+explanatory variables, `balance` and `income` (income in dollars as
+recorded, as in the flexible logistic regression chapter; income
+coefficients reported per \$1,000). It opens with a reminder of which
+variables the logistic regression chapters used and a class-summary table.
+First `balance` alone, with its histograms by default class shown before the
+fit (spike at zero, smaller spread among defaulters; priors interpreted first
+as the no-feature error rate to beat, group means, pooled $\hat\sigma$,
 LDA-implied $\hat\beta_0, \hat\beta_1$ beside the logistic regression's,
-boundary near \$2,009 vs. \$1,937), then `balance + student` after
-default-by-student histograms (negative student slope via
-$\hat\Sigma^{-1}$, matching the confounding reversal of the multiple logistic
-regression chapter; the 0/1 indicator cannot be Gaussian). Confusion matrix
-at $t = 0.5$ (error 2.75%, sensitivity about 24%, specificity about 99.8%)
-and at $t = 0.2$ (sensitivity about 59%); an interactive threshold figure
-with checkboxes plots the overall error rate, true positive rate, and false
+boundary near \$2,009 vs. \$1,937). Then `balance + income`, after a
+scatterplot of income against balance by class and income histograms by
+class: income is bimodal (the lower mode is mostly students, a data fact,
+not a model feature) and weakly negatively correlated with balance within
+each class (about $-0.16$). The fitted income slope is positive although
+defaulters' mean income is slightly lower, because $\hat\Sigma^{-1}$ adjusts
+income for balance; the boundary is a nearly vertical line in the
+(balance, income) plane, and logistic regression's lies slightly left of
+LDA's. Income adds little beyond balance (AUC about 0.948 to 0.949; similar
+error rates). Confusion matrix of the two-feature LDA at $t = 0.5$ (error
+about 2.8%, sensitivity about 23%, specificity about 99.8%) and at
+$t = 0.2$ (sensitivity about 57%); an interactive threshold figure with
+checkboxes plots the overall error rate, sensitivity, specificity, and false
 positive rate against $t$, with the overall error rate tracking the false
 positive rate because non-defaulters dominate. $t = 0.5$ is the Bayes
 classifier's threshold but need not minimize an *estimated* classifier's
-error rate (here the training error is lowest somewhat below $0.5$); ROC
-curves for LDA and logistic regression nearly coincide, with identical AUCs
-for the one-feature models and AUC about 0.95 for both two-feature models.
-All rates are training rates; test-error estimation is deferred to
-resampling. QDA and naive Bayes are the next chapter.
+error rate (LDA's training error is lowest somewhat below $0.5$). ROC curves
+for LDA and logistic regression nearly coincide; the one-feature models have
+identical AUCs, and LDA's flatter posterior means it flags fewer customers
+than logistic regression at high thresholds and more at low ones. All rates
+are training rates; test-error estimation is deferred to resampling. QDA and
+naive Bayes are the next chapter.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
@@ -614,7 +625,9 @@ in the non-linear — while in the linear scenario LDA and logistic regression
 point, and no method wins in every scenario; KNN uses standardized features and fixed $K$ values (no
 tuning, since resampling is not yet taught).
 
-Worked example: `ISLR2::Default` (`balance` and the student indicator $D$),
+Worked example: `ISLR2::Default` (`balance` and the student indicator $D$;
+the LDA chapter used `balance` and `income`, and this chapter returns to the
+student indicator because naive Bayes models a categorical feature directly),
 split once at random into training and test halves. `MASS::qda()` and
 `e1071::naiveBayes()` fit beside LDA, logistic regression, and KNN
 ($K = 1$ and $K$ the smallest odd integer above $\sqrt n$, on standardized

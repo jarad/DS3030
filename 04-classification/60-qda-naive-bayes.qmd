@@ -1040,8 +1040,10 @@ in every scenario.
 ## Credit card default classification
 
 **Question.** The previous lecture found LDA's shared-covariance assumption
-strained in the credit card data, and balance and student status were
-correlated within each class. Do QDA and naive Bayes, which change LDA's model in different directions,
+strained in the credit card data, using balance and income. This lecture
+returns to balance and student status, the features of the multiple logistic
+regression lecture, because naive Bayes can model a categorical feature
+directly instead of treating it as Gaussian. Do QDA and naive Bayes, which change LDA's model in different directions,
 classify new customers more accurately than LDA and logistic regression, and
 how does KNN compare?
 

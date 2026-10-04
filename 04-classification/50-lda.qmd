@@ -1151,30 +1151,33 @@ disagreement in one number.
 ## Credit card default classification
 
 **Question.** Can LDA identify credit card customers who will default from
-their balance and student status, and how does it compare with the logistic
-regressions fit to the same customers in the previous lectures?
+their balance and income, and how does it compare with logistic regressions
+fit to the same customers and features?
 
 **Data.** `ISLR2::Default` records `r format(nrow(Default), big.mark = ",")`
 customers. The response is `default`, with `Yes` the positive class. The
 explanatory variables are `balance`, the customer's monthly credit card
-balance in dollars, and `student`, a two-level factor. The features are
-`balance` itself and the indicator
-$D = \mathrm{I}(\texttt{student} = \texttt{Yes})$.
+balance in dollars, and `income`, the customer's income in dollars. The
+features are the explanatory variables themselves. As in the flexible
+logistic regression lecture, `income` enters the models in dollars as
+recorded; its coefficients are reported per \$1,000 of income so that they
+are readable.
 
 ### Class summaries
 
-These customers were analyzed in the
-[Simple Logistic Regression](10-logistic-regression.qmd),
-[Multiple Logistic Regression](20-multiple-logistic-regression.qmd), and
-[Flexible Logistic Regression](30-flexible-logistic-regression.qmd)
-lectures. The probability of default rose with balance, student status
-mattered once balance was held fixed, and the additive model in balance and
-student status sufficed.
+These customers were analyzed in the logistic regression lectures: the
+[Simple Logistic Regression](10-logistic-regression.qmd) lecture modeled
+default from `balance`, the
+[Multiple Logistic Regression](20-multiple-logistic-regression.qmd) lecture
+from `balance` and `student`, and the
+[Flexible Logistic Regression](30-flexible-logistic-regression.qmd) lecture
+added interactions, including one between `balance` and `income`. This
+lecture uses `balance` and `income`, the two quantitative explanatory
+variables, because LDA models each class's features with a Gaussian density.
 
 The quantities LDA estimates — class proportions, class means, and a common
-spread — can all be computed before fitting anything. The histograms below
-show balance within each default class, ignoring student status, and the
-table summarizes each class.
+spread — can all be computed before fitting anything. The table summarizes
+each class.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1182,9 +1185,7 @@ table summarizes each class.
 #| output: false
 Default <- Default |>
   mutate(default01   = as.numeric(default == "Yes"),
-         student01   = as.numeric(student == "Yes"),
-         default_jit = default01 + runif(n(), -0.03, 0.03),
-         student_jit = student01 + runif(n(), -0.2, 0.2))
+         default_jit = default01 + runif(n(), -0.03, 0.03))
 
 class_summary <- Default |>
   group_by(default) |>
@@ -1192,24 +1193,57 @@ class_summary <- Default |>
             prop = n() / nrow(Default),
             mean_balance = mean(balance),
             sd_balance = sd(balance),
-            prop_student = mean(student01),
+            mean_income = mean(income),
+            sd_income = sd(income),
             n_zero = sum(balance == 0),
+            cor_balance_income = cor(balance, income),
             .groups = "drop")
+
+dollars <- function(v) format(round(v), big.mark = ",")
 
 class_summary_table <- class_summary |>
   transmute(default,
             n = format(n, big.mark = ","),
             prop = sprintf("%.4f", prop),
-            mean_balance = format(round(mean_balance), big.mark = ","),
-            sd_balance = format(round(sd_balance), big.mark = ","),
-            prop_student = sprintf("%.3f", prop_student)) |>
+            mean_balance = dollars(mean_balance),
+            sd_balance = dollars(sd_balance),
+            mean_income = dollars(mean_income),
+            sd_income = dollars(sd_income)) |>
   knitr::kable(col.names = c("Default", "Customers", "Proportion",
                              "Mean balance (\\$)", "SD of balance (\\$)",
-                             "Proportion students"),
-               align = "cccccc")
+                             "Mean income (\\$)", "SD of income (\\$)"),
+               align = "ccccccc")
 
 summary_of <- function(k, col) class_summary[[col]][class_summary$default == k]
+```
+:::
 
+```{r class-summary-table}
+#| echo: false
+class_summary_table
+```
+
+Only `r format(summary_of("Yes", "n"), big.mark = ",")` customers, a proportion
+of `r sprintf("%.4f", summary_of("Yes", "prop"))`, defaulted. Defaulters carry
+an average balance of \$`r dollars(summary_of("Yes", "mean_balance"))`
+against \$`r dollars(summary_of("No", "mean_balance"))` for non-defaulters,
+and the standard deviations of balance differ between classes,
+\$`r dollars(summary_of("No", "sd_balance"))` against
+\$`r dollars(summary_of("Yes", "sd_balance"))`, where LDA assumes one shared
+variance. The two classes' incomes are much closer: defaulters average
+\$`r dollars(summary_of("Yes", "mean_income"))` against
+\$`r dollars(summary_of("No", "mean_income"))`, with similar standard
+deviations.
+
+### Balance alone
+
+Before any model is fit, the histograms below show balance within each
+default class, one panel per class, on the density scale.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-hist}
+#| output: false
 balance_hist_plot <- ggplot(Default, aes(x = balance)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 100,
                  boundary = 0, fill = "grey80", color = "grey55") +
@@ -1226,33 +1260,11 @@ balance_hist_plot <- ggplot(Default, aes(x = balance)) +
 balance_hist_plot
 ```
 
-```{r class-summary-table}
-#| echo: false
-class_summary_table
-```
-
-Only `r format(summary_of("Yes", "n"), big.mark = ",")` customers, a proportion
-of `r sprintf("%.4f", summary_of("Yes", "prop"))`, defaulted. Defaulters carry
-an average balance of
-\$`r format(round(summary_of("Yes", "mean_balance")), big.mark = ",")`
-against \$`r format(round(summary_of("No", "mean_balance")), big.mark = ",")`
-for non-defaulters, and their histogram sits well to the right of the
-non-defaulters'.
-
-Two aspects of the data strain LDA's assumptions. The standard deviations of
-balance differ between classes,
-\$`r format(round(summary_of("No", "sd_balance")), big.mark = ",")` against
-\$`r format(round(summary_of("Yes", "sd_balance")), big.mark = ",")`, where
-LDA assumes one shared variance. And the non-defaulter histogram has a spike
-at zero — `r format(summary_of("No", "n_zero"), big.mark = ",")` customers
-carry no balance, and `r summary_of("Yes", "n_zero")` defaulters do — which
-no Gaussian density reproduces.
-
-Students make up a larger share of defaulters
-(`r sprintf("%.3f", summary_of("Yes", "prop_student"))`) than of
-non-defaulters (`r sprintf("%.3f", summary_of("No", "prop_student"))`).
-
-### Balance alone
+The defaulters' histogram sits well to the right of the non-defaulters'. The
+non-defaulter histogram also has a spike at zero —
+`r format(summary_of("No", "n_zero"), big.mark = ",")` customers carry no
+balance, and `r summary_of("Yes", "n_zero")` defaulters do — which no
+Gaussian density reproduces.
 
 `MASS::lda()` takes the same formula interface as `glm()`. Fitting `default`
 on `balance`:
@@ -1325,7 +1337,8 @@ coef_table_1
 The tabs below show the fitted Gaussian class-conditional densities over each
 class's histogram, the same densities weighted by the estimated priors, the
 two estimated discriminant functions, and the posterior probability of
-default from LDA and from logistic regression.
+default from LDA and from logistic regression, with each customer's jittered
+outcome; the dotted lines mark LDA's boundary.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1441,7 +1454,8 @@ standard deviation is $\hat\sigma = `r sprintf("%.2f", sigma_hat_1)`$, between
 the two class-specific standard deviations. In the Gaussian densities tab, the
 fitted density for non-defaulters misses the spike at zero, and the one for
 defaulters, forced to share $\hat\sigma$ with the larger class, is wider than
-their histogram: the two departures the class summaries flagged.
+their histogram: the two departures the histograms and class summaries
+flagged.
 
 The **coefficient of the linear discriminant**,
 `r signif(balance_lda$scaling[1, 1], 4)`, equals
@@ -1497,42 +1511,83 @@ directions and the Bayes'-theorem discriminants of this lecture produce the
 same classifier.
 :::
 
-### Balance and student
+### Balance and income
 
-Before `student` enters the model, the histograms below split each default
-class's balances by student status.
+Before `income` enters the model, the first tab below plots income against
+balance for every customer, with defaulters and non-defaulters distinguished
+by colour and shape, and the second shows income within each default class,
+one panel per class, on the density scale.
 
 ::: {.callout-note collapse="true"}
 ### Code
-```{r default-eda}
+```{r default-income-eda}
 #| output: false
-eda_plot <- ggplot(Default, aes(x = balance)) +
-  geom_histogram(aes(y = after_stat(density)), binwidth = 100,
+income_by_student <- Default |>
+  group_by(student) |>
+  summarize(median_income = median(income), .groups = "drop")
+student_income <- function(s) {
+  income_by_student$median_income[income_by_student$student == s]
+}
+
+# Defaulters are drawn last so they are not hidden under non-defaulters.
+scatter_base <- ggplot(arrange(Default, default),
+                       aes(x = balance, y = income)) +
+  geom_point(aes(color = default, shape = default), alpha = 0.35,
+             size = 0.8) +
+  scale_color_manual(values = class_colors) +
+  scale_shape_manual(values = c(16, 17)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  labs(x = "Credit card balance ($)", y = "Income ($)", color = "Default",
+       shape = "Default")
+
+eda_scatter <- scatter_base +
+  labs(title = "ISLR2::Default, income against balance")
+
+income_hist_plot <- ggplot(Default, aes(x = income)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2500,
                  boundary = 0, fill = "grey80", color = "grey55") +
-  facet_grid(default ~ student,
-             labeller = labeller(default = label_both, student = label_both)) +
-  labs(x = "Credit card balance ($)", y = "Density",
-       title = "ISLR2::Default, balance within each default-by-student group")
+  facet_wrap(~ default, ncol = 1, labeller = label_both) +
+  labs(x = "Income ($)", y = "Density",
+       title = "ISLR2::Default, income within each default class")
 ```
 :::
 
-```{r default-eda-figure}
+::: {.panel-tabset}
+#### Scatterplot
+```{r default-scatter-figure}
 #| echo: false
 #| fig-width: 7
 #| fig-height: 4.5
-eda_plot
+eda_scatter
 ```
 
-In both columns, the defaulters' histogram in the bottom row sits well to the
-right of the non-defaulters' in the top row. In both rows, the students'
-histogram on the right is shifted somewhat to the right of the non-students'
-on the left: within each default class, students carry higher balances, so
-balance and the student indicator are positively correlated.
+#### Income histograms
+```{r default-income-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+income_hist_plot
+```
+:::
 
-Adding `student` to the formula gives the $p = 2$ model:
+In the scatterplot, defaulters are concentrated at high balances across
+nearly the whole range of income, and at any given balance the two classes
+overlap in income. Within each class balance and income are weakly negatively
+correlated: $r = `r sprintf("%.3f", summary_of("No", "cor_balance_income"))`$
+among non-defaulters and
+$r = `r sprintf("%.3f", summary_of("Yes", "cor_balance_income"))`$ among
+defaulters.
+
+The two classes' income histograms look alike, and each is bimodal. The
+lower mode is mostly students: in these data students' median income is
+\$`r dollars(student_income("Yes"))`, against
+\$`r dollars(student_income("No"))` for non-students. No Gaussian density has
+two modes, so income strains LDA's assumptions just as balance did.
+
+Adding `income` to the formula gives the $p = 2$ model:
 
 ```{r additive-lda}
-additive_lda <- MASS::lda(default ~ balance + student, data = Default)
+additive_lda <- MASS::lda(default ~ balance + income, data = Default)
 additive_lda
 ```
 
@@ -1540,13 +1595,17 @@ additive_lda
 ### Code
 ```{r additive-lda-extract}
 #| output: false
-X2 <- model.matrix(~ balance + student, data = Default)[, -1]
+X2 <- as.matrix(Default[c("balance", "income")])
 hand_2 <- lda_by_hand(X2, Default$default)
 
 scaling_ratio <- additive_lda$scaling[, 1] / hand_2$beta
 cor_within <- hand_2$Sigma[1, 2] / sqrt(hand_2$Sigma[1, 1] * hand_2$Sigma[2, 2])
+# Income difference between the classes that their balance difference
+# predicts through the pooled within-class regression of income on balance.
+mean_diff <- hand_2$mu["Yes", ] - hand_2$mu["No", ]
+income_diff_predicted <- hand_2$Sigma[1, 2] / hand_2$Sigma[1, 1] * mean_diff[1]
 
-additive_glm <- glm(default ~ balance + student, data = Default,
+additive_glm <- glm(default ~ balance + income, data = Default,
                     family = "binomial")
 b_glm_2 <- coef(additive_glm)
 
@@ -1555,23 +1614,26 @@ post_glm_2 <- fitted(additive_glm)
 max_diff_2 <- max(abs(post_lda_2 -
                       plogis(hand_2$beta0 + drop(X2 %*% hand_2$beta))))
 
+# Income coefficients are reported per $1,000 of income.
 coef_table_2 <- tibble(
   term = c("Intercept $\\hat\\beta_0$", "`balance` $\\hat\\beta_1$",
-           "`studentYes` $\\hat\\beta_2$"),
-  lda = c(hand_2$beta0, hand_2$beta),
-  glm = unname(b_glm_2)
+           "`income` $\\hat\\beta_2$, per \\$1,000"),
+  lda = c(hand_2$beta0, hand_2$beta[1], 1000 * hand_2$beta[2]),
+  glm = c(b_glm_2[1], b_glm_2[2], 1000 * b_glm_2[3])
 ) |>
   mutate(across(c(lda, glm), \(v) sprintf("%.6f", v))) |>
   knitr::kable(col.names = c("Coefficient", "LDA", "Logistic regression"),
                align = "lcc")
 
-# Decision boundary in the (balance, D) plane:
-# beta0 + beta1 * balance + beta2 * D = 0.
-threshold_at <- function(b0, b1, b2, d) -(b0 + b2 * d) / b1
-x_star_lda_2 <- sapply(0:1, \(d) threshold_at(hand_2$beta0, hand_2$beta[1],
-                                              hand_2$beta[2], d))
-x_star_glm_2 <- sapply(0:1, \(d) threshold_at(b_glm_2[1], b_glm_2[2],
-                                              b_glm_2[3], d))
+# Decision boundary in the (balance, income) plane:
+# beta0 + beta1 * balance + beta2 * income = 0.
+income_levels <- quantile(Default$income, c(0.25, 0.5, 0.75))
+income_level_names <- c("lower quartile", "median", "upper quartile")
+threshold_at <- function(b0, b1, b2, inc) -(b0 + b2 * inc) / b1
+x_star_lda_2 <- threshold_at(hand_2$beta0, hand_2$beta[1], hand_2$beta[2],
+                             income_levels)
+x_star_glm_2 <- threshold_at(b_glm_2[1], b_glm_2[2], b_glm_2[3],
+                             income_levels)
 
 boundary_lines <- tibble(
   model = c("LDA", "Logistic regression"),
@@ -1579,73 +1641,71 @@ boundary_lines <- tibble(
   slope = c(-hand_2$beta[1] / hand_2$beta[2], -b_glm_2[2] / b_glm_2[3])
 )
 
-boundary_plot <- ggplot(Default, aes(x = balance, y = student_jit)) +
-  geom_point(aes(color = default, shape = default), alpha = 0.25,
-             size = 0.9) +
+boundary_plot <- scatter_base +
   geom_abline(data = boundary_lines,
               aes(intercept = intercept, slope = slope, linetype = model),
               linewidth = 0.9) +
-  scale_color_manual(values = class_colors) +
-  scale_shape_manual(values = c(16, 17)) +
-  scale_y_continuous(breaks = c(0, 1), labels = c("No (0)", "Yes (1)")) +
-  coord_cartesian(ylim = c(-0.35, 1.35)) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
-  labs(x = "Credit card balance ($)", y = "Student indicator D",
-       color = "Default", shape = "Default", linetype = "Boundary",
-       title = "Decision boundaries in the (balance, D) plane")
+  coord_cartesian(xlim = range(Default$balance),
+                  ylim = range(Default$income)) +
+  labs(linetype = "Boundary",
+       title = "Decision boundaries in the (balance, income) plane")
 
-posterior_grid_2 <- expand_grid(
-  balance = seq(0, 2800, length.out = 400),
-  student = factor(c("No", "Yes"), levels = levels(Default$student))
-)
+# Posterior probability against balance at three fixed incomes.
+income_facet <- function(v) {
+  factor(v, levels = unname(income_levels),
+         labels = sprintf("Income $%s (%s)", dollars(income_levels),
+                          income_level_names))
+}
+posterior_grid_2 <- expand_grid(balance = seq(0, 2800, length.out = 400),
+                                income = unname(income_levels))
 posterior_curves_2 <- posterior_grid_2 |>
   mutate(LDA = predict(additive_lda, newdata = posterior_grid_2)$posterior[, "Yes"],
          `Logistic regression` = predict(additive_glm,
                                          newdata = posterior_grid_2,
-                                         type = "response")) |>
+                                         type = "response"),
+         income_label = income_facet(income)) |>
   pivot_longer(c(LDA, `Logistic regression`), names_to = "model",
                values_to = "p_hat")
 
 posterior_plot_2 <- ggplot(posterior_curves_2, aes(x = balance, y = p_hat)) +
-  geom_point(data = Default, aes(y = default_jit), alpha = 0.08, size = 0.7) +
   geom_hline(yintercept = 0.5, color = "grey60") +
   geom_line(aes(color = model, linetype = model), linewidth = 0.9) +
-  facet_wrap(~ student, labeller = label_both) +
+  facet_wrap(~ income_label, nrow = 1) +
   scale_color_manual(values = model_colors) +
   scale_y_continuous(breaks = c(0, 0.5, 1)) +
   labs(x = "Credit card balance ($)", y = "P(default = Yes)",
        color = "Model", linetype = "Model",
-       title = "Posterior probability of default by student status")
+       title = "Posterior probability of default at three incomes")
 ```
 :::
 
 Substituting the estimates into $\beta_0$ and $\beta$ gives LDA's
-coefficients, shown beside those of the additive logistic regression of the
-multiple logistic regression lecture:
+coefficients, shown beside those of the logistic regression with the same two
+features:
 
 ```{r coef-table-2}
 #| echo: false
 coef_table_2
 ```
 
-The tabs below show each model's decision boundary in the
-$(\texttt{balance}, D)$ plane, with the points jittered vertically around
-$D = 0$ and $D = 1$, and each model's posterior probability of default for
-non-students and for students.
+The first tab below draws each model's decision boundary over the
+scatterplot of income against balance. The second plots each model's
+posterior probability of default against balance at the lower quartile,
+median, and upper quartile of income, with a grey line at $0.5$.
 
 ::: {.panel-tabset}
 #### Decision boundary
 ```{r additive-boundary-figure}
 #| echo: false
 #| fig-width: 7
-#| fig-height: 3.6
+#| fig-height: 4.5
 boundary_plot
 ```
 
 #### Posterior
 ```{r additive-posterior-figure}
 #| echo: false
-#| fig-width: 7
+#| fig-width: 8
 #| fig-height: 3.4
 posterior_plot_2
 ```
@@ -1653,52 +1713,52 @@ posterior_plot_2
 
 The prior probabilities are unchanged, since they do not depend on the
 features. The group means now form a vector for each class: the `balance`
-column repeats the one-feature means, and the `studentYes` column is the
-class mean of the indicator $D$, which is the proportion of students in that
-class. The coefficients of the linear discriminant are proportional to
+column repeats the one-feature means, and the `income` column holds the class
+mean incomes of the class summary table. The coefficients of the linear
+discriminant are proportional to
 $\hat\beta = \hat\Sigma^{-1}\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$: dividing
 each printed coefficient by the corresponding entry of $\hat\beta$ computed
 from the formulas gives `r sprintf("%.4f", scaling_ratio[1])` for both.
 
 In the coefficient table, the intercept
 $\hat\beta_0 = `r sprintf("%.3f", hand_2$beta0)`$ is the log posterior odds of
-default for a non-student with no balance. The `balance` slope plays the same
-role as before. The `studentYes` slope,
-$`r sprintf("%.3f", hand_2$beta[2])`$, is negative: at a fixed balance, LDA
-assigns a student a lower posterior probability of default than a
-non-student. That is the opposite direction from the raw class means, where
-students made up a larger share of defaulters. Multiplying by
-$\hat\Sigma^{-1}$ accounts for the within-class correlation of
-`r sprintf("%.3f", cor_within)` between balance and $D$ seen in the
-histograms, in the same way that holding balance fixed reversed the sign of
-the student coefficient in logistic regression. Applying the logistic
+default for a customer with no balance and no income, an extrapolation, since
+the lowest recorded income is \$`r dollars(min(Default$income))`. The
+`balance` slope plays the same role as before. The `income` slope,
+$`r sprintf("%.4f", 1000 * hand_2$beta[2])`$ per \$1,000, is positive: at a
+fixed balance, LDA assigns a slightly higher posterior probability of default
+to a customer with a higher income, although defaulters' mean income is the
+lower of the two. Multiplying by $\hat\Sigma^{-1}$ adjusts each feature for
+the other. With a pooled within-class correlation of
+$`r sprintf("%.3f", cor_within)`$, defaulters' higher balances predict a mean
+income \$`r dollars(-income_diff_predicted)` below non-defaulters', but it is
+only \$`r dollars(-mean_diff[2])` below; the positive slope reflects that
+excess. Logistic regression's `income` coefficient,
+$`r sprintf("%.4f", 1000 * b_glm_2[3])`$ per \$1,000, is also positive, since
+it too compares customers with the same balance. Applying the logistic
 function to $\hat\beta_0 + x^\top\hat\beta$ again reproduces `predict()`'s
 posterior probabilities, to within $`r sci(max_diff_2, 1)`$.
 
-The boundary is a straight line in the $(\texttt{balance}, D)$ plane, though
-customers occupy only its two horizontal strips. Where the LDA line crosses
-each strip gives a balance threshold for each group:
-\$`r format(round(x_star_lda_2[1]), big.mark = ",")` for non-students and
-\$`r format(round(x_star_lda_2[2]), big.mark = ",")` for students. The
-logistic regression boundary gives
-\$`r format(round(x_star_glm_2[1]), big.mark = ",")` and
-\$`r format(round(x_star_glm_2[2]), big.mark = ",")`. In both models students
-need a higher balance than non-students before being classified as
-defaulters. The posterior tab shows the same comparison on the probability
-scale: in each panel the LDA curve is flatter than the logistic regression
-curve and crosses $0.5$ further right.
+The boundary is a straight line in the $(\texttt{balance}, \texttt{income})$
+plane, and a nearly vertical one, because a dollar of income moves the log
+posterior odds far less than a dollar of balance. Read as a balance
+threshold, LDA's boundary sits at
+\$`r dollars(x_star_lda_2[1])` for a customer at the lower quartile of
+income and \$`r dollars(x_star_lda_2[3])` at the upper quartile; logistic
+regression's sits at \$`r dollars(x_star_glm_2[1])` and
+\$`r dollars(x_star_glm_2[3])`. In both models the threshold falls as income
+rises, and logistic regression's lies to the left of LDA's. The posterior
+tab shows the same comparison on the probability scale: at each income the
+LDA curve is flatter than the logistic regression curve and crosses $0.5$
+further right.
 
-$D$ takes only the values $0$ and $1$, so the class-conditional distribution
-of $(\texttt{balance}, D)$ cannot be bivariate Gaussian. `MASS::lda()` fits
-the model regardless, because the estimates are sample means and covariances,
-which can be computed for any numeric column. Whether the resulting classifier
-is useful is a question about its classifications, which the next subsection
-answers.
+Whether adding `income` improves the classifications is the question of the
+next three subsections.
 
 ### Confusion matrices
 
 Classifying each customer as a defaulter when $\hat p(x) > 0.5$, the LDA
-classifier with `balance` and `student` produces this confusion matrix:
+classifier with `balance` and `income` produces this confusion matrix:
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1760,11 +1820,13 @@ the training data alone is the subject of the resampling unit.
 ### Threshold choice
 
 A credit card company that wants to catch more of its eventual defaulters can
-lower the threshold. The figure below tracks the overall error rate, the true
-positive rate (sensitivity), and the false positive rate
-($1 - \text{specificity}$) of the LDA classifier as $t$ moves from $0$ to
-$0.5$, with dotted lines at $t = `r t_low`$ and $t = 0.5$. The checkboxes
-choose which rates are drawn.
+lower the threshold. The figure below tracks four rates of the LDA classifier
+with `balance` and `income` as $t$ moves from $0$ to $0.5$ — the overall
+error rate, sensitivity (the true positive rate), specificity (the true
+negative rate), and the false positive rate ($1 - \text{specificity}$) — with
+dotted lines at $t = `r t_low`$ and $t = 0.5$. The checkboxes choose which
+rates are drawn; the false positive rate starts unchecked because it mirrors
+specificity.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1773,7 +1835,8 @@ choose which rates are drawn.
 threshold_rates <- tibble(t = seq(0, 0.5, by = 0.005)) |>
   mutate(m = map(t, \(tt) metrics(confusion_counts(post_lda_2, tt))),
          `Overall error rate` = map_dbl(m, "error"),
-         `True positive rate (sensitivity)` = map_dbl(m, "sensitivity"),
+         `Sensitivity (true positive rate)` = map_dbl(m, "sensitivity"),
+         `Specificity (true negative rate)` = map_dbl(m, "specificity"),
          `False positive rate (1 - specificity)` =
            map_dbl(m, \(v) 1 - v[["specificity"]])) |>
   select(-m) |>
@@ -1789,17 +1852,23 @@ min_error_threshold <- function(p_hat) {
 min_err_lda <- min_error_threshold(post_lda_2)
 min_err_glm <- min_error_threshold(post_glm_2)
 
-cm_lda_low <- confusion_counts(post_lda_2, t_low)
-cm_glm_05  <- confusion_counts(post_glm_2, 0.5)
-cm_glm_low <- confusion_counts(post_glm_2, t_low)
-m_lda_low  <- metrics(cm_lda_low)
-m_glm_05   <- metrics(cm_glm_05)
-m_glm_low  <- metrics(cm_glm_low)
+cm_lda1_05  <- confusion_counts(post_1, 0.5)
+cm_lda1_low <- confusion_counts(post_1, t_low)
+cm_lda_low  <- confusion_counts(post_lda_2, t_low)
+cm_glm_05   <- confusion_counts(post_glm_2, 0.5)
+cm_glm_low  <- confusion_counts(post_glm_2, t_low)
+m_lda1_05   <- metrics(cm_lda1_05)
+m_lda1_low  <- metrics(cm_lda1_low)
+m_lda_low   <- metrics(cm_lda_low)
+m_glm_05    <- metrics(cm_glm_05)
+m_glm_low   <- metrics(cm_glm_low)
 
 compare_table <- tibble(
-  Model = c("LDA", "LDA", "Logistic regression", "Logistic regression"),
-  t = c(0.5, t_low, 0.5, t_low),
-  cm = list(cm_lda_05, cm_lda_low, cm_glm_05, cm_glm_low)
+  Model = rep(c("LDA, balance", "LDA, balance + income",
+                "Logistic regression, balance + income"), each = 2),
+  t = rep(c(0.5, t_low), 3),
+  cm = list(cm_lda1_05, cm_lda1_low, cm_lda_05, cm_lda_low,
+            cm_glm_05, cm_glm_low)
 ) |>
   mutate(TP = map_dbl(cm, "TP"), FN = map_dbl(cm, "FN"),
          FP = map_dbl(cm, "FP"), TN = map_dbl(cm, "TN"),
@@ -1826,15 +1895,17 @@ ojs_define(threshold_rates = threshold_rates,
 ```{ojs}
 //| label: threshold-checkboxes
 //| echo: false
-rateNames = ["Overall error rate", "True positive rate (sensitivity)",
+rateNames = ["Overall error rate", "Sensitivity (true positive rate)",
+             "Specificity (true negative rate)",
              "False positive rate (1 - specificity)"]
 rateStyles = ({
   "Overall error rate": {stroke: "black", dash: "none"},
-  "True positive rate (sensitivity)": {stroke: "#D55E00", dash: "8,4"},
-  "False positive rate (1 - specificity)": {stroke: "#0072B2", dash: "2,4"}
+  "Sensitivity (true positive rate)": {stroke: "#D55E00", dash: "8,4"},
+  "Specificity (true negative rate)": {stroke: "#0072B2", dash: "2,4"},
+  "False positive rate (1 - specificity)": {stroke: "#009E73", dash: "12,4,2,4"}
 })
 viewof shownRates = Inputs.checkbox(rateNames, {
-  value: rateNames,
+  value: rateNames.slice(0, 3),
   format: name => html`<span style="display: inline-flex; align-items: center; gap: 0.4em">
     <svg width="36" height="10"><line x1="2" y1="5" x2="34" y2="5"
       stroke="${rateStyles[name].stroke}" stroke-width="2.5"
@@ -1866,38 +1937,47 @@ viewof shownRates = Inputs.checkbox(rateNames, {
 }
 ```
 
-The confusion-matrix counts at $t = 0.5$ and $t = `r t_low`$, for LDA and for
-the additive logistic regression:
+The confusion-matrix counts at $t = 0.5$ and $t = `r t_low`$ for LDA with
+`balance` alone, LDA with `balance` and `income`, and the logistic regression
+with `balance` and `income`:
 
 ```{r compare-table}
 #| echo: false
 compare_table
 ```
 
-As $t$ falls from $0.5$, the true positive rate rises steadily while the
-false positive rate stays near zero until $t$ is small. The overall error rate,
-dominated by the `r format(cm_lda_05["TN"] + cm_lda_05["FP"], big.mark = ",")`
+As $t$ falls from $0.5$, sensitivity rises steadily while specificity stays
+near $1$, and the false positive rate near $0$, until $t$ is small. The
+overall error rate, dominated by the
+`r format(cm_lda_05["TN"] + cm_lda_05["FP"], big.mark = ",")`
 non-defaulters, follows the false positive rate: nearly flat over most of the
 range, then climbing sharply as $t$ approaches $0$ and almost every customer is
 flagged.
 
-The overall error rate is not smallest at $t = 0.5$. LDA's training error rate
-is lowest near $t = `r sprintf("%.2f", min_err_lda[["t"]])`$, at
+The overall error rate need not be smallest at $t = 0.5$. LDA's training
+error rate is lowest near $t = `r sprintf("%.3f", min_err_lda[["t"]])`$, at
 `r sprintf("%.2f", 100 * min_err_lda[["error"]])`%, against
-`r sprintf("%.2f", 100 * m_lda_05["error"])`% at $t = 0.5$. The additive
-logistic regression's is lowest near
-$t = `r sprintf("%.2f", min_err_glm[["t"]])`$, at
+`r sprintf("%.2f", 100 * m_lda_05["error"])`% at $t = 0.5$. The logistic
+regression's is lowest near
+$t = `r sprintf("%.3f", min_err_glm[["t"]])`$, at
 `r sprintf("%.2f", 100 * min_err_glm[["error"]])`%, against
 `r sprintf("%.2f", 100 * m_glm_05["error"])`% at $t = 0.5$.
 
-In the table, lowering the threshold to $t = `r t_low`$ raises LDA's
-sensitivity from `r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`% to
+In the table, lowering the threshold to $t = `r t_low`$ raises the
+two-feature LDA classifier's sensitivity from
+`r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`% to
 `r sprintf("%.1f", 100 * m_lda_low["sensitivity"])`%, at the cost of
 specificity falling from `r sprintf("%.1f", 100 * m_lda_05["specificity"])`% to
 `r sprintf("%.1f", 100 * m_lda_low["specificity"])`% and the overall error rate
 rising from `r sprintf("%.2f", 100 * m_lda_05["error"])`% to
-`r sprintf("%.2f", 100 * m_lda_low["error"])`%. At both thresholds logistic
-regression flags more customers as defaulters than LDA does —
+`r sprintf("%.2f", 100 * m_lda_low["error"])`%. Adding `income` changes LDA
+very little: with `balance` alone the error rate is
+`r sprintf("%.2f", 100 * m_lda1_05["error"])`% and the sensitivity
+`r sprintf("%.1f", 100 * m_lda1_05["sensitivity"])`% at $t = 0.5$, and
+`r sprintf("%.2f", 100 * m_lda1_low["error"])`% and
+`r sprintf("%.1f", 100 * m_lda1_low["sensitivity"])`% at $t = `r t_low`$. At
+both thresholds logistic regression flags more customers as defaulters than
+the two-feature LDA classifier does —
 `r cm_glm_05["TP"] + cm_glm_05["FP"]` against
 `r cm_lda_05["TP"] + cm_lda_05["FP"]` at $t = 0.5$ — and so has the higher
 sensitivity and the lower specificity of the two.
@@ -1905,9 +1985,10 @@ sensitivity and the lower specificity of the two.
 ### ROC curves and AUC
 
 A comparison at one or two thresholds depends on which thresholds were
-chosen. The ROC curves below compare the two `balance` and `student`
-classifiers at every threshold, with the four classifiers of the previous
-table marked.
+chosen. The ROC curves below compare LDA and logistic regression with
+`balance` and `income` at every threshold, with their points at $t = 0.5$ and
+$t = `r t_low`$ from the previous table marked and a dashed diagonal for
+reference.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1917,8 +1998,8 @@ is_yes <- Default$default == "Yes"
 scores <- list(
   "LDA, balance" = post_1,
   "Logistic regression, balance" = fitted(balance_glm),
-  "LDA, balance + student" = post_lda_2,
-  "Logistic regression, balance + student" = post_glm_2
+  "LDA, balance + income" = post_lda_2,
+  "Logistic regression, balance + income" = post_glm_2
 )
 
 auc_values <- tibble(model = names(scores)) |>
@@ -1962,25 +2043,25 @@ roc_plot <- ggplot(roc_2, aes(x = fpr, y = tpr)) +
   labs(x = "False positive rate (1 - specificity)",
        y = "True positive rate (sensitivity)",
        color = "Model", linetype = "Model", shape = "Model",
-       fill = "Threshold", title = "ROC curves, balance + student")
+       fill = "Threshold", title = "ROC curves, balance + income")
 
-# Balance at which the additive models' posterior curves cross, by student
-# status, and the posterior probability there.
-posterior_both <- function(b, s) {
-  nd <- tibble(balance = b,
-               student = factor(s, levels = levels(Default$student)))
+# Balance at which the two-feature models' posterior curves cross, at the
+# lower quartile, median, and upper quartile of income, and the posterior
+# probability there.
+posterior_both <- function(b, inc) {
+  nd <- tibble(balance = b, income = inc)
   c(lda = predict(additive_lda, newdata = nd)$posterior[, "Yes"],
     glm = unname(predict(additive_glm, newdata = nd, type = "response")))
 }
-crossover <- tibble(student = c("No", "Yes")) |>
-  mutate(balance = map_dbl(student, \(s) {
-           uniroot(\(b) diff(posterior_both(b, s)), c(800, 2500))$root
+crossover <- tibble(income = unname(income_levels)) |>
+  mutate(balance = map_dbl(income, \(i) {
+           uniroot(\(b) diff(posterior_both(b, i)), c(800, 2500))$root
          }),
-         p = map2_dbl(balance, student, \(b, s) posterior_both(b, s)[["lda"]]))
-cross_of <- function(s, col) crossover[[col]][crossover$student == s]
+         p = map2_dbl(balance, income, \(b, i) posterior_both(b, i)[["lda"]]))
 
-# A threshold below both crossing probabilities.
+# A threshold below every crossing probability.
 t_below <- 0.1
+stopifnot(t_below < min(crossover$p))
 n_flag_lda_below <- sum(post_lda_2 > t_below)
 n_flag_glm_below <- sum(post_glm_2 > t_below)
 ```
@@ -1994,7 +2075,7 @@ roc_plot
 ```
 
 The AUC of each classifier, for both the `balance` and the
-`balance + student` models, computed both as the area under the empirical ROC
+`balance + income` models, computed both as the area under the empirical ROC
 curve and as the proportion of (defaulter, non-defaulter) pairs ordered
 correctly:
 
@@ -2009,45 +2090,51 @@ each model's marked point up and slightly right along its curve. At each of
 these two thresholds, logistic regression's point sits further along its
 nearly shared curve than LDA's.
 
-The two models' posterior curves cross at a balance of
-\$`r format(round(cross_of("No", "balance")), big.mark = ",")` for
-non-students and \$`r format(round(cross_of("Yes", "balance")), big.mark = ",")`
-for students, where both models give posterior probabilities of
-`r sprintf("%.3f", cross_of("No", "p"))` and
-`r sprintf("%.3f", cross_of("Yes", "p"))`, respectively. Above those balances LDA's flatter
-curve lies below logistic regression's, so a threshold above both crossing
-probabilities is reached by LDA only at a higher balance, and LDA flags fewer
-customers; both marked thresholds are of this kind. Below both crossing
-probabilities the order reverses: at $t = `r t_below`$, LDA flags
-`r format(n_flag_lda_below, big.mark = ",")` customers and logistic regression
+At the lower quartile, median, and upper quartile of income, the two models'
+posterior curves cross at balances of
+\$`r dollars(crossover$balance[1])`, \$`r dollars(crossover$balance[2])`,
+and \$`r dollars(crossover$balance[3])`, where both give posterior
+probabilities of `r sprintf("%.3f", crossover$p[1])`,
+`r sprintf("%.3f", crossover$p[2])`, and `r sprintf("%.3f", crossover$p[3])`.
+Above those balances LDA's flatter curve lies below logistic regression's, so
+a threshold above the crossing probabilities is reached by LDA only at a
+higher balance, and LDA flags fewer customers; both marked thresholds are of
+this kind. Below the crossing probabilities the order reverses: at
+$t = `r t_below`$, LDA flags `r format(n_flag_lda_below, big.mark = ",")`
+customers and logistic regression
 `r format(n_flag_glm_below, big.mark = ",")`.
 
 The two AUC computations agree in every row of the table. With `balance`
 alone, LDA and logistic regression have identical AUCs of
 `r sprintf("%.5f", auc_of("LDA, balance"))`: both posterior probabilities are
 increasing functions of balance, so they order the customers identically and
-trace the same ROC curve. With `balance` and `student`, the two classifiers'
-posterior probabilities weight $D$ differently relative to balance, so their
-orderings differ slightly. Their AUCs,
-`r sprintf("%.5f", auc_of("LDA, balance + student"))` and
-`r sprintf("%.5f", auc_of("Logistic regression, balance + student"))`, differ
-by $`r sci(auc_of("LDA, balance + student") - auc_of("Logistic regression, balance + student"), 2)`$.
-An AUC of
-`r sprintf("%.3f", auc_of("LDA, balance + student"))` means that for a randomly
-chosen defaulter and non-defaulter, the LDA classifier gives the defaulter
-the higher posterior probability about
-`r round(100 * auc_of("LDA, balance + student"))`% of the time.
+trace the same ROC curve. With `balance` and `income`, the two classifiers'
+posterior probabilities weight income differently relative to balance, so
+their orderings differ slightly. Their AUCs,
+`r sprintf("%.5f", auc_of("LDA, balance + income"))` and
+`r sprintf("%.5f", auc_of("Logistic regression, balance + income"))`, differ
+by $`r sci(auc_of("LDA, balance + income") - auc_of("Logistic regression, balance + income"), 2)`$,
+and adding `income` raises LDA's AUC by only
+`r sprintf("%.4f", auc_of("LDA, balance + income") - auc_of("LDA, balance"))`.
+An AUC of `r sprintf("%.3f", auc_of("LDA, balance + income"))` means that for
+a randomly chosen defaulter and non-defaulter, the LDA classifier gives the
+defaulter the higher posterior probability about
+`r round(100 * auc_of("LDA, balance + income"))`% of the time.
 
-**Conclusion.** LDA's Gaussian assumptions describe these data poorly — the
-student indicator is not Gaussian and the two classes' balance variances
-differ — yet LDA with `balance` and `student` orders the training customers
-almost exactly as the additive logistic regression does. Its decision
-boundary likewise assigns students a higher balance threshold. At $t = 0.5$
-and $t = `r t_low`$ it flags fewer customers than logistic regression, because
-its flatter posterior curve lies below logistic regression's over the balances
-where those thresholds are crossed. At $t = 0.5$ it
-catches `r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`% of the
-defaulters, and lowering the threshold to `r t_low` raises that to
+**Conclusion.** LDA's Gaussian assumptions fit these data imperfectly —
+balance has a spike at zero and a smaller spread among defaulters, and income
+is bimodal — yet LDA with `balance` and `income` orders the training
+customers almost exactly as the logistic regression with the same features
+does. Income adds little beyond balance: it raises LDA's AUC by
+`r sprintf("%.4f", auc_of("LDA, balance + income") - auc_of("LDA, balance"))`
+and moves its error rate at $t = 0.5$ from
+`r sprintf("%.2f", 100 * m_lda1_05["error"])`% to
+`r sprintf("%.2f", 100 * m_lda_05["error"])`%. At $t = 0.5$ and
+$t = `r t_low`$ LDA flags fewer customers than logistic regression, because
+its flatter posterior curve lies below logistic regression's over the
+balances where those thresholds are crossed. At $t = 0.5$ it catches
+`r sprintf("%.1f", 100 * m_lda_05["sensitivity"])`% of the defaulters, and
+lowering the threshold to `r t_low` raises that to
 `r sprintf("%.1f", 100 * m_lda_low["sensitivity"])`% at a cost of
 `r sprintf("%.1f", 100 * (m_lda_05["specificity"] - m_lda_low["specificity"]))`
 percentage points of specificity.
