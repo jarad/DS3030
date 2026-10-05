@@ -124,6 +124,16 @@ below are the broader authoring rules those specific decisions sit inside.
   is doing (motivating, defining the model, fitting it, interpreting it) and
   let each of those become one `##` with several `###` children, rather than
   giving each small step its own top-level section.
+- **Show data first in every section that introduces a method, not only in
+  the worked example.** The data-first order above is not limited to a
+  chapter's closing worked example. A `##` section that introduces a model
+  (for example, "one-feature LDA" or "multiple-feature LDA") opens with real
+  data, a plot of the raw data the method will be applied to, before any
+  model statement, density, or derivation, and the theory that follows
+  refers back to what that plot showed. The data may be the chapter's
+  running example, reused. A section that opens with a model formula and
+  only reaches data later, in the worked example, breaks this rule even if
+  the worked example itself is ordered correctly.
 - Worked examples follow **motivation → exploratory data analysis → model →
   inference → conclusion**, strictly in that order on the page. State the
   question and the data before showing any plot, show the plot before
@@ -141,11 +151,19 @@ below are the broader authoring rules those specific decisions sit inside.
   same way every other heading in the book is named for its content rather
   than its function. (This does not apply to the `### For example,` callout
   heading below, a different, fixed idiom for a short illustrative aside
-  inside a collapsed note.) When a chapter's example is substantial, give it
-  one standalone worked-example section late in the chapter (after the theory
-  subsections, before the conclusion) that walks the whole analysis start to
-  finish, rather than scattering every numeric result across the theory
-  subsections that introduce each piece of the method.
+  inside a collapsed note.) **A chapter's single running example is worked
+  through the whole chapter, not parked in a section near the end.** Each
+  piece of theory is followed immediately by that piece applied to the
+  running example — the data when the section opens, the fitted estimates
+  when estimation is introduced, the decision boundary when the boundary is
+  derived, the confusion matrix when it is defined, and so on — so the
+  theory is always illustrated by something the reader has already seen. A
+  standalone worked-example section is for an *additional* example (a
+  second dataset, or an extra analysis such as a different model fit to the
+  same data), not for the one example that carries the chapter. Do not use
+  simulated or made-up parameters to illustrate a piece of theory when the
+  running example can illustrate it; use a simulation only when the point is
+  about a data-generating process itself.
 - **Interpret $\beta_0$ before any other coefficient**, every time a fitted
   model's coefficients are read off in order — the intercept sets the
   baseline the other coefficients are differences or ratios from, so reading

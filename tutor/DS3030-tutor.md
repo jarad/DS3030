@@ -504,7 +504,10 @@ assigns $\arg\max_k p_k(x)$ ($K = 2$: $p_2(x) > 0.5$), and because the
 conditional error probability is $1 - p_{\hat y(x)}(x)$ it minimizes the
 error at every $x$ and hence overall (the **Bayes error rate**).
 
-One feature: Gaussian $f_k$ with class means $\mu_k$ and a **shared**
+One feature: the section opens with real data, histograms of `balance` by
+default class in `ISLR2::Default` (two roughly bell-shaped piles centered at
+different balances), which motivate the model of Gaussian $f_k$ with class
+means $\mu_k$ and a **shared**
 variance $\sigma^2$; derivation of the discriminant written as intercept plus
 slope, $\delta_k(x) = \left[\log\pi_k - \mu_k^2/(2\sigma^2)\right] +
 (\mu_k/\sigma^2)\,x$ (the dropped terms, including the $x^2$ term, are free
@@ -518,7 +521,10 @@ class's mean. Estimates $\hat\pi_k = n_k/n$ and class sample means
 likelihood estimate rescaled to be unbiased), from the **joint** likelihood
 $\prod_i \pi_{y_i} f_{y_i}(x_i)$ (closed form, so separation does not
 prevent them from existing, though a singular pooled covariance does) versus
-logistic regression's conditional likelihood. Multiple features: $x$ a
+logistic regression's conditional likelihood. Multiple features: the
+section opens with a scatterplot of income against balance by default class
+(overlapping clouds, weak negative within-class correlation), which motivates
+a shared covariance matrix; $x$ a
 column $p$-vector (no leading 1), multivariate Gaussian with mean vectors
 $\mu_k$ and shared covariance $\Sigma$,
 $\delta_k(x) = \left(\log\pi_k - \tfrac12\mu_k^\top\Sigma^{-1}\mu_k\right) +

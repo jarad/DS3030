@@ -137,6 +137,24 @@ Match the voice of the existing chapters. Specifically:
   disambiguates it. See `CONVENTIONS.md`.
 - Prefer short paragraphs and frequent `##` section headings over long prose
   runs. The notes are read on a web page and used live in class.
+- **A chapter's single running example is worked through the whole chapter,
+  not parked in a section near the end.** Each piece of theory is followed
+  immediately by that piece applied to the running example (the data when a
+  section opens, the fitted estimates when estimation is introduced, the
+  boundary when it is derived, the confusion matrix when it is defined). A
+  standalone worked-example section is only for an *additional* example, not
+  for the one example that carries the chapter. Do not illustrate theory with
+  simulated or made-up parameters when the running example can do it.
+- **Show data first in every section that introduces a method, not only in
+  the worked example.** A `##` section that introduces a model (for example,
+  "one-feature LDA" or "multiple-feature LDA") opens with real data — a plot
+  of the raw data the method will be applied to — before any model
+  statement, density, or derivation, and the theory that follows refers back
+  to what that plot showed. The data may be the chapter's running example,
+  reused. Opening a section with a model formula and reaching data only in
+  the worked example near the end of the chapter breaks this rule. When a
+  brief or a reviewer describes the order as applying to "the worked
+  example", apply it to these theory sections too.
 - Every worked example follows **motivation → exploratory data analysis →
   model → inference → conclusion**, strictly in that order on the page: state
   the question and the data before showing any plot, show the plot before

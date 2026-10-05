@@ -141,6 +141,62 @@ assumption about its form, and LDA's assumption is that it is Gaussian.
 
 ## One-feature LDA
 
+The credit card customers of the logistic regression lectures,
+`ISLR2::Default`, show what a one-feature model has to describe, with default
+status as the class and credit card balance as the feature. The histograms
+below show balance within each default class, one panel per class, on the
+density scale.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-data}
+#| output: false
+Default <- Default |>
+  mutate(default01   = as.numeric(default == "Yes"),
+         default_jit = default01 + runif(n(), -0.03, 0.03))
+
+dollars <- function(v) format(round(v), big.mark = ",")
+# Axis labels such as $60,000, without the scales package.
+dollar_labels <- function(v) {
+  ifelse(is.na(v), NA,
+         paste0("$", format(v, big.mark = ",", scientific = FALSE, trim = TRUE)))
+}
+
+balance_by_class <- Default |>
+  group_by(default) |>
+  summarize(mean = mean(balance), sd = sd(balance), .groups = "drop")
+balance_of <- function(k, col) balance_by_class[[col]][balance_by_class$default == k]
+
+balance_hist_plot <- ggplot(Default, aes(x = balance)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 100,
+                 boundary = 0, fill = "grey80", color = "grey55") +
+  facet_wrap(~ default, ncol = 1, labeller = label_both) +
+  scale_x_continuous(labels = dollar_labels) +
+  labs(x = "Credit card balance ($)", y = "Density",
+       title = "ISLR2::Default, balance within each default class")
+```
+:::
+
+```{r default-hist-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+balance_hist_plot
+```
+
+Each class's balances form a single, roughly bell-shaped pile, and the two
+piles are centered at different values: non-defaulters average
+\$`r dollars(balance_of("No", "mean"))` and defaulters
+\$`r dollars(balance_of("Yes", "mean"))`. Their spreads are of the same order,
+with standard deviations of \$`r dollars(balance_of("No", "sd"))` and
+\$`r dollars(balance_of("Yes", "sd"))`; the worked example at the end of the
+lecture returns to how far they differ and to the non-defaulters' spike at
+zero.
+
+That picture suggests a model: describe each class's balance by a Gaussian
+density with its own mean, the center of its pile, and one variance shared by
+both classes, the common width of the piles.
+
 ### Gaussian class-conditional densities
 
 With a single feature ($p = 1$), LDA assumes the statistical model
@@ -160,7 +216,9 @@ $$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left[-\frac{(x - \mu_k)^2}{2\sigma
 where $\pi$ without a subscript is the constant $3.14159\ldots$, unrelated to the
 prior probabilities $\pi_k$.
 
-The classes differ only in where their densities are centered. The shared
+The classes differ only in where their densities are centered. For the credit
+card customers, $\mu_k$ is the center of class $k$'s pile of balances in the
+histograms above, and $\sigma$ is the width the two piles share. The shared
 variance is what makes the classifier linear.
 
 ### Discriminant function
@@ -354,6 +412,10 @@ $\sum_k n_k = n$,
 - $\hat\sigma^2$ is the **pooled variance**: squared deviations from each
 observation's own class mean, summed over all classes and divided by $n - K$.
 
+For the balances in the histograms at the start of this section, $\hat\mu_k$
+is each class's mean balance; the worked example computes all three estimates
+and draws the fitted Gaussian curves over the same histograms.
+
 $\hat\pi_k$ and $\hat\mu_k$ are maximum likelihood estimates; $\hat\sigma^2$
 is the maximum likelihood estimate rescaled by $n/(n - K)$ to make it
 unbiased. Under the generative model the joint
@@ -399,6 +461,59 @@ $x^* = `r mean(toy_lda$means)`$.
 
 ## Multiple-feature LDA
 
+A second feature turns each customer into a point. The scatterplot below
+plots income against credit card balance for every customer, with defaulters
+and non-defaulters distinguished by color and shape.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-scatter}
+#| output: false
+# Defaulters are drawn last so they are not hidden under non-defaulters.
+scatter_base <- ggplot(arrange(Default, default),
+                       aes(x = balance, y = income)) +
+  geom_point(aes(color = default, shape = default), alpha = 0.35,
+             size = 0.8) +
+  scale_color_manual(values = class_colors) +
+  scale_shape_manual(values = c(16, 17)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  scale_x_continuous(labels = dollar_labels) +
+  scale_y_continuous(labels = dollar_labels) +
+  labs(x = "Credit card balance ($)", y = "Income ($)", color = "Default",
+       shape = "Default")
+
+eda_scatter <- scatter_base +
+  labs(title = "ISLR2::Default, income against balance")
+
+within_cor <- Default |>
+  group_by(default) |>
+  summarize(r = cor(balance, income), .groups = "drop")
+within_cor_of <- function(k) within_cor$r[within_cor$default == k]
+```
+:::
+
+```{r default-scatter-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+eda_scatter
+```
+
+Each class forms a broad cloud, and the two clouds overlap heavily:
+defaulters sit at larger balances, across nearly the whole range of income.
+Within each class balance and income are weakly negatively correlated,
+$r = `r sprintf("%.3f", within_cor_of("No"))`$ among non-defaulters and
+$r = `r sprintf("%.3f", within_cor_of("Yes"))`$ among defaulters, so a
+description of each class's cloud needs a center and a spread for each
+feature and the correlation between them. The worked example returns to the
+zero balances and the two bands of income visible within the non-defaulter
+cloud.
+
+That suggests the multivariate version of the one-feature model: describe
+each class's features by a multivariate Gaussian density with its own mean
+vector, the center of its cloud, and a covariance matrix shared by both
+classes, which gives the clouds one common spread and tilt.
+
 ### Multivariate Gaussian densities
 
 With $p > 1$ features, $X = (X_1, \ldots, X_p)^\top$ is a random column vector
@@ -428,7 +543,9 @@ where $|\Sigma|$ is the determinant of $\Sigma$.
 Each class's density has contours that are nested ellipses centered at
 $\mu_k$. Sharing
 $\Sigma$ means every class's ellipses have the same shape and orientation and
-differ only in their center.
+differ only in their center. For the credit card customers, $\mu_k$ is the
+center of class $k$'s cloud in the scatterplot above, and $\Sigma$ gives the
+two clouds one common spread and tilt.
 
 ### Matrix-form discriminant
 
@@ -1188,10 +1305,6 @@ summarizes each class.
 ### Code
 ```{r default-setup}
 #| output: false
-Default <- Default |>
-  mutate(default01   = as.numeric(default == "Yes"),
-         default_jit = default01 + runif(n(), -0.03, 0.03))
-
 class_summary <- Default |>
   group_by(default) |>
   summarize(n = n(),
@@ -1201,15 +1314,7 @@ class_summary <- Default |>
             mean_income = mean(income),
             sd_income = sd(income),
             n_zero = sum(balance == 0),
-            cor_balance_income = cor(balance, income),
             .groups = "drop")
-
-dollars <- function(v) format(round(v), big.mark = ",")
-# Axis labels such as $60,000, without the scales package.
-dollar_labels <- function(v) {
-  ifelse(is.na(v), NA,
-         paste0("$", format(v, big.mark = ",", scientific = FALSE, trim = TRUE)))
-}
 
 class_summary_table <- class_summary |>
   transmute(default,
@@ -1247,32 +1352,18 @@ deviations.
 
 ### Balance alone
 
-Before any model is fit, the histograms below show balance within each
-default class, one panel per class, on the density scale.
+Before any model is fit, the histograms of balance within each default
+class that open the one-feature LDA section are repeated below.
 
-::: {.callout-note collapse="true"}
-### Code
-```{r default-hist}
-#| output: false
-balance_hist_plot <- ggplot(Default, aes(x = balance)) +
-  geom_histogram(aes(y = after_stat(density)), binwidth = 100,
-                 boundary = 0, fill = "grey80", color = "grey55") +
-  facet_wrap(~ default, ncol = 1, labeller = label_both) +
-  scale_x_continuous(labels = dollar_labels) +
-  labs(x = "Credit card balance ($)", y = "Density",
-       title = "ISLR2::Default, balance within each default class")
-```
-:::
-
-```{r default-hist-figure}
+```{r example-hist-figure}
 #| echo: false
 #| fig-width: 7
 #| fig-height: 4.5
 balance_hist_plot
 ```
 
-The defaulters' histogram sits well to the right of the non-defaulters'. The
-non-defaulter histogram also has a spike at zero —
+As noted there, the defaulters' histogram sits well to the right of the
+non-defaulters'. The non-defaulter histogram also has a spike at zero —
 `r format(summary_of("No", "n_zero"), big.mark = ",")` customers carry no
 balance, and `r if (summary_of("Yes", "n_zero") == 0) "no defaulter does" else paste(summary_of("Yes", "n_zero"), "defaulters do")`
 — which no Gaussian density reproduces.
@@ -1527,10 +1618,11 @@ same classifier.
 
 ### Balance and income
 
-Before `income` enters the model, the first tab below plots income against
-balance for every customer, with defaulters and non-defaulters distinguished
-by color and shape, and the second shows income within each default class,
-one panel per class, on the density scale.
+Before `income` enters the model, the first tab below repeats the
+scatterplot of income against balance that opens the multiple-feature LDA
+section, with defaulters and non-defaulters distinguished by color and shape,
+and the second shows income within each default class, one panel per class,
+on the density scale.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1542,22 +1634,6 @@ income_by_student <- Default |>
 student_income <- function(s) {
   income_by_student$median_income[income_by_student$student == s]
 }
-
-# Defaulters are drawn last so they are not hidden under non-defaulters.
-scatter_base <- ggplot(arrange(Default, default),
-                       aes(x = balance, y = income)) +
-  geom_point(aes(color = default, shape = default), alpha = 0.35,
-             size = 0.8) +
-  scale_color_manual(values = class_colors) +
-  scale_shape_manual(values = c(16, 17)) +
-  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
-  scale_x_continuous(labels = dollar_labels) +
-  scale_y_continuous(labels = dollar_labels) +
-  labs(x = "Credit card balance ($)", y = "Income ($)", color = "Default",
-       shape = "Default")
-
-eda_scatter <- scatter_base +
-  labs(title = "ISLR2::Default, income against balance")
 
 income_hist_plot <- ggplot(Default, aes(x = income)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 2500,
@@ -1571,7 +1647,7 @@ income_hist_plot <- ggplot(Default, aes(x = income)) +
 
 ::: {.panel-tabset}
 #### Scatterplot
-```{r default-scatter-figure}
+```{r example-scatter-figure}
 #| echo: false
 #| fig-width: 7
 #| fig-height: 4.5
@@ -1587,13 +1663,9 @@ income_hist_plot
 ```
 :::
 
-In the scatterplot, defaulters are concentrated at high balances across
-nearly the whole range of income, and at any given balance the two classes
-overlap in income. Within each class balance and income are weakly negatively
-correlated: $r = `r sprintf("%.3f", summary_of("No", "cor_balance_income"))`$
-among non-defaulters and
-$r = `r sprintf("%.3f", summary_of("Yes", "cor_balance_income"))`$ among
-defaulters.
+As noted with that scatterplot, the two classes overlap heavily in income,
+defaulters sit at higher balances, and balance and income are weakly
+negatively correlated within each class.
 
 The two classes' income histograms look alike, and each is bimodal. The
 lower mode is mostly students: in these data students' median income is
