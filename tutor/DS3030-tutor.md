@@ -88,8 +88,19 @@ read consistently with the notes:
 - $\beta_j$ for coefficients, $\hat\beta_j$ for estimates, never a bare $b$.
 - $p$ is always the number of features (including basis functions from a
   polynomial expansion or dummy variables from a categorical explanatory
-  variable). $K$ is reserved for the number of neighbors in KNN. A
-  polynomial's degree is $d$.
+  variable). $K$
+  has two meanings, both following ISLR2, and which one is meant depends on
+  context: the number of neighbors in KNN, and the number of classes from the
+  LDA chapter onward, where classes are indexed $k = 1, \ldots, K$. (The
+  earlier classification and logistic regression chapters write $C$ for the
+  number of classes; treat $C$ there and $K$ later as the same quantity.)
+  When KNN classification and a class count appear together, say which $K$
+  you mean. A polynomial's degree is $d$.
+- In generalized linear models, $\mu_i = E[Y_i \mid x_i]$ is the mean,
+  $\eta_i = x_i\beta$ the linear predictor, and $g$ the link, with
+  $g(\mu_i) = \eta_i$; ISLR2 instead writes $\eta$ for the link and
+  $\lambda$ for the Poisson mean. $e^{\beta_j}$ in Poisson regression is a
+  **rate ratio**.
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -479,6 +490,330 @@ and overdispersion, are named only inside "Beyond this course" callouts and
 are neither taught nor tested. Multinomial (multi-class) logistic regression
 is still not covered.
 
+### 13. Linear Discriminant Analysis
+<https://jarad.github.io/DS3030/04-classification/50-lda.html>
+
+First generative classifier, worked through the whole chapter on one running
+example, `ISLR2::Default` (a simulated data set of 10,000 credit card
+customers; response `default`, features `balance` and `income`, with income
+in dollars as recorded and its coefficients reported per \$1,000). Every
+piece of theory is followed immediately by the same piece applied to these
+customers.
+
+Generative classifiers: the chapter opens with the question and the data, a
+reminder of what the logistic regression chapters fit, a class-summary table,
+and histograms of balance by default class (density scale within each class,
+and a stacked count histogram of all customers). Logistic regression models
+$P(Y = k \mid X = x)$ directly; a generative classifier models the
+**class-conditional density** $f_k(x)$ and **prior probability**
+$\pi_k = P(Y = k)$ and reverses the conditioning by Bayes' theorem,
+$p_k(x) = \pi_k f_k(x) / \sum_l \pi_l f_l(x) \propto \pi_k f_k(x)$; here $X$
+is treated as random, unlike every earlier chapter. Classes are indexed
+$k = 1, \ldots, K$ as in ISLR2. The estimated priors (about 0.967 and
+0.033) illustrate $\pi_k$, the within-class histograms picture $f_k$, and the
+defaulters' share of a stacked bar estimates $p_{\text{Yes}}(x)$. A
+classifier is an assignment rule $\hat y(x)$; the **Bayes classifier**
+assigns $\arg\max_k p_k(x)$ ($K = 2$: $p_2(x) > 0.5$), and because the
+conditional error probability is $1 - p_{\hat y(x)}(x)$ it minimizes the
+error at every $x$ and hence overall (the **Bayes error rate**). With no
+feature information it would assign every customer `No`.
+
+One-feature LDA (balance): the section opens with the balance histograms
+within each default class (one roughly bell-shaped pile per class, centered
+at different balances, spreads of the same order), which motivate Gaussian
+$f_k$ with class means $\mu_k$ and a **shared** variance $\sigma^2$. Estimates
+$\hat\pi_k = n_k/n$ and class sample means (maximum likelihood) and pooled
+variance with divisor $n - K$ (the maximum likelihood estimate rescaled to be
+unbiased), from the **joint** likelihood $\prod_i \pi_{y_i} f_{y_i}(x_i)$
+(closed form, so separation does not prevent them from existing, though a
+zero pooled variance does) versus logistic regression's conditional
+likelihood; then the `MASS::lda(default ~ balance)` output (priors, group
+means, the LD coefficient $1/\hat\sigma$), a by-hand check, and the fitted
+Gaussians over the histograms (missing the non-defaulters' spike at zero and
+too wide for defaulters). The discriminant written as intercept plus slope,
+$\delta_k(x) = \left[\log\pi_k - \mu_k^2/(2\sigma^2)\right] +
+(\mu_k/\sigma^2)\,x$ (the dropped terms, including the $x^2$ term, are free
+of $k$ only because $\sigma^2$ is shared), with the fitted
+$\hat\delta_{\text{No}}$ and $\hat\delta_{\text{Yes}}$ for balance; recovery
+of $p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$; the log posterior odds
+$\beta_0 + \beta_1 x$ (logistic regression's form, estimated differently);
+and the boundary
+$x^* = (\mu_1+\mu_2)/2 + \sigma^2\log(\pi_1/\pi_2)/(\mu_2-\mu_1)$, where the
+prior-weighted densities cross. For the credit card fit, an equal-priors
+counterfactual puts the boundary at the midpoint of the class means (about
+\$1,276), while the estimated priors move it to about \$2,009, beyond the
+defaulters' mean balance, so even a customer with that average balance is
+classified `No` (a small enough prior moves the boundary past the rarer
+class's mean); a tab shows
+the two fitted discriminant lines crossing there. A comparison with simple
+logistic regression (coefficient table, posterior curves; LDA's curve is
+slightly flatter and crosses 0.5 further right than logistic regression's
+\$1,937).
+
+Multiple-feature LDA (balance and income): the section opens with a
+scatterplot of income against balance by default class and income
+histograms by class (overlapping clouds, weak negative within-class
+correlation of about $-0.16$, bimodal income whose lower mode is mostly
+students — a data fact, not a model feature), which motivate a multivariate
+Gaussian with a shared covariance matrix. $x$ is a column $p$-vector (no
+leading 1); pooled covariance estimate $\hat\Sigma$ and the
+`MASS::lda(default ~ balance + income)` output with a by-hand check;
+$\delta_k(x) = \left(\log\pi_k - \tfrac12\mu_k^\top\Sigma^{-1}\mu_k\right) +
+x^\top\Sigma^{-1}\mu_k$ with a table of the fitted discriminants; a
+hyperplane boundary $\beta_0 + x^\top\beta = 0$ with slopes
+$\beta = \Sigma^{-1}(\mu_2 - \mu_1)$ (not perpendicular to the segment
+joining the means; through its midpoint with equal priors). The fitted
+figure draws contours of $\hat f_k$ and of $\pi_k \hat f_k$ at fixed heights
+for equal and estimated priors: the boundary passes through the crossings of
+same-height contours, a smaller prior shrinks that class's contours and
+shifts the boundary parallel toward its mean, and the estimated boundary is
+nearly vertical (balance matters far more per standard deviation). A
+comparison with logistic regression on balance + income: the fitted income
+slope is positive although defaulters' mean income is slightly lower,
+because $\hat\Sigma^{-1}$ adjusts income for balance; logistic regression's
+boundary lies slightly left of LDA's, and LDA's posterior is flatter at each
+income quartile.
+
+Classifier evaluation, with the balance + income LDA as the running example,
+opens with histograms of that classifier's log posterior odds within each
+true class and a dotted line at 0 ($\hat p = 0.5$): the classes overlap, so
+any threshold makes two kinds of mistake. Then positive/negative class, threshold $t$, confusion matrix (TP, FN, FP, TN;
+truth in rows) and the example's matrix at $t = 0.5$ (error about 2.8%,
+mostly missed defaulters); **sensitivity** (recall, true positive rate),
+**specificity** (true negative rate), false negative and false positive
+rates, with the example's values (sensitivity about 23%, specificity about
+99.8%). With $K$ classes the confusion matrix is $K \times K$ with entries
+$n_{kj}$, the error rate is $1 - \sum_k n_{kk}/n$, sensitivity
+$n_{kk}/\sum_j n_{kj}$ and specificity
+$\sum_{l\ne k}\sum_{j\ne k} n_{lj} / \sum_{l\ne k}\sum_j n_{lj}$ are
+computed one class versus the rest, and the threshold $t = 0.5$ generalizes
+to "assign the largest posterior". Why lowering $t$ can only raise sensitivity and
+lower specificity, an interactive figure with checkboxes plotting the
+overall error rate, sensitivity, specificity, and false positive rate
+against $t$, and a table at $t = 0.5$ and $t = 0.2$ for LDA (balance only and
+balance + income) and logistic regression (sensitivity about 57% at
+$t = 0.2$); $t = 0.5$ need not minimize an estimated classifier's error rate.
+The **ROC curve** (sensitivity vs. $1 -$ specificity over all thresholds,
+depending only on how a classifier orders observations), with a slider that
+moves the threshold on the example's real log posterior odds and its real
+ROC curve, and the LDA and logistic regression ROC curves, which nearly
+coincide; LDA's flatter posterior means it flags a subset of logistic
+regression's customers at high thresholds and a superset at low ones.
+**AUC**, derived as $P(S_+ > S_-)$, with the pairwise-comparison estimator
+and, for equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$. The
+example's AUCs (identical for the two one-feature models, about 0.95 for both
+two-feature models) and a figure comparing classifiers fit to the same
+customers (balance only, income only, both, and no features): income alone
+is near the diagonal, and the balance-only and two-feature curves cross, so
+the classifier with the larger AUC can still be the worse one over the false
+positive rates that matter for a given application. The fitted
+equal-variance model understates the empirical AUC, while the same formula
+with each class's own standard deviation comes close. All rates are training
+rates; test-error estimation is deferred to resampling.
+
+A short "Credit card findings" section, after classifier evaluation, answers
+the opening question: LDA orders the customers almost exactly as logistic
+regression does, income adds little to classification beyond balance
+although its logistic regression coefficient is clearly nonzero, and a
+lender worried about missed defaults would use a threshold below 0.5.
+
+An additional "Student strata" section first tabulates the strata (students
+default more often and have far lower incomes) and plots income against
+balance faceted by student status, then fits LDA (balance +
+income) separately to students and non-students and compares it with
+logistic regression fully interacted with student status (shown to equal
+separate per-stratum logistic regressions). Because each stratum's priors are
+its own default rates, the stratum posteriors share one scale, so a pooled
+AUC is meaningful. Students' larger prior alone would lower their LDA
+threshold, but their threshold is higher because students in both classes
+carry higher balances (the confounding of the multiple logistic regression
+chapter), and it stays higher at equal incomes. The extra flexibility barely
+changes training error or AUC, and the stratified models, with twice as many
+parameters, tend to have more optimistic training rates. QDA and naive Bayes
+are the next chapter.
+
+### 14. Quadratic Discriminant Analysis and Naive Bayes
+<https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
+
+Two relaxations of LDA's model for $f_k(x)$, then a comparison of every
+classifier so far, all worked through one running example:
+`ISLR2::Default` with `balance` and `income` (the LDA chapter's features),
+split once at random into training and test halves at the start of the
+chapter, with every model fit to the training half. The chapter opens with
+the training data: a scatterplot with each class's approximately 95%
+normal-theory ellipse
+shows balance less spread out among defaulters (the QDA motivation), income
+about equally spread, small within-class balance-income correlations (the
+naive Bayes motivation), and bimodal income because students have much lower
+incomes; a short recap of Bayes' theorem and LDA's shared covariance follows.
+The QDA and naive Bayes sections each reopen with the same scatterplot and
+what it shows for that model.
+
+**QDA**: $X \mid Y = k \sim N_p(\mu_k, \Sigma_k)$ with a class-specific
+covariance matrix, estimated by each class's sample covariance (divisor
+$n_k - 1$, invertible only if $n_k > p$); `MASS::qda()` fit to the training
+half, with the two $\hat\Sigma_k$ written out. Derivation of
+$\delta_k(x) = -\tfrac12 x^\top\Sigma_k^{-1}x + x^\top\Sigma_k^{-1}\mu_k -
+\tfrac12\mu_k^\top\Sigma_k^{-1}\mu_k - \tfrac12\log|\Sigma_k| + \log\pi_k$
+(the quadratic term and $\log|\Sigma_k|$ no longer cancel) and of the two-class
+log posterior odds, quadratic in $x$ (squares and cross-products), with the
+fitted coefficients in a table (no single coefficient gives a feature's
+effect). The boundary is a conic section for $p = 2$ and up to two points for
+$p = 1$, with the larger-variance class assigned in both tails. Shown on the
+data: QDA's boundary beside LDA's line over the training scatterplot (close
+within the data, with a second branch beyond the largest training balance),
+and, for balance alone, the prior-weighted densities over the training
+histograms and the two discriminant parabolas crossing twice (where chapter
+13's shared-variance discriminants were straight lines crossing once); the negative $\texttt{balance}^2$ coefficient makes
+the posterior cross 0.5 again at very high balances, beyond any customer.
+**Bias-variance tradeoff** via parameter counts (excluding priors): LDA
+$Kp + p(p+1)/2$, QDA $Kp + Kp(p+1)/2$; a simulated figure of repeated
+LDA/QDA boundaries at small and large $n_k$ (simulated because it compares
+fits from repeated training sets against a known Bayes decision boundary,
+which the credit card data cannot supply) shows LDA's bias and QDA's
+variance.
+
+**Naive Bayes**: features conditionally independent given the class,
+$f_k(x) = \prod_j f_{kj}(x_j)$, each one-feature density of its own type
+(Gaussian for a quantitative feature, Bernoulli/categorical probabilities for
+a binary/categorical one); `e1071::naiveBayes()` fit to the training half;
+two-class log posterior odds additive, $\log(\pi_2/\pi_1) + \sum_j g_j(x_j)$,
+with no interactions; Gaussian naive Bayes is QDA (class-specific variances)
+or LDA (shared variances) with a diagonal covariance matrix, and on the data
+its standard deviations equal the square roots of QDA's diagonals; $2Kp$
+parameters, sidestepping the curse of dimensionality (e.g. $2^p$ cells,
+$2^p - 1$ free probabilities, for a joint pmf of $p$ binary features versus
+$p$ probabilities). A **mixed feature types** example adds `student` as a
+third, binary feature, whose fitted Bernoulli probabilities by class shift the
+log posterior odds by a constant with no Gaussian assumption. The price of
+independence is bias, but only the side of the threshold matters for
+classification. Its boundary stays within about a hundred dollars of QDA's
+within the data, though the two can tilt in opposite directions with income,
+because its income term compares the classes' income distributions without
+adjusting for balance (slightly curved, since the class income SDs differ),
+unlike LDA's correlation-adjusted income slope.
+
+**Comparison**: opens with one figure of all five classifiers' 0.5
+boundaries over the training data (logistic regression and LDA straight, QDA
+and naive Bayes curved with second branches, KNN jagged). KNN classification
+as a neighbor vote
+$\hat p_{\text{Yes}}(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = \text{Yes})$ on
+standardized features (in that section $K$ counts neighbors and the class
+count is written as 2), with $K = 1$ and $K$ the smallest odd integer above
+$\sqrt n$, fixed in advance; boundary shapes (linear for logistic regression
+and LDA, quadratic for QDA, quadratic without cross-products for Gaussian
+naive Bayes, any shape for KNN), parametric vs. nonparametric, and how $n$
+and $p$ favor flexible vs. restricted methods. A simulation study of four
+scenarios (linear, quadratic, independent features with $p = 10$, non-linear
+sine boundary) shows each scenario won by the method whose assumptions are
+the most restrictive ones that still hold (QDA, naive Bayes, and KNN in the
+last three), while in the linear scenario LDA and logistic regression (both
+correct) essentially tie, and no method wins in every scenario. On the credit
+card test half the four model-based classifiers have nearly identical error
+rates and AUCs (naive Bayes close to QDA), differing mainly in how many
+customers each flags at threshold 0.5 and so in sensitivity; KNN with the larger
+$K$ has a lower test AUC than any of them, and KNN with $K = 1$ has zero
+training error but a much higher test error. Training error rates are
+optimistic on average, though on a single split chance can outweigh that;
+test rates are the fair comparison, and a single split is one draw. The
+section ends by answering the opening question for this split (which
+model's test error rate is lowest, how QDA and naive Bayes compare with LDA
+and logistic regression, how KNN compares), stated so it holds whichever way
+the split falls.
+
+A final **student strata** section first shows the two strata (a summary
+table and a faceted scatterplot: students default more often and have lower
+incomes), then fits QDA separately to students and
+non-students (each stratum's priors are its own default rates, so all
+posteriors are on one scale) and compares it with the single QDA, the
+additive logistic regression, and the logistic regression with every
+coefficient interacted with student status (shown numerically to equal
+separate per-stratum logistic fits); stratifying doubles the parameters
+(priors not counted, as in the chapter's parameter-count table) without
+meaningfully changing test error rates or AUCs.
+
+### 15. Generalized Linear Models
+<https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
+
+A count response, and the framework that contains linear, logistic, and
+Poisson regression. The chapter opens with the hourly bike-rental counts and
+their mean-variance plot, and introduces the **Poisson distribution** there:
+pmf $\mu^y e^{-\mu}/y!$ with mean and variance both $\mu$ (derived, plus a
+slider showing the pmf skewed at small $\mu$ and spreading as $\mu$ grows), the
+dashed variance = mean line that every hour-by-working-day group lies above
+(the busiest group's observed standard deviation is about eight times its
+Poisson one). The GLM section opens by re-showing that mean-variance plot.
+Motivation: least squares on the counts
+gives negative fitted means, residuals that fan out as the mean grows, and
+additive month, temperature, and weather effects that shift every hour by the
+same number of riders, so an hour whose shift is below average (a winter
+month, a cold hour, rain) sits as far below its hour's mean at night as at
+rush hour and goes negative at night. A
+**generalized linear model** has three components: a distribution for
+$Y_i$ given $x_i$ with mean $\mu_i = E[Y_i \mid x_i]$ (random component), a
+linear predictor $\eta_i = x_i\beta$, and a strictly monotone **link function** $g$
+with $g(\mu_i) = \eta_i$; for the three links in the chapter, its inverse
+keeps the mean in range. (ISLR2 writes $\eta$ for the link and $\lambda$ for the Poisson mean;
+the notes keep $\eta$ for the linear predictor, write $g$ for the link, and
+$\mu_i$ for every mean.) Special cases in one table: linear regression
+(normal, identity link, variance $\sigma^2$), logistic regression (Bernoulli,
+logit link, variance $\mu_i(1-\mu_i)$ with $\mu_i = p(x_i)$), and Poisson
+regression (Poisson, log link, variance $\mu_i$), with
+$Var[Y_i \mid x_i] = \phi V(\mu_i)$ ($\phi = \sigma^2$ for the normal,
+$\phi = 1$ for Bernoulli and Poisson); `glm()` families `gaussian`,
+`binomial`, `poisson`. A GLM transforms the mean, $\log E[Y_i]$, not the
+response, $E[\log Y_i]$.
+
+**Poisson regression**, opened with the observed hourly means by weather
+(rain scales the hourly profile rather than shifting it, motivating the log
+link): $\log\mu_i = x_i\beta$, so
+$\mu_i = e^{x_i\beta}$ is positive and features act multiplicatively;
+$e^{\beta_0}$ is the mean count with every feature at zero (reference levels)
+and $e^{\beta_j}$ the **rate ratio**, the factor multiplying the mean count
+per one-unit increase in feature $j$ holding the others fixed (the analogue
+of the odds ratio). Log-likelihood
+$\sum_i [y_i x_i\beta - e^{x_i\beta} - \log(y_i!)]$, score equations
+$\sum_i x_{ij}(y_i - \mu_i) = 0$ (the logistic form; fitted means sum, and
+average within each dummy's level, to the observed counts), in general no
+closed form (with only dummy variables the solution is the cell means; a
+quantitative feature such as temperature removes it),
+fit by iteratively reweighted least squares. Wald $z$-tests and intervals,
+exponentiated for rate ratios; drop-in-deviance test with the Poisson residual
+deviance $2[\ell_{\text{sat}} - \ell(\hat\beta)]$, whose differences equal
+$-2[\ell(\hat\beta_r) - \ell(\hat\beta_f)]$ as for logistic regression.
+**Overdispersion** ($Var[Y_i \mid x_i] > \mu_i$) is checked with the average
+squared Pearson residual
+$\hat\phi = \sum_i (y_i - \hat\mu_i)^2/\hat\mu_i \,/\, [n - (p+1)]$ and a
+binned plot of squared residuals against fitted means; under it the estimates
+remain usable if the mean model is right, but standard errors are too small,
+tests too liberal, and intervals too narrow. Its sources are explanatory
+variables missing from the model and events within one count that are not
+independent; the in-course remedy, adding features that explain the extra
+variation, addresses only the first.
+
+Running example, worked through every section rather than in a separate
+worked-example section: `ISLR2::Bikeshare` (8,645 hourly records; `casual` and
+`registered` are components of `bikers` and are never used), with features
+hour as a 24-level factor interacted with working day, month, temperature
+converted to degrees Celsius, and weather with its one-hour `heavy rain/snow`
+level merged into `rain/snow`. The same 62-column linear predictor serves the
+linear regression (the identity-link GLM, whose fitted means go negative) and
+the Poisson regression, fit once maximum likelihood estimation has been
+introduced. A two-tab figure of fitted versus observed hourly means by weather
+and working day shows linear regression going negative overnight in rain while
+Poisson regression scales the profile down. Interpretation reads the intercept first (mean count
+at midnight on a non-working January day, clear, 0 °C), then the working-day
+ratio at the reference hour, the per-5 °C rate ratio (about 1.08), and the
+rain/snow rate ratio (about 0.56). The fitted score equations are checked on
+the data (fitted means sum to the observed total, and both models reproduce
+each hour-by-working-day mean). Wald intervals for the rate ratios all exclude
+1. A drop-in-deviance test on 23 df rejects a shared hourly profile, and the
+rejection survives dividing $G^2$ by the dispersion estimate. The Pearson
+dispersion is about 11 (about 26 without the interaction), so the counts are
+overdispersed.
+Multinomial logistic regression is not covered. Cross-validation is the next
+unit.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can
@@ -541,6 +876,21 @@ review touching the scale on which logistic coefficients live, what an
 interaction coefficient does and does not measure, a property of the fitted
 probabilities implied by the score equations, and the consequence of swapping
 which class is the event.
+
+**Homework 6** (generative classifiers, classifier evaluation, Poisson
+regression): deriving the log posterior odds of a naive Bayes classifier with
+non-Gaussian features, estimating its parameters, and the effect of redundant
+features; comparing logistic regression, LDA, QDA, naive Bayes, and KNN on a
+held-out test set by error rate, sensitivity, specificity, ROC curves, and AUC,
+relating the results to each method's assumptions, and choosing a threshold to
+meet a sensitivity target; a simulation of how training-set size shifts the
+LDA-versus-QDA tradeoff; choosing a classifier for described settings; a
+Poisson regression with rate ratios, Wald intervals and tests, a
+drop-in-deviance test, and an overdispersion check, with a critique of an
+overstated claim; a true/false conceptual review touching AUC versus
+thresholds, the role of the priors, training error of nested classifiers,
+conditional independence, the error rate of a trivial classifier, and what
+overdispersion does and does not affect.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable

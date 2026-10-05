@@ -31,9 +31,16 @@ convention.
   defaults to `()`. Two levels are `[(\cdot)]`; three are `{[(\cdot)]}`.
   Never repeat the same bracket at two nested levels, and never use a level's
   bracket out of cycle order. Example: $E[(Y - \hat f(X))^2]$, not
-  $E\{[Y-\hat f(X)]^2\}$ and not $E(Y-\hat f(X))^2$. This governs $E[\cdot]$,
-  $Var[\cdot]$, $Bias[\cdot]$ and any other nested mathematical expression —
-  it is a general typesetting rule, not one specific to expectation notation.
+  $E\{[Y-\hat f(X)]^2\}$ and not $E(Y-\hat f(X))^2$. This governs any nested
+  mathematical expression, including a function's argument such as
+  $\exp\left[-\tfrac{1}{2}\left(x-\mu\right)^2/\sigma^2\right]$.
+  **The one exception is the expectation-type operators $E[\cdot]$,
+  $Var[\cdot]$, $Cov[\cdot]$, and $Bias[\cdot]$: their own brackets are
+  always square, at any depth, so $Var[E[Y \mid X]]$ is correct as written.**
+  Groupings inside one of these brackets still follow the cycle from $()$
+  (so $E[(Y - \hat f(X))^2]$), and a grouping that contains one, which must
+  sit outside the $[\cdot]$ it holds, takes $\{\cdot\}$:
+  $\left\{E[Y_i \mid x_i]\right\}^2$.
 - **The indicator function is $\mathrm{I}(\cdot)$**, upright, never plain
   italic $I(\cdot)$ — it names a function, not a variable.
 - **"Reference," not "baseline,"** for the category or bin a set of dummy
@@ -51,6 +58,48 @@ convention.
   for the raw recorded quantity and "feature" for whatever actually enters
   the model, rather than treating either as a general-purpose synonym for
   the other.
+- **$K$ is the number of classes**, with classes indexed $k = 1, \ldots, K$,
+  matching ISLR2. This applies from `04-classification/50-lda.qmd` onward.
+  $C$ is not used for class count going forward: that chapter already uses
+  $c$ for an ROC cutoff and $c_{FN}$/$c_{FP}$ for misclassification costs, so
+  $C$ would collide. The earlier chapters `02-learning/30-classification.qmd`
+  and `04-classification/10-logistic-regression.qmd` write $C$ (and index
+  classes by $c$); that predates this decision and is not being retroactively
+  renamed, and `50-lda.qmd` says so in a bridging sentence where $K$ is
+  introduced.
+- **$K$ is also the number of neighbors in KNN**, again matching ISLR2
+  (`03-regression/40-flexibility.qmd` onward). The two meanings are
+  contextual. A passage that uses KNN alongside a class count (e.g. KNN
+  classification compared with the generative classifiers) must make clear
+  which $K$ is meant rather than introduce a new symbol for either.
+- **$D$ is an indicator (dummy) variable**, e.g.
+  $D = \mathrm{I}(\texttt{student} = \texttt{Yes})$ in the `Default`
+  examples. A diagonal covariance matrix (Gaussian naive Bayes, in
+  `04-classification/60-qda-naive-bayes.qmd`) is therefore written
+  $\Lambda_k = \text{diag}(\sigma_{k1}^2, \ldots, \sigma_{kp}^2)$, not $D_k$.
+  $D$ is also, contextually, the **residual deviance** of a fitted model
+  (`04-classification/20-multiple-logistic-regression.qmd`, where
+  $G^2 = D_r - D_f$, and `04-classification/70-generalized-linear-models.qmd`).
+  The two meanings do not appear in the same passage; a chapter that uses $D$
+  for the deviance says so in one sentence where it first appears.
+- **Generalized linear models write $\mu_i = E[Y_i \mid x_i]$ for the mean,
+  $\eta_i = x_i\beta$ for the linear predictor, and $g$ for the link**, with
+  $g(\mu_i) = \eta_i$ (`04-classification/70-generalized-linear-models.qmd`
+  onward). This departs from ISLR2 in two places, each noted in a bridging
+  sentence in that chapter: ISLR2 writes $\eta$ for the link function itself,
+  but these notes already used $\eta$ for the linear predictor in the
+  logistic regression chapters; and ISLR2 writes $\lambda$ for the Poisson
+  mean, where these notes use the general GLM symbol $\mu_i$. The variance is
+  written $Var[Y_i \mid x_i] = \phi\, V(\mu_i)$, with $V$ the variance
+  function and $\phi$ the dispersion parameter. The observation-indexed mean
+  $\mu_i$ is distinct from the class mean $\mu_k$ of the discriminant
+  analysis chapters; the GLM chapter says so where $\mu_i$ is defined. In
+  the GLM chapter the logistic-regression probability is written $\mu_i$
+  (identified once with the earlier $p(x_i)$), which avoids a new bare-$p$
+  probability.
+- **"Rate ratio"** names $e^{\beta_j}$ in Poisson regression: the factor by
+  which the mean count is multiplied per one-unit increase in feature $j$,
+  the analogue of the odds ratio.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

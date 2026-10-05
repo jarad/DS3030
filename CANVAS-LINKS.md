@@ -29,3 +29,6 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-09-19 | New | | 04-classification/20-multiple-logistic-regression.qmd | |
 | 2026-09-19 | New | | 04-classification/30-flexible-logistic-regression.qmd | |
 | 2026-09-19 | New | | 04-classification/40-problems-in-logistic-regression.qmd | |
+| 2026-10-01 | New | | 04-classification/50-lda.qmd | |
+| 2026-10-01 | New | | 04-classification/60-qda-naive-bayes.qmd | |
+| 2026-10-01 | New | | 04-classification/70-generalized-linear-models.qmd | |
