@@ -31,9 +31,11 @@ words-only slide).
 Slides never draw from a `### For example,` or `### Beyond this course`
 callout.
 
-**Timing guess:** about 30 `core` slides at 1 to 1.5 minutes each fills one
-50-minute class; the 15 `optional` slides are the first candidates to move to
-Wednesday or to leave to the notes.
+**Timing guess:** 38 slides are tagged `core` and 10 `optional` (47 slides
+counting the agenda). At about a minute per slide the `core` set already fills
+a 50-minute class, so the `optional` slides are the first to leave to the
+notes, and you may want to tag more slides `optional` (13.5.7 Student strata
+and the 13.4 multiple-class slide are the other likely candidates).
 
 ## Open question about interactive figures
 
