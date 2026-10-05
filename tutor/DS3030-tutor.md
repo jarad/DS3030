@@ -668,8 +668,10 @@ histograms and the two discriminant parabolas crossing twice (where chapter
 the posterior cross 0.5 again at very high balances, beyond any customer.
 **Bias-variance tradeoff** via parameter counts (excluding priors): LDA
 $Kp + p(p+1)/2$, QDA $Kp + Kp(p+1)/2$; a simulated figure of repeated
-LDA/QDA boundaries at small and large $n_k$ (simulated because the point is
-about repeated training sets) shows LDA's bias and QDA's variance.
+LDA/QDA boundaries at small and large $n_k$ (simulated because it compares
+fits from repeated training sets against a known Bayes decision boundary,
+which the credit card data cannot supply) shows LDA's bias and QDA's
+variance.
 
 **Naive Bayes**: features conditionally independent given the class,
 $f_k(x) = \prod_j f_{kj}(x_j)$, each one-feature density of its own type
