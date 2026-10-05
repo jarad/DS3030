@@ -569,8 +569,10 @@ because $\hat\Sigma^{-1}$ adjusts income for balance; logistic regression's
 boundary lies slightly left of LDA's, and LDA's posterior is flatter at each
 income quartile.
 
-Classifier evaluation, with the balance + income LDA as the running example:
-positive/negative class, threshold $t$, confusion matrix (TP, FN, FP, TN;
+Classifier evaluation, with the balance + income LDA as the running example,
+opens with histograms of that classifier's log posterior odds within each
+true class and a dotted line at 0 ($\hat p = 0.5$): the classes overlap, so
+any threshold makes two kinds of mistake. Then positive/negative class, threshold $t$, confusion matrix (TP, FN, FP, TN;
 truth in rows) and the example's matrix at $t = 0.5$ (error about 2.8%,
 mostly missed defaulters); **sensitivity** (recall, true positive rate),
 **specificity** (true negative rate), false negative and false positive
@@ -594,21 +596,25 @@ ROC curve, and the LDA and logistic regression ROC curves, which nearly
 coincide; LDA's flatter posterior means it flags a subset of logistic
 regression's customers at high thresholds and a superset at low ones.
 **AUC**, derived as $P(S_+ > S_-)$, with the pairwise-comparison estimator
-and, for equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$
-(the fitted balance model implies a smaller AUC than the empirical one). The
+and, for equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$. The
 example's AUCs (identical for the two one-feature models, about 0.95 for both
 two-feature models) and a figure comparing classifiers fit to the same
 customers (balance only, income only, both, and no features): income alone
 is near the diagonal, and the balance-only and two-feature curves cross, so
 the classifier with the larger AUC can still be the worse one over the false
-positive rates that matter for a given application. Income adds little to
-classification beyond balance (at $t = 0.2$ it slightly raises the training
-error and lowers sensitivity), although it is a real predictor in the
-logistic regression. All rates are training rates; test-error estimation is
+positive rates that matter for a given application. The fitted
+equal-variance model understates the empirical AUC, while the same formula
+with each class's own standard deviation comes close. A short "Credit card
+findings" subsection answers the opening question: LDA orders the customers
+almost exactly as logistic regression does, income adds little to
+classification beyond balance although it is a real feature in the logistic
+regression, and a lender worried about missed defaults would use a threshold
+below 0.5. All rates are training rates; test-error estimation is
 deferred to resampling.
 
 An additional "Student strata" section first tabulates the strata (students
-default more often and have far lower incomes), then fits LDA (balance +
+default more often and have far lower incomes) and plots income against
+balance faceted by student status, then fits LDA (balance +
 income) separately to students and non-students and compares it with
 logistic regression fully interacted with student status (shown to equal
 separate per-stratum logistic regressions). Because each stratum's priors are
