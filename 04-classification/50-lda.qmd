@@ -75,8 +75,9 @@ card balance in dollars, and `income`, the customer's income in dollars,
 because LDA models each class's features with a Gaussian density. The
 features are the explanatory variables themselves. `income` enters the models
 in dollars as recorded, as in the flexible logistic regression lecture; its
-coefficients are reported here per \$1,000 of income. `student` (Yes/No) is
-used only in the Student strata section, to split the customers.
+coefficients are reported here per \$1,000 of income. `student` (Yes/No)
+explains a feature of the income data in the Multiple-feature LDA section and
+splits the customers in the Student strata section.
 
 The table summarizes balance within each default class. The first tab below
 shows balance within each class, one panel per class, on the density scale;
@@ -180,17 +181,20 @@ are centered at different values: defaulters average
 \$`r dollars(summary_of("No", "mean_balance"))` for non-defaulters. The
 standard deviations, \$`r dollars(summary_of("No", "sd_balance"))` for
 non-defaulters and \$`r dollars(summary_of("Yes", "sd_balance"))` for
-defaulters, are of the same order but not equal, and the non-defaulter histogram has a spike at zero:
+defaulters, are of the same order but not equal, and the non-defaulter
+histogram has a spike at zero:
 `r format(summary_of("No", "n_zero"), big.mark = ",")` customers carry no
-balance, and `r if (summary_of("Yes", "n_zero") == 0) "no defaulter does" else paste(summary_of("Yes", "n_zero"), "defaulters do")`.
+balance, and
+`r if (summary_of("Yes", "n_zero") == 0) "no defaulter does" else paste(summary_of("Yes", "n_zero"), "defaulters do")`.
 
 On the count scale, defaulters are a thin layer at the bottom of the bars at
 most balances and make up most of a bar only at the largest balances.
 
 ### Bayes' theorem
 
-Logistic regression models the conditional probability $P(Y = k \mid X = x)$
-of each class $k = 1, \ldots, K$ directly. Its likelihood is the conditional
+With the response falling in one of $K$ classes, indexed $k = 1, \ldots, K$,
+logistic regression models the conditional probability
+$P(Y = k \mid X = x)$ directly. Its likelihood is the conditional
 distribution of the response given the features, and the distribution of the
 features themselves never enters it.
 
@@ -246,10 +250,10 @@ For the credit card customers the class proportions estimate the priors,
 $\hat\pi_{\text{No}} = `r sprintf("%.4f", summary_of("No", "prop"))`$ and
 $\hat\pi_{\text{Yes}} = `r sprintf("%.4f", summary_of("Yes", "prop"))`$, and
 the two panels of the first tab picture $f_{\text{No}}$ and
-$f_{\text{Yes}}$ for balance. The second tab pictures the numerator: a bar's
-height is proportional to $\pi_{\text{No}} f_{\text{No}}(x) +
-\pi_{\text{Yes}} f_{\text{Yes}}(x)$ over its bin, and the defaulters' share
-of the bar estimates $p_{\text{Yes}}(x)$. Among customers with balances from
+$f_{\text{Yes}}$ for balance. The second tab pictures the numerators: each
+colored segment's height is proportional to $\pi_k f_k(x)$ over its bin, the
+whole bar's to their sum $f(x)$, and the defaulters' share of the bar
+estimates $p_{\text{Yes}}(x)$. Among customers with balances from
 \$`r dollars(example_bin)` to \$`r dollars(example_bin + bin_width)`, for
 example, a share of `r sprintf("%.3f", share_at(example_bin))` defaulted.
 
@@ -284,8 +288,8 @@ classifier.
 An estimate of this rule from the bars of the stacked histogram assigns `Yes`
 where defaulters make up more than half a bar, which first happens in the bin
 starting at \$`r dollars(first_majority_bin)` (among bins with at least
-`r min_bin_n` customers). With no feature information the largest posterior probability is
-the largest prior, so every customer would be assigned `No`, and the
+`r min_bin_n` customers). With no feature information the largest posterior
+probability is the largest prior, so every customer would be assigned `No`, and the
 `r sprintf("%.2f", 100 * summary_of("Yes", "prop"))`% who defaulted would all
 be misclassified; that error rate is the one any classifier using features
 has to beat.
@@ -455,9 +459,8 @@ The **coefficient of the linear discriminant**,
 $1/\hat\sigma = `r signif(1 / sigma_hat_1, 4)`$: `MASS::lda()`
 reports the discriminant direction rescaled so that the discriminant has
 variance $1$ within each class, and with one feature the direction itself is
-just "larger balance points toward `Yes`." This is Fisher's scaling, described
-in the callout below, not the slope of $\delta_k$, which is
-$\mu_k/\sigma^2$.
+just "larger balance points toward `Yes`." This is Fisher's scaling,
+described in the callout below.
 
 ::: {.callout-note collapse="true"}
 ### Beyond this course
@@ -475,7 +478,7 @@ same classifier.
 ::: {.callout-note collapse="true"}
 ### For example,
 LDA's estimates have closed forms, and separation does not prevent them from
-existing, though a singular pooled covariance still would. The previous
+existing, though a zero pooled variance still would. The previous
 lecture's completely separated toy data, $x = 1, \ldots, 10$ with $y = 1$
 exactly when $x > 5$, left logistic regression with no finite maximum
 likelihood estimate. `MASS::lda()` fits LDA to the same data:
@@ -486,9 +489,9 @@ toy_lda <- MASS::lda(y ~ x, data = toy)
 toy_lda$means
 ```
 
-The class means are `r toy_lda$means[1]` and `r toy_lda$means[2]`, the priors
-are equal, and so the LDA boundary is the midpoint,
-$x^* = `r mean(toy_lda$means)`$.
+The class means are `r toy_lda$means[1]` and `r toy_lda$means[2]` and the
+priors are equal; the Decision boundary subsection shows that this puts the
+LDA boundary $\hat x^*$ at their midpoint, `r mean(toy_lda$means)`.
 :::
 
 ### Discriminant function
@@ -516,7 +519,9 @@ at $x = 0$, and
 
 Each $\delta_k$ is linear in $x$, with the same intercept-plus-slope form as a
 regression's linear predictor. The classifier assigns an observation to the
-class with the largest $\delta_k(x)$.
+class with the largest $\delta_k(x)$. The slope $\mu_k/\sigma^2$ is not the
+coefficient of the linear discriminant printed by `MASS::lda()`, which is
+Fisher's scaling of the discriminant direction.
 
 Had the variances differed, with $\sigma_k^2$ the class-$k$ variance, the
 term $-\log\left(\sqrt{2\pi}\,\sigma_k\right)$ would differ between classes
@@ -1151,12 +1156,13 @@ yes_peak_share <- hand_2$pi[2]
 :::
 
 For the credit card fit, each tab below draws faint customer points, the two
-estimated class means (crosses) joined by a grey segment, and contours of
-each class's fitted density. The first tab draws contours of $\hat f_k$. The
-other two draw contours of the prior-weighted densities at the same three
-heights in both tabs, $\pi_k \hat f_k$ with equal priors and
-$\hat\pi_k \hat f_k$ with the estimated priors, together with that tab's decision boundary (long dashes); open circles
-mark where a non-defaulter contour crosses the defaulter contour of the same
+estimated class means (crosses) joined by a grey segment, and contours: the
+first tab draws two contours (Mahalanobis radii 1 and 2) of each class's
+fitted density $\hat f_k$, and the second and third draw contours of the
+prior-weighted densities at the same three heights in both tabs,
+$\pi_k \hat f_k$ with equal priors and $\hat\pi_k \hat f_k$ with the
+estimated priors, together with that tab's decision boundary (long dashes).
+Open circles mark where a non-defaulter contour crosses the defaulter contour of the same
 height, and the dotted line in the third tab is the equal-prior boundary.
 
 ::: {.panel-tabset}
@@ -1199,7 +1205,7 @@ defaulters, because the prior enters only $\beta_0$.
 The estimated boundary is nearly vertical: across the whole observed range of
 income, LDA's balance threshold shifts by only
 \$`r dollars(abs(diff(x_star_lda_range)))`, against a range of balance of
-\$`r dollars(diff(range(Default$balance)))`. Per standard deviation, balance
+\$`r dollars(diff(range(Default$balance)))`. Per overall standard deviation, balance
 moves LDA's log posterior odds by `r sprintf("%.2f", per_sd_lda[1])` and
 income by only `r sprintf("%.2f", per_sd_lda[2])`. The coefficients of the
 linear discriminant printed by `MASS::lda()` are proportional to
@@ -1366,9 +1372,19 @@ crosses $0.5$ further right.
 
 ## Classifier evaluation
 
+An error rate counts every mistake the same way. Failing to flag a customer
+who goes on to default and flagging a customer who does not are different
+mistakes with different costs, and a classifier can have a small error rate
+while making almost every mistake of one kind. The classification lecture
+introduced the confusion matrix, which separates the mistakes; this section
+develops it in full for two classes, extends it to $K$ classes, and adds the
+ROC curve and AUC, which summarize a two-class classifier at every threshold.
+The running example is the LDA classifier with `balance` and `income`.
+
 The figure shows, for each true default class, the histogram of the
 `balance` and `income` LDA classifier's log posterior odds of default, on the
-density scale, with a dotted line at $0$, where $\hat p(x) = 0.5$.
+density scale, with a dotted line at $0$, where the classifier's estimated
+probability of default, $\hat p(x)$, equals $0.5$.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1416,17 +1432,8 @@ The defaulters' scores sit well to the right of the non-defaulters' (medians
 `r sprintf("%.2f", score_of("No", "median"))`), but the two histograms
 overlap: `r sprintf("%.1f", 100 * score_of("Yes", "below_0"))`% of defaulters
 score at or below $0$, and `r sprintf("%.1f", 100 * score_of("No", "above_0"))`%
-of non-defaulters above it. Any threshold therefore makes two kinds of
-mistake, defaulters to its left and non-defaulters to its right.
-
-An error rate counts every mistake the same way. Failing to flag a customer
-who goes on to default and flagging a customer who does not are different
-mistakes with different costs, and a classifier can have a small error rate
-while making almost every mistake of one kind. The classification lecture
-introduced the confusion matrix, which separates the mistakes; this section
-develops it in full for two classes, extends it to $K$ classes, and adds the
-ROC curve and AUC, which summarize a two-class classifier at every threshold.
-The running example is the LDA classifier with `balance` and `income`.
+of non-defaulters above it. Any threshold inside the overlap makes two kinds
+of mistake, defaulters to its left and non-defaulters to its right.
 
 ### Confusion matrix
 
@@ -1619,7 +1626,8 @@ this course.
 ### Classification threshold {#threshold-choice}
 
 The threshold $t = 0.5$ is the Bayes classifier's: if $\hat p(x)$ equalled
-the true $p(x)$, it would minimize the expected error rate. An estimated
+the true $p_2(x)$, the posterior probability of the positive class, it would
+minimize the expected error rate. An estimated
 $\hat p(x)$ carries no such guarantee, and even for the Bayes classifier the
 overall error rate need not be the quantity of interest.
 
@@ -1820,12 +1828,12 @@ $\hat p(x) > t$ is the same as predicting positive when the log posterior
 odds exceed the cutoff $c = \log\left[t/(1 - t)\right]$.
 
 For the credit card LDA classifier, the slider below moves the threshold
-$t$; its left panel is the opening figure of this section, with the dotted
-line free to move.
-A line above the plots reports $t$, the cutoff $c$ on the log posterior odds,
-sensitivity, and specificity. The left panel draws the histograms of the
-classifier's log posterior odds within each class, on the density scale, with
-a dotted vertical rule at $c$; the shaded bars to the right of $c$ are the
+$t$; its left panel uses the same bins as the opening figure. A line above
+the plots reports $t$, the cutoff $c$ on the log posterior odds, sensitivity,
+and specificity. The left panel draws the histograms of the classifier's log
+posterior odds within each class, on the density scale, the defaulters' with
+a dashed outline and the non-defaulters' with a solid one, and a dotted
+vertical line at $c$; the shaded bars to the right of $c$ are the
 customers flagged, darker for defaulters (sensitivity) and lighter for
 non-defaulters (the false positive rate). The right panel marks where the
 classifier lands on its ROC curve, with a dashed diagonal for reference.
@@ -2240,7 +2248,9 @@ consistent with the defaulters' balances being less spread out than the
 shared $\hat\sigma$ assumes, which separates the classes better than the
 fitted model expects. With each class's own standard deviation in place of
 $\hat\sigma$, $S_+ - S_-$ has variance
-$s_{\text{No}}^2 + s_{\text{Yes}}^2$, and
+$s_{\text{No}}^2 + s_{\text{Yes}}^2$, where $s_{\text{No}}$ and
+$s_{\text{Yes}}$ are the class sample standard deviations in the summary
+table, and
 $\Phi\left(`r sprintf("%.2f", diff(hand_1$mu[, 1]))`/\sqrt{`r dollars(summary_of("No", "sd_balance"))`^2 + `r dollars(summary_of("Yes", "sd_balance"))`^2}\right) = `r sprintf("%.3f", auc_gauss_sep)`$,
 close to the empirical value.
 
@@ -2257,7 +2267,7 @@ positive rates, and the AUC averages the true positive rate over all false
 positive rates, so the classifier with the larger AUC can still be the worse
 one over the false positive rates that matter for a given application.
 
-### Credit card findings
+## Credit card findings
 
 LDA with `balance` and `income` identifies defaulters about as well as the
 logistic regression with the same features: although its Gaussian
@@ -2266,7 +2276,8 @@ logistic regression does, and differs mainly in flagging fewer customers at
 high thresholds. Income adds little to classification beyond balance,
 raising LDA's AUC by
 `r sprintf("%.4f", auc_of("LDA, balance + income") - auc_of("LDA, balance"))`,
-although it is a real feature in the logistic regression. At $t = 0.5$
+although its logistic regression coefficient is clearly nonzero
+($z = `r sprintf("%.2f", z_income_glm)`$). At $t = 0.5$
 either classifier catches only a minority of defaulters, so a lender that
 cares about missed defaults would use a lower threshold.
 
@@ -2492,8 +2503,8 @@ and its AUC from
 `r sprintf("%.4f", strata_of("Logistic regression, additive", "auc"))` to
 `r sprintf("%.4f", strata_of("Logistic regression, interacted with student", "auc"))`.
 The AUC compares defaulters with non-defaulters across strata as well as
-within them. These are training rates, and the stratified models estimate twice as many
-parameters — `r 2 * n_par_lda` against `r n_par_lda` for LDA
+within them. These are training rates, and the stratified models estimate
+twice as many parameters — `r 2 * n_par_lda` against `r n_par_lda` for LDA
 (`r K - 1` prior, `r K * p_features` means, and
 `r p_features * (p_features + 1) / 2` covariance entries per fit), and
 `r length(coef(interacted_glm))` against `r length(coef(additive_glm))` for

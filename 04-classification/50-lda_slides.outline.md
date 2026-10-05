@@ -291,7 +291,7 @@ words: "Income adds little beyond balance"
 
 ---
 
-# 13.5 Student strata
+# 13.6 Student strata
 
 ## 44. Students and non-students
 tag: optional
