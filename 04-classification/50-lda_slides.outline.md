@@ -38,7 +38,7 @@ be a static image), `none` (a words-only slide). A slide may combine two
 Slides never draw from a `### For example,` or `### Beyond this course`
 callout.
 
-**Timing:** 18 slides, 16 tagged `core` and 2 `optional`, about 2 to 3
+**Timing:** 17 slides, 15 tagged `core` and 2 `optional`, about 2 to 3
 minutes each since several slides carry two equations or a whole tabset.
 
 ---
@@ -84,10 +84,11 @@ show: figure — balance-gauss-figure
 words: "One-feature LDA: Gaussian densities fitted to each class"
 say: the start of 13.2; the histograms with the fitted N(μ̂_k, σ̂²) over them
 
-## 6. Gaussian class-conditional densities
+## 6. Gaussian model and parameter estimation
 tag: core
-show: equation — 13.2.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N(\mu_k,\sigma^2)`
-words: "Same σ² in every class"
+show: equation — 13.2.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N(\mu_k,\sigma^2)`, and equation — 13.2.2, `\hat\pi_k`, `\hat\mu_k`, `\hat\sigma^2` (pooled, divisor n − K), on one slide
+words: "Same σ² in every class; closed-form estimates: proportions, means, pooled variance"
+note: this puts the one-feature parameter estimation on the model slide, as slide 10 does for the multivariate case
 
 ## 7. Discriminant function and decision boundary
 tag: core
@@ -100,59 +101,54 @@ tag: core
 show: tabset — three tabs: "Equal priors" (balance-equal-figure), "Estimated priors" (balance-weighted-figure), "Discriminant functions" (balance-delta-figure)
 words: "Equal priors put the boundary at the midpoint; the small prior for Yes moves it toward the defaulters' mean"
 
-## 9. Parameter estimation
-tag: core
-show: equation — 13.2.2, `\hat\pi_k`, `\hat\mu_k`, `\hat\sigma^2` (pooled, divisor n − K)
-words: "Closed form: proportions, means, pooled variance"
-
 ---
 
 # 13.3 Multiple-feature LDA (balance and income)
 
-## 10. Balance and income
+## 9. Balance and income
 tag: core
 show: figure — additive-densities-figure (the scatterplot of balance against income with the fitted class contours and the two class means)
 words: "Two continuous features; one contour set per class"
-say: the start of 13.3; the same image is the first tab of slide 13
+say: the start of 13.3; the same image is the first tab of slide 12
 
-## 11. Multivariate Gaussian model and parameter estimation
+## 10. Multivariate Gaussian model and parameter estimation
 tag: core
 show: equation — 13.3.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N_p(\mu_k, \Sigma)`, and equation — 13.3.2, `\hat\mu_k` and `\hat\Sigma`, on one slide
 words: "Shared Σ, pooled over classes with divisor n − K"
 note: this puts the statistical model on the parameter-estimation slide
 
-## 12. Matrix-form discriminant and linear decision boundary
+## 11. Matrix-form discriminant and linear decision boundary
 tag: core
 show: equation — 13.3.3, δ_k(x) intercept + slope form, and equation — 13.3.4, `\beta_0 + x^\top\beta`, on one slide
 words: "Still linear in x; a hyperplane, a line when p = 2"
 note: this combines the matrix-form and linear-boundary slides
 
-## 13. Fitted densities and priors
+## 12. Fitted densities and priors
 tag: core
 show: tabset — three tabs: "Fitted densities" (additive-densities-figure), "Equal priors" (additive-equal-figure), "Estimated priors" (additive-estimated-figure)
 words: "Boundary through the crossings of the prior-weighted contours"
-say: the first tab repeats slide 10's image, which is fine here because it keeps the tabs in one flow
+say: the first tab repeats slide 9's image, which is fine here because it keeps the tabs in one flow
 
 ---
 
 # Examples
 
-## 14. Simple logistic regression comparison
+## 13. Simple logistic regression comparison
 tag: core
 show: figure — balance-posterior-figure
 words: "Balance alone: LDA is a logistic curve, slightly flatter than logistic regression"
 
-## 15. Multiple logistic regression comparison
+## 14. Multiple logistic regression comparison
 tag: core
 show: figure — additive-posterior-figure
 words: "Balance and income: posterior probability by income quartile"
 
-## 16. Student strata
+## 15. Student strata
 tag: core
 show: figure — strata-figure
 words: "Separate models for students and non-students; each panel over its own incomes"
 
-## 17. Conclusion
+## 16. Conclusion
 tag: optional
 show: none
 words: the bare concept names from the chapter's `## Conclusion`, no recap sentences — Bayes' theorem · generative classifier · LDA · discriminant function · linear boundary
