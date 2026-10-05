@@ -757,20 +757,26 @@ variables missing from the model and events within one count that are not
 independent; the in-course remedy, adding features that explain the extra
 variation, addresses only the first.
 
-Worked example: `ISLR2::Bikeshare` (8,645 hourly records; `casual` and
+Running example, worked through every section rather than in a separate
+worked-example section: `ISLR2::Bikeshare` (8,645 hourly records; `casual` and
 `registered` are components of `bikers` and are never used), with features
 hour as a 24-level factor interacted with working day, month, temperature
 converted to degrees Celsius, and weather with its one-hour `heavy rain/snow`
-level merged into `rain/snow`. A tabset of observed versus fitted hourly
-means by weather and working day shows linear regression going negative
-overnight in rain while Poisson regression scales the profile down.
-Interpretation reads the intercept
-first (mean count at midnight on a non-working January day, clear, 0 °C),
-then the working-day ratio at the reference hour, the per-5 °C rate ratio
-(about 1.08), and the rain/snow rate ratio (about 0.56). A drop-in-deviance
-test on 23 df rejects a shared hourly profile, and the rejection survives
-dividing $G^2$ by the dispersion estimate. The Pearson dispersion is
-about 11 (about 26 without the interaction), so the counts are overdispersed.
+level merged into `rain/snow`. The same 62-column linear predictor serves the
+linear regression (the identity-link GLM, whose fitted means go negative) and
+the Poisson regression, fit right after the log-linear model is stated. A
+tabset of observed versus fitted hourly means by weather and working day shows
+linear regression going negative overnight in rain while Poisson regression
+scales the profile down. Interpretation reads the intercept first (mean count
+at midnight on a non-working January day, clear, 0 °C), then the working-day
+ratio at the reference hour, the per-5 °C rate ratio (about 1.08), and the
+rain/snow rate ratio (about 0.56). The fitted score equations are checked on
+the data (fitted means sum to the observed total, and both models reproduce
+each hour-by-working-day mean). Wald intervals for the rate ratios all exclude
+1. A drop-in-deviance test on 23 df rejects a shared hourly profile, and the
+rejection survives dividing $G^2$ by the dispersion estimate. The Pearson
+dispersion is about 11 (about 26 without the interaction), so the counts are
+overdispersed.
 Multinomial logistic regression is not covered. Cross-validation is the next
 unit.
 
