@@ -327,7 +327,9 @@ Named chunks whose output can go on a slide (anything else in the chapter is
 code, a callout, or prose).
 
 - **Figures (PNG in `_freeze/04-classification/50-lda/figure-html/`):**
-  default-hist-figure, default-stack-figure, balance-gauss-figure, balance-equal-figure,
+  default-hist-figure (the same image reappears at the top of 13.2 as
+  onefeature-hist-figure, so the deck shows it once, on slide 2),
+  default-stack-figure, balance-gauss-figure, balance-equal-figure,
   balance-weighted-figure, balance-delta-figure, balance-posterior-figure,
   default-scatter-figure, default-income-figure, additive-densities-figure,
   additive-equal-figure, additive-estimated-figure, additive-boundary-figure,

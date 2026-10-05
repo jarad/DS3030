@@ -31,8 +31,8 @@ posterior probability minimizes the expected error rate,
 - **derive** the LDA discriminant function $\delta_k(x)$ for one feature under
 Gaussian class-conditional densities with a shared variance $\sigma^2$, and
 **show** that it is linear in $x$, so that the decision boundary is a single
-point that moves toward the mean of the class whose prior probability is
-smaller,
+point that moves toward, and when the prior is small enough past, the mean of
+the class whose prior probability is smaller,
 - **write** the discriminant function for $p > 1$ features in matrix form using
 class mean vectors $\mu_k$ and a shared covariance matrix $\Sigma$, and
 **compute** the estimates $\hat\pi_k$, $\hat\mu_k$, and $\hat\sigma^2$ or
@@ -72,14 +72,17 @@ added interactions, including one between `balance` and `income`.
 is `default`, with `Yes` the positive class. This lecture uses the two
 quantitative explanatory variables, `balance`, the customer's monthly credit
 card balance in dollars, and `income`, the customer's income in dollars,
-because LDA models each class's features with a Gaussian density. The
+because linear discriminant analysis (LDA), the method of this lecture,
+models each class's features with a Gaussian density. The
 features are the explanatory variables themselves. `income` enters the models
 in dollars as recorded, as in the flexible logistic regression lecture; its
 coefficients are reported here per \$1,000 of income. `student` (Yes/No)
 explains a feature of the income data in the Multiple-feature LDA section and
 splits the customers in the Student strata section.
 
-The table summarizes balance within each default class. The first tab below
+The table gives each default class's number and proportion of customers and
+the mean, standard deviation, and number of zero values of its balances. The
+first tab below
 shows balance within each class, one panel per class, on the density scale;
 the second shows all customers in one histogram on the count scale, with each
 bar split into non-defaulters (light blue) and defaulters (dark orange).
@@ -201,14 +204,13 @@ features themselves never enters it.
 A **generative classifier** takes the other route. It models how the features
 are distributed *within* each class, as in the first tab above, and how
 common each class is, and then reverses the conditioning with Bayes' theorem
-to obtain $P(Y = k \mid X = x)$. Linear discriminant analysis (LDA) is the
-first generative classifier in this course.
+to obtain $P(Y = k \mid X = x)$. LDA is the first generative classifier in
+this course.
 
 Every earlier lecture conditioned on the features and treated them as fixed. A
 generative classifier models their distribution, so here $X$ is a random
 vector — the features of a randomly chosen observation — and $x$ is a value it
-takes. Let the response $Y$ take one of $K$ classes, $k = 1, \ldots, K$, and
-define
+takes. With $Y$ the response, define
 
 $$\pi_k = P(Y = k), \qquad f_k(x) = \text{density of } X \text{ given } Y = k,$$
 
@@ -302,9 +304,18 @@ assumption about its form, and LDA's assumption is that it is Gaussian.
 
 ## One-feature LDA
 
-The one feature here is balance, whose histograms open the chapter. Within
-each class the balances formed a single, roughly bell-shaped pile, centered
-at a different value for each class and of broadly similar width. That
+The one feature here is balance. The histograms below show balance within
+each default class, one panel per class, on the density scale.
+
+```{r onefeature-hist-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+balance_hist_plot
+```
+
+Each class's balances form a single, roughly bell-shaped pile; the two piles
+are centered at different balances and have spreads of the same order. That
 suggests a model: describe each class's balance by a Gaussian density with its
 own mean, the center of its pile, and one variance shared by both classes, the
 common width of the piles.
@@ -330,8 +341,7 @@ prior probabilities $\pi_k$.
 
 The classes differ only in where their densities are centered. For the credit
 card customers, $\mu_k$ is the center of class $k$'s pile of balances in the
-histograms that open the chapter, and $\sigma$ is the width the two piles
-share.
+histograms above, and $\sigma$ is the width the two piles share.
 
 ### Parameter estimation
 
@@ -374,7 +384,8 @@ responses under a stronger assumption — Gaussian features with a shared
 variance — and every estimate is a sample proportion, mean, or variance.
 
 `MASS::lda()` takes the same formula interface as `glm()`. Fitting `default`
-on `balance`:
+on `balance` prints three blocks: the prior probabilities, the group means,
+and the coefficients of linear discriminants.
 
 ```{r balance-lda}
 balance_lda <- MASS::lda(default ~ balance, data = Default)
@@ -431,7 +442,7 @@ gauss_plot <- balance_hist_plot +
 
 The figure below draws each class's fitted density
 $N\left(\hat\mu_k, \hat\sigma^2\right)$ over that class's histogram from the
-start of the chapter.
+start of this section.
 
 ```{r balance-gauss-figure}
 #| echo: false
@@ -452,12 +463,13 @@ class-specific standard deviations.
 In the figure, the fitted density for non-defaulters misses the spike at zero,
 and the one for defaulters, forced to share $\hat\sigma$ with the larger
 class, is wider than their histogram: the two departures from LDA's
-assumptions that the opening histograms showed.
+assumptions that the histograms showed.
 
 The **coefficient of the linear discriminant**,
 `r signif(balance_lda$scaling[1, 1], 4)`, equals
 $1/\hat\sigma = `r signif(1 / sigma_hat_1, 4)`$: `MASS::lda()`
-reports the discriminant direction rescaled so that the discriminant has
+reports the discriminant direction rescaled so that the printed linear
+combination, $\text{LD1} = \text{coefficient} \times \texttt{balance}$, has
 variance $1$ within each class, and with one feature the direction itself is
 just "larger balance points toward `Yes`." This is Fisher's scaling,
 described in the callout below.
@@ -490,8 +502,8 @@ toy_lda$means
 ```
 
 The class means are `r toy_lda$means[1]` and `r toy_lda$means[2]` and the
-priors are equal; the Decision boundary subsection shows that this puts the
-LDA boundary $\hat x^*$ at their midpoint, `r mean(toy_lda$means)`.
+priors are equal, so LDA classifies by which class mean is closer: the
+boundary is their midpoint, `r mean(toy_lda$means)`.
 :::
 
 ### Discriminant function
@@ -512,7 +524,7 @@ $$\delta_k(x) = \left(\log \pi_k - \frac{\mu_k^2}{2\sigma^2}\right) + \frac{\mu_
 
 where
 
-- $\delta_k(x)$ is the discriminant score of class $k$ at feature value $x$,
+- $\delta_k(x)$ is the discriminant value of class $k$ at feature value $x$,
 - $\log \pi_k - \mu_k^2/\left(2\sigma^2\right)$ is its intercept, the score
 at $x = 0$, and
 - $\mu_k/\sigma^2$ is its slope.
@@ -532,7 +544,7 @@ make each discriminant quadratic in $x$.
 The dropped terms are the same in every class's $\log\left(\pi_k f_k(x)\right)$,
 so their exponentials are common factors of every $\pi_k f_k(x)$. They cancel
 from the ratio in Bayes' theorem and the posterior probabilities can be
-recovered from the discriminant scores alone:
+recovered from the discriminant values alone:
 
 $$p_k(x) = \frac{e^{\delta_k(x)}}{\sum_{l=1}^K e^{\delta_l(x)}}.$$
 
@@ -583,7 +595,8 @@ to the other.
 With equal prior probabilities the logarithm is zero and the boundary is the
 midpoint of the two means. Take $\mu_2 > \mu_1$. If class $2$ is the rarer
 class, $\pi_2 < \pi_1$, the logarithm is positive and the boundary moves to the
-right, toward $\mu_2$: an observation must look more like a typical class-$2$
+right, toward $\mu_2$, and past it once
+$\sigma^2 \log(\pi_1/\pi_2)/(\mu_2 - \mu_1) > (\mu_2 - \mu_1)/2$: an observation must look more like a typical class-$2$
 observation before the classifier assigns it to the rarer class. Since
 $\delta_1(x) = \delta_2(x)$ exactly where $\pi_1 f_1(x) = \pi_2 f_2(x)$, the
 boundary is also where the two prior-weighted densities cross.
@@ -678,11 +691,13 @@ midpoint of the class means, \$`r dollars(x_mid)`. With the estimated priors
 the defaulter curve shrinks to a small bump that rises above the non-defaulter
 curve only past
 $\hat x^* = `r gsub(",", "{,}", paste0("\\$", dollars(x_star_lda)))`$, deep in
-the right tail where both are small. In the boundary formula that shift is
+the non-defaulters' right tail. In the boundary formula that shift is
 the prior term
 $\hat\sigma^2\log\left(\hat\pi_{\text{No}}/\hat\pi_{\text{Yes}}\right)/\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$,
 which adds \$`r dollars(x_star_lda - x_mid)` because $\hat\pi_{\text{Yes}}$ is
-so small. The discriminant functions are two straight lines crossing at the
+so small. The boundary lies beyond
+$\hat\mu_{\text{Yes}} = `r gsub(",", "{,}", paste0("\\$", dollars(hand_1$mu[2, 1])))`$,
+so even a customer with the defaulters' average balance is classified `No`. The discriminant functions are two straight lines crossing at the
 same balance. A linear discriminant function for each class, with the
 boundary where two of them are equal, is the "linear" in linear discriminant
 analysis.
@@ -1059,7 +1074,8 @@ weighted_grid_2 <- function(p) {
     pivot_longer(c(No, Yes), names_to = "default", values_to = "density")
 }
 
-# Fitted densities: contours at Mahalanobis radii 1 and 2. Prior-weighted
+# Fitted densities: contours where (x - mu_k)' Sigma^{-1} (x - mu_k) is 1 and
+# 4. Prior-weighted
 # densities: the same three heights, as fractions of the peak of f_k, in both
 # prior tabs.
 density_levels_2  <- f_peak_2 * exp(-c(1, 2)^2 / 2)
@@ -1157,13 +1173,15 @@ yes_peak_share <- hand_2$pi[2]
 
 For the credit card fit, each tab below draws faint customer points, the two
 estimated class means (crosses) joined by a grey segment, and contours: the
-first tab draws two contours (Mahalanobis radii 1 and 2) of each class's
-fitted density $\hat f_k$, and the second and third draw contours of the
-prior-weighted densities at the same three heights in both tabs,
+first tab draws two contours of each class's fitted density $\hat f_k$, the
+ellipses on which
+$\left(x - \hat\mu_k\right)^\top \hat\Sigma^{-1} \left(x - \hat\mu_k\right)$
+equals $1$ and $4$, and the second and third draw contours of the
+prior-weighted densities at the same three heights,
 $\pi_k \hat f_k$ with equal priors and $\hat\pi_k \hat f_k$ with the
 estimated priors, together with that tab's decision boundary (long dashes).
-Open circles mark where a non-defaulter contour crosses the defaulter contour of the same
-height, and the dotted line in the third tab is the equal-prior boundary.
+Open circles mark where a non-defaulter contour crosses the defaulter
+contour of the same height, and the dotted line in the third tab is the equal-prior boundary.
 
 ::: {.panel-tabset}
 #### Fitted densities
@@ -1205,13 +1223,7 @@ defaulters, because the prior enters only $\beta_0$.
 The estimated boundary is nearly vertical: across the whole observed range of
 income, LDA's balance threshold shifts by only
 \$`r dollars(abs(diff(x_star_lda_range)))`, against a range of balance of
-\$`r dollars(diff(range(Default$balance)))`. Per overall standard deviation, balance
-moves LDA's log posterior odds by `r sprintf("%.2f", per_sd_lda[1])` and
-income by only `r sprintf("%.2f", per_sd_lda[2])`. The coefficients of the
-linear discriminant printed by `MASS::lda()` are proportional to
-$\hat\beta = \hat\Sigma^{-1}\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$: dividing
-each printed coefficient by the corresponding entry of $\hat\beta$ gives
-`r sprintf("%.4f", scaling_ratio[1])` for both.
+\$`r dollars(diff(range(Default$balance)))`.
 
 ### Multiple logistic regression comparison {#balance-and-income}
 
@@ -1361,6 +1373,14 @@ same balance. Applying the logistic function to
 $\hat\beta_0 + x^\top\hat\beta$ again reproduces `predict()`'s posterior
 probabilities, to within $`r sci(max_diff_2, 1)`$.
 
+Per overall standard deviation, balance moves LDA's log posterior odds by
+`r sprintf("%.2f", per_sd_lda[1])` and income by only
+`r sprintf("%.2f", per_sd_lda[2])`. The coefficients of the linear
+discriminant printed by `MASS::lda()` are proportional to the LDA column of
+the table: dividing each printed coefficient by the corresponding entry of
+$\hat\beta = \hat\Sigma^{-1}\left(\hat\mu_{\text{Yes}} - \hat\mu_{\text{No}}\right)$
+gives `r sprintf("%.4f", scaling_ratio[1])` for both.
+
 Read as a balance threshold, LDA's boundary sits at
 \$`r dollars(x_star_lda_2[1])` for a customer at the lower quartile of
 income and \$`r dollars(x_star_lda_2[3])` at the upper quartile; logistic
@@ -1377,7 +1397,7 @@ who goes on to default and flagging a customer who does not are different
 mistakes with different costs, and a classifier can have a small error rate
 while making almost every mistake of one kind. The classification lecture
 introduced the confusion matrix, which separates the mistakes; this section
-develops it in full for two classes, extends it to $K$ classes, and adds the
+develops it in full for two classes and for $K$ classes, and adds the
 ROC curve and AUC, which summarize a two-class classifier at every threshold.
 The running example is the LDA classifier with `balance` and `income`.
 
@@ -1470,7 +1490,7 @@ where
 - $FP$ is the number of negative observations predicted positive, and
 - $TN$ is the number of negative observations predicted negative.
 
-In the opening figure, with $t = 0.5$, $TP$ and $FN$ count the defaulters to
+In the score histograms above, with $t = 0.5$, $TP$ and $FN$ count the defaulters to
 the right and left of the dotted line, and $FP$ and $TN$ the non-defaulters
 to its right and left. The diagonal holds the correct classifications, so the
 error rate is $(FP + FN)/n$.
@@ -1541,7 +1561,7 @@ $$\text{Sensitivity} = \frac{TP}{TP + FN}, \qquad \text{Specificity} = \frac{TN}
 
 where
 
-- **sensitivity**, also called **recall** or the **true positive rate**, is the
+- **sensitivity**, also called **recall** or the **true positive rate** (TPR), is the
 proportion of positive observations the classifier catches, an estimate of
 $P\left(\hat y(X) = \text{positive} \mid Y = \text{positive}\right)$, and
 - **specificity**, also called the **true negative rate**, is the proportion of
@@ -1550,7 +1570,7 @@ $P\left(\hat y(X) = \text{negative} \mid Y = \text{negative}\right)$.
 
 Their complements are error rates within each true class:
 $1 - \text{sensitivity} = FN/(TP + FN)$ is the **false negative rate**, and
-$1 - \text{specificity} = FP/(TN + FP)$ is the **false positive rate**.
+$1 - \text{specificity} = FP/(TN + FP)$ is the **false positive rate** (FPR).
 
 In the credit card confusion matrix, of the
 `r cm_lda_05["TP"] + cm_lda_05["FN"]` customers who defaulted the classifier
@@ -1643,9 +1663,9 @@ threshold improves both.
 ### Beyond this course
 If the two mistakes have known costs, $c_{FN}$ for a missed positive and
 $c_{FP}$ for a false alarm, the expected cost of predicting positive at $x$ is
-$c_{FP}\left[1 - p(x)\right]$ and of predicting negative is $c_{FN}\, p(x)$.
+$c_{FP}\left[1 - p_2(x)\right]$ and of predicting negative is $c_{FN}\, p_2(x)$.
 Predicting positive is the cheaper choice exactly when
-$p(x) > c_{FP}/(c_{FP} + c_{FN})$, so that ratio is the cost-minimizing
+$p_2(x) > c_{FP}/(c_{FP} + c_{FN})$, so that ratio is the cost-minimizing
 threshold. Equal costs recover $t = 0.5$.
 :::
 
@@ -1828,7 +1848,7 @@ $\hat p(x) > t$ is the same as predicting positive when the log posterior
 odds exceed the cutoff $c = \log\left[t/(1 - t)\right]$.
 
 For the credit card LDA classifier, the slider below moves the threshold
-$t$; its left panel uses the same bins as the opening figure. A line above
+$t$; its left panel uses the same bins as the score histograms above. A line above
 the plots reports $t$, the cutoff $c$ on the log posterior odds, sensitivity,
 and specificity. The left panel draws the histograms of the classifier's log
 posterior odds within each class, on the density scale, the defaulters' with
@@ -2248,9 +2268,9 @@ consistent with the defaulters' balances being less spread out than the
 shared $\hat\sigma$ assumes, which separates the classes better than the
 fitted model expects. With each class's own standard deviation in place of
 $\hat\sigma$, $S_+ - S_-$ has variance
-$s_{\text{No}}^2 + s_{\text{Yes}}^2$, where $s_{\text{No}}$ and
-$s_{\text{Yes}}$ are the class sample standard deviations in the summary
-table, and
+$\hat\sigma_{\text{No}}^2 + \hat\sigma_{\text{Yes}}^2$, where
+$\hat\sigma_{\text{No}}$ and $\hat\sigma_{\text{Yes}}$ are the class sample
+standard deviations in the summary table, and
 $\Phi\left(`r sprintf("%.2f", diff(hand_1$mu[, 1]))`/\sqrt{`r dollars(summary_of("No", "sd_balance"))`^2 + `r dollars(summary_of("Yes", "sd_balance"))`^2}\right) = `r sprintf("%.3f", auc_gauss_sep)`$,
 close to the empirical value.
 
@@ -2285,7 +2305,8 @@ cares about missed defaults would use a lower threshold.
 
 Student status has not entered any model so far. This additional analysis
 asks whether separate models for students and non-students classify better.
-The table below summarizes the two student strata.
+The table below gives each stratum's number of customers, number of
+defaulters, default rate, and median income.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -2508,8 +2529,8 @@ twice as many parameters — `r 2 * n_par_lda` against `r n_par_lda` for LDA
 (`r K - 1` prior, `r K * p_features` means, and
 `r p_features * (p_features + 1) / 2` covariance entries per fit), and
 `r length(coef(interacted_glm))` against `r length(coef(additive_glm))` for
-logistic regression — so their training rates tend to understate their test
-error rates by more; whether stratifying helps on new customers is a question for
+logistic regression — so their training error rates tend to understate test
+error, and their training AUCs to overstate test AUC, by more; whether stratifying helps on new customers is a question for
 test data.
 
 At each stratum's median income, LDA's balance threshold is
@@ -2558,7 +2579,8 @@ responses rather than from the iteratively maximized conditional likelihood
 of logistic regression. The class proportions and class means maximize that
 joint likelihood, and the pooled variance or covariance matrix is its
 maximizer rescaled to be unbiased. A smaller prior probability moves the
-boundary toward that class's mean.
+boundary toward that class's mean, and past it when the prior is small
+enough.
 
 A classifier's error rate hides which mistakes it makes. The confusion matrix
 separates them, sensitivity and specificity measure performance within each

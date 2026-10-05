@@ -518,13 +518,15 @@ conditional error probability is $1 - p_{\hat y(x)}(x)$ it minimizes the
 error at every $x$ and hence overall (the **Bayes error rate**). With no
 feature information it would assign every customer `No`.
 
-One-feature LDA (balance): Gaussian $f_k$ with class means $\mu_k$ and a
-**shared** variance $\sigma^2$, motivated by the histograms. Estimates
+One-feature LDA (balance): the section opens with the balance histograms
+within each default class (one roughly bell-shaped pile per class, centered
+at different balances, spreads of the same order), which motivate Gaussian
+$f_k$ with class means $\mu_k$ and a **shared** variance $\sigma^2$. Estimates
 $\hat\pi_k = n_k/n$ and class sample means (maximum likelihood) and pooled
 variance with divisor $n - K$ (the maximum likelihood estimate rescaled to be
 unbiased), from the **joint** likelihood $\prod_i \pi_{y_i} f_{y_i}(x_i)$
 (closed form, so separation does not prevent them from existing, though a
-singular pooled covariance does) versus logistic regression's conditional
+zero pooled variance does) versus logistic regression's conditional
 likelihood; then the `MASS::lda(default ~ balance)` output (priors, group
 means, the LD coefficient $1/\hat\sigma$), a by-hand check, and the fitted
 Gaussians over the histograms (missing the non-defaulters' spike at zero and
@@ -539,7 +541,10 @@ and the boundary
 $x^* = (\mu_1+\mu_2)/2 + \sigma^2\log(\pi_1/\pi_2)/(\mu_2-\mu_1)$, where the
 prior-weighted densities cross. For the credit card fit, an equal-priors
 counterfactual puts the boundary at the midpoint of the class means (about
-\$1,276), while the estimated priors move it to about \$2,009; a tab shows
+\$1,276), while the estimated priors move it to about \$2,009, beyond the
+defaulters' mean balance, so even a customer with that average balance is
+classified `No` (a small enough prior moves the boundary past the rarer
+class's mean); a tab shows
 the two fitted discriminant lines crossing there. A comparison with simple
 logistic regression (coefficient table, posterior curves; LDA's curve is
 slightly flatter and crosses 0.5 further right than logistic regression's
