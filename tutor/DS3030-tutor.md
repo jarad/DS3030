@@ -738,7 +738,9 @@ Poisson regression. The chapter opens with the hourly bike-rental counts and
 their mean-variance plot, and introduces the **Poisson distribution** there:
 pmf $\mu^y e^{-\mu}/y!$ with mean and variance both $\mu$ (derived, plus a
 slider showing the pmf skewed at small $\mu$ and spreading as $\mu$ grows), the
-dashed variance = mean line that every hour-by-working-day group lies above.
+dashed variance = mean line that every hour-by-working-day group lies above
+(the busiest group's observed standard deviation is about eight times its
+Poisson one). The GLM section opens by re-showing that mean-variance plot.
 Motivation: least squares on the counts
 gives negative fitted means, residuals that fan out as the mean grows, and
 additive month, temperature, and weather effects that shift every hour by the
@@ -770,7 +772,9 @@ per one-unit increase in feature $j$ holding the others fixed (the analogue
 of the odds ratio). Log-likelihood
 $\sum_i [y_i x_i\beta - e^{x_i\beta} - \log(y_i!)]$, score equations
 $\sum_i x_{ij}(y_i - \mu_i) = 0$ (the logistic form; fitted means sum, and
-average within each dummy's level, to the observed counts), no closed form,
+average within each dummy's level, to the observed counts), in general no
+closed form (with only dummy variables the solution is the cell means; a
+quantitative feature such as temperature removes it),
 fit by iteratively reweighted least squares. Wald $z$-tests and intervals,
 exponentiated for rate ratios; drop-in-deviance test with the Poisson residual
 deviance $2[\ell_{\text{sat}} - \ell(\hat\beta)]$, whose differences equal
