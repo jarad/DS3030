@@ -34,9 +34,8 @@ words-only slide).
 Slides never draw from a `### For example,` or `### Beyond this course`
 callout.
 
-**Timing guess:** 40 slides are tagged `core` and 10 `optional` (49
-counting the agenda). At about a minute per slide the `core` set already fills
-a 50-minute class, so the `optional` slides are the first to leave to the
+**Timing guess:** 39 slides are tagged `core` (the agenda is one of them) and 10 `optional`, 49 in all.
+At about a minute per slide the `core` set already fills a 50-minute class, so the `optional` slides are the first to leave to the
 notes; the Student strata slides (44 to 47) and the multiple-class slide are
 the likeliest to move.
 
@@ -293,15 +292,15 @@ words: "Income adds little beyond balance"
 
 # 13.6 Student strata
 
-## 44. Students and non-students
+## 44. Stratum summary
+tag: optional
+show: table — strata-summary-table
+words: "Separate models for students and non-students: sizes and default rates"
+
+## 45. Students and non-students
 tag: optional
 show: figure — strata-data-figure
 words: "Raw data, one panel per stratum"
-
-## 45. Stratum summary
-tag: optional
-show: table — strata-summary-table
-words: "Separate models for students and non-students"
 
 ## 46. Pooled comparison
 tag: optional
@@ -328,8 +327,7 @@ Named chunks whose output can go on a slide (anything else in the chapter is
 code, a callout, or prose).
 
 - **Figures (PNG in `_freeze/04-classification/50-lda/figure-html/`):**
-  default-hist-figure (two tabs: within each class, all customers),
-  default-stack-figure, balance-gauss-figure, balance-equal-figure,
+  default-hist-figure, default-stack-figure, balance-gauss-figure, balance-equal-figure,
   balance-weighted-figure, balance-delta-figure, balance-posterior-figure,
   default-scatter-figure, default-income-figure, additive-densities-figure,
   additive-equal-figure, additive-estimated-figure, additive-boundary-figure,
