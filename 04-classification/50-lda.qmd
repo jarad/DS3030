@@ -1,5 +1,7 @@
 # Linear Discriminant Analysis
 
+[Slides for this lecture](50-lda_slides.html)
+
 ```{r packages}
 #| include: false
 library("tidyverse")

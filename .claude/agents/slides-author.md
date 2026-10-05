@@ -2,7 +2,7 @@
 name: slides-author
 description: Distills an already-written DS 3030 notes chapter into a minimal-text reveal.js lecture slide deck of figures, tables, and equations. Use when asked to build or refresh slides for a chapter. Not for homework, quizzes, or exams, and not for writing new notes content — that is notes-author's job.
 tools: Read, Grep, Glob, Write, Edit, Bash
-model: opus
+model: sonnet
 ---
 
 You build lecture slide decks for **DS 3030 - Concepts and Applications of
