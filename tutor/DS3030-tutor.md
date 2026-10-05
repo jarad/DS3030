@@ -493,108 +493,121 @@ is still not covered.
 ### 13. Linear Discriminant Analysis
 <https://jarad.github.io/DS3030/04-classification/50-lda.html>
 
-First generative classifier. Contrasts logistic regression, which models
-$P(Y = k \mid X = x)$ directly, with modeling the **class-conditional
-density** $f_k(x)$ and **prior probability** $\pi_k = P(Y = k)$ and reversing
-the conditioning by Bayes' theorem, $p_k(x) = \pi_k f_k(x) / \sum_l \pi_l
-f_l(x) \propto \pi_k f_k(x)$; here $X$ is treated as random, unlike every
-earlier chapter. Classes are indexed $k = 1, \ldots, K$ as in ISLR2. A
+First generative classifier, worked through the whole chapter on one running
+example, `ISLR2::Default` (a simulated data set of 10,000 credit card
+customers; response `default`, features `balance` and `income`, with income
+in dollars as recorded and its coefficients reported per \$1,000). Every
+piece of theory is followed immediately by the same piece applied to these
+customers.
+
+Generative classifiers: the chapter opens with the question and the data, a
+reminder of what the logistic regression chapters fit, a class-summary table,
+and histograms of balance by default class (density scale within each class,
+and a stacked count histogram of all customers). Logistic regression models
+$P(Y = k \mid X = x)$ directly; a generative classifier models the
+**class-conditional density** $f_k(x)$ and **prior probability**
+$\pi_k = P(Y = k)$ and reverses the conditioning by Bayes' theorem,
+$p_k(x) = \pi_k f_k(x) / \sum_l \pi_l f_l(x) \propto \pi_k f_k(x)$; here $X$
+is treated as random, unlike every earlier chapter. Classes are indexed
+$k = 1, \ldots, K$ as in ISLR2. The estimated priors (about 0.967 and
+0.033) illustrate $\pi_k$, the within-class histograms picture $f_k$, and the
+defaulters' share of a stacked bar estimates $p_{\text{Yes}}(x)$. A
 classifier is an assignment rule $\hat y(x)$; the **Bayes classifier**
 assigns $\arg\max_k p_k(x)$ ($K = 2$: $p_2(x) > 0.5$), and because the
 conditional error probability is $1 - p_{\hat y(x)}(x)$ it minimizes the
-error at every $x$ and hence overall (the **Bayes error rate**).
+error at every $x$ and hence overall (the **Bayes error rate**). With no
+feature information it would assign every customer `No`.
 
-One feature: the section opens with real data, histograms of `balance` by
-default class in `ISLR2::Default` (two roughly bell-shaped piles centered at
-different balances), which motivate the model of Gaussian $f_k$ with class
-means $\mu_k$ and a **shared**
-variance $\sigma^2$; derivation of the discriminant written as intercept plus
-slope, $\delta_k(x) = \left[\log\pi_k - \mu_k^2/(2\sigma^2)\right] +
+One-feature LDA (balance): Gaussian $f_k$ with class means $\mu_k$ and a
+**shared** variance $\sigma^2$, motivated by the histograms. Estimates
+$\hat\pi_k = n_k/n$ and class sample means (maximum likelihood) and pooled
+variance with divisor $n - K$ (the maximum likelihood estimate rescaled to be
+unbiased), from the **joint** likelihood $\prod_i \pi_{y_i} f_{y_i}(x_i)$
+(closed form, so separation does not prevent them from existing, though a
+singular pooled covariance does) versus logistic regression's conditional
+likelihood; then the `MASS::lda(default ~ balance)` output (priors, group
+means, the LD coefficient $1/\hat\sigma$), a by-hand check, and the fitted
+Gaussians over the histograms (missing the non-defaulters' spike at zero and
+too wide for defaulters). The discriminant written as intercept plus slope,
+$\delta_k(x) = \left[\log\pi_k - \mu_k^2/(2\sigma^2)\right] +
 (\mu_k/\sigma^2)\,x$ (the dropped terms, including the $x^2$ term, are free
-of $k$ only because $\sigma^2$ is shared), recovery of $p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$, the
-log posterior odds $\beta_0 + \beta_1 x$ (logistic regression's form,
-estimated differently), and the boundary
+of $k$ only because $\sigma^2$ is shared), with the fitted
+$\hat\delta_{\text{No}}$ and $\hat\delta_{\text{Yes}}$ for balance; recovery
+of $p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$; the log posterior odds
+$\beta_0 + \beta_1 x$ (logistic regression's form, estimated differently);
+and the boundary
 $x^* = (\mu_1+\mu_2)/2 + \sigma^2\log(\pi_1/\pi_2)/(\mu_2-\mu_1)$, where the
-prior-weighted curves $\pi_k f_k(x)$ cross, which moves toward the rarer
-class's mean. Estimates $\hat\pi_k = n_k/n$ and class sample means
-(maximum likelihood) and pooled variance with divisor $n - K$ (the maximum
-likelihood estimate rescaled to be unbiased), from the **joint** likelihood
-$\prod_i \pi_{y_i} f_{y_i}(x_i)$ (closed form, so separation does not
-prevent them from existing, though a singular pooled covariance does) versus
-logistic regression's conditional likelihood. Multiple features: the
-section opens with a scatterplot of income against balance by default class
-(overlapping clouds, weak negative within-class correlation), which motivates
-a shared covariance matrix; $x$ a
-column $p$-vector (no leading 1), multivariate Gaussian with mean vectors
-$\mu_k$ and shared covariance $\Sigma$,
-$\delta_k(x) = \left(\log\pi_k - \tfrac12\mu_k^\top\Sigma^{-1}\mu_k\right) +
-x^\top\Sigma^{-1}\mu_k$, a hyperplane boundary $\beta_0 + x^\top\beta = 0$
-with slopes $\beta = \Sigma^{-1}(\mu_2 - \mu_1)$ (not perpendicular to the
-segment joining the means), and the pooled covariance estimate $\hat\Sigma$.
-The two-feature figure (means differing in both features, correlation 0.6)
-draws contours of $\pi_k f_k$ at fixed heights for equal and unequal priors:
-the boundary passes through the crossings of same-height contours, and a
-smaller prior shrinks that class's contours and shifts the boundary parallel
-toward its mean.
+prior-weighted densities cross. For the credit card fit, an equal-priors
+counterfactual puts the boundary at the midpoint of the class means (about
+\$1,276), while the estimated priors move it to about \$2,009; a tab shows
+the two fitted discriminant lines crossing there. A comparison with simple
+logistic regression (coefficient table, posterior curves; LDA's curve is
+slightly flatter and crosses 0.5 further right than logistic regression's
+\$1,937).
 
-Evaluation vocabulary, extending the classification chapter's confusion
-matrix: positive/negative class, threshold $t$, confusion matrix (TP, FN, FP,
-TN; truth in rows), error rate, **sensitivity** (recall, true positive rate),
+Multiple-feature LDA (balance and income): the section opens with a
+scatterplot of income against balance by default class and income
+histograms by class (overlapping clouds, weak negative within-class
+correlation of about $-0.16$, bimodal income whose lower mode is mostly
+students — a data fact, not a model feature), which motivate a multivariate
+Gaussian with a shared covariance matrix. $x$ is a column $p$-vector (no
+leading 1); pooled covariance estimate $\hat\Sigma$ and the
+`MASS::lda(default ~ balance + income)` output with a by-hand check;
+$\delta_k(x) = \left(\log\pi_k - \tfrac12\mu_k^\top\Sigma^{-1}\mu_k\right) +
+x^\top\Sigma^{-1}\mu_k$ with a table of the fitted discriminants; a
+hyperplane boundary $\beta_0 + x^\top\beta = 0$ with slopes
+$\beta = \Sigma^{-1}(\mu_2 - \mu_1)$ (not perpendicular to the segment
+joining the means; through its midpoint with equal priors). The fitted
+figure draws contours of $\hat f_k$ and of $\pi_k \hat f_k$ at fixed heights
+for equal and estimated priors: the boundary passes through the crossings of
+same-height contours, a smaller prior shrinks that class's contours and
+shifts the boundary parallel toward its mean, and the estimated boundary is
+nearly vertical (balance matters far more per standard deviation). A
+comparison with logistic regression on balance + income: the fitted income
+slope is positive although defaulters' mean income is slightly lower,
+because $\hat\Sigma^{-1}$ adjusts income for balance; logistic regression's
+boundary lies slightly left of LDA's, and LDA's posterior is flatter at each
+income quartile.
+
+Classifier evaluation, with the balance + income LDA as the running example:
+positive/negative class, threshold $t$, confusion matrix (TP, FN, FP, TN;
+truth in rows) and the example's matrix at $t = 0.5$ (error about 2.8%,
+mostly missed defaulters); **sensitivity** (recall, true positive rate),
 **specificity** (true negative rate), false negative and false positive
-rates. With $K$ classes the confusion matrix is $K \times K$ with entries
+rates, with the example's values (sensitivity about 23%, specificity about
+99.8%). With $K$ classes the confusion matrix is $K \times K$ with entries
 $n_{kj}$, the error rate is $1 - \sum_k n_{kk}/n$, sensitivity
 $n_{kk}/\sum_j n_{kj}$ and specificity
 $\sum_{l\ne k}\sum_{j\ne k} n_{lj} / \sum_{l\ne k}\sum_j n_{lj}$ are
 computed one class versus the rest, and the threshold $t = 0.5$ generalizes
-to "assign the largest posterior" (multi-class ROC/AUC is only a
-"Beyond this course" pointer; multinomial logistic regression is not
-covered in this course). Why lowering $t$ can only raise sensitivity and lower
-specificity; the **ROC curve** (sensitivity vs. $1 -$ specificity over all
-thresholds, depending only on how a classifier orders observations); and
-**AUC**, derived as $P(S_+ > S_-)$ and, for equal-variance Gaussians,
-$\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$, with the pairwise-comparison
-estimator. AUC ranks classifiers without choosing a threshold: a figure
-compares empirical ROC curves of three LDA classifiers fit to one simulated
-data set from the two-feature model ($X_1$ only, $X_2$ only, both), where
-the two-feature curve lies on or above both single-feature curves; when curves
-cross, each has the higher true positive rate over part of the range of
-false positive rates, so the classifier with the larger AUC can still be the
-worse one over the false positive rates that matter for a given
-application.
+to "assign the largest posterior" (multinomial logistic regression is not
+covered in this course). Why lowering $t$ can only raise sensitivity and
+lower specificity, an interactive figure with checkboxes plotting the
+overall error rate, sensitivity, specificity, and false positive rate
+against $t$, and a table at $t = 0.5$ and $t = 0.2$ for LDA (balance only and
+balance + income) and logistic regression (sensitivity about 57% at
+$t = 0.2$); $t = 0.5$ need not minimize an estimated classifier's error rate.
+The **ROC curve** (sensitivity vs. $1 -$ specificity over all thresholds,
+depending only on how a classifier orders observations), with a slider that
+moves the threshold on the example's real log posterior odds and its real
+ROC curve, and the LDA and logistic regression ROC curves, which nearly
+coincide; LDA's flatter posterior means it flags a subset of logistic
+regression's customers at high thresholds and a superset at low ones.
+**AUC**, derived as $P(S_+ > S_-)$, with the pairwise-comparison estimator
+and, for equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$
+(the fitted balance model implies a smaller AUC than the empirical one). The
+example's AUCs (identical for the two one-feature models, about 0.95 for both
+two-feature models) and a figure comparing classifiers fit to the same
+customers (balance only, income only, both, and no features): income alone
+is near the diagonal, and the balance-only and two-feature curves cross, so
+the classifier with the larger AUC can still be the worse one over the false
+positive rates that matter for a given application. Income adds little to
+classification beyond balance (at $t = 0.2$ it slightly raises the training
+error and lowers sensitivity), although it is a real predictor in the
+logistic regression. All rates are training rates; test-error estimation is
+deferred to resampling.
 
-Worked example: `ISLR2::Default` with `MASS::lda()` on the two quantitative
-explanatory variables, `balance` and `income` (income in dollars as
-recorded, as in the flexible logistic regression chapter; income
-coefficients reported per \$1,000). It opens with a reminder of which
-variables the logistic regression chapters used and a class-summary table.
-First `balance` alone, with its histograms by default class shown before the
-fit (spike at zero, smaller spread among defaulters; priors interpreted first
-as the no-feature error rate to beat, group means, pooled $\hat\sigma$,
-LDA-implied $\hat\beta_0, \hat\beta_1$ beside the logistic regression's,
-boundary near \$2,009 vs. \$1,937). Then `balance + income`, after a
-scatterplot of income against balance by class and income histograms by
-class: income is bimodal (the lower mode is mostly students, a data fact,
-not a model feature) and weakly negatively correlated with balance within
-each class (about $-0.16$). The fitted income slope is positive although
-defaulters' mean income is slightly lower, because $\hat\Sigma^{-1}$ adjusts
-income for balance; the boundary is a nearly vertical line in the
-(balance, income) plane, and logistic regression's lies slightly left of
-LDA's. Confusion matrix of the two-feature LDA at $t = 0.5$ (error
-about 2.8%, sensitivity about 23%, specificity about 99.8%) and at
-$t = 0.2$ (sensitivity about 57%); an interactive threshold figure with
-checkboxes plots the overall error rate, sensitivity, specificity, and false
-positive rate against $t$, with the overall error rate tracking the false
-positive rate because non-defaulters dominate. $t = 0.5$ is the Bayes
-classifier's threshold but need not minimize an *estimated* classifier's
-error rate (LDA's training error is lowest somewhat below $0.5$). ROC curves
-for LDA and logistic regression nearly coincide; the one-feature models have
-identical AUCs, and LDA's flatter posterior means it flags a subset of
-logistic regression's customers at high thresholds and a superset at low
-ones. Income adds little to classification beyond balance (AUC about 0.948
-to 0.949; at $t = 0.2$ it slightly raises the training error and lowers
-sensitivity), although it is a real predictor in the logistic regression.
-
-A short "Student strata" subsection first tabulates the strata (students
+An additional "Student strata" section first tabulates the strata (students
 default more often and have far lower incomes), then fits LDA (balance +
 income) separately to students and non-students and compares it with
 logistic regression fully interacted with student status (shown to equal
@@ -605,11 +618,8 @@ threshold, but their threshold is higher because students in both classes
 carry higher balances (the confounding of the multiple logistic regression
 chapter), and it stays higher at equal incomes. The extra flexibility barely
 changes training error or AUC, and the stratified models, with twice as many
-parameters, tend to have more optimistic training rates.
-
-All rates are training rates; estimating test error from
-the training data alone is deferred to resampling. QDA and naive Bayes are the next chapter,
-which evaluates on held-out customers.
+parameters, tend to have more optimistic training rates. QDA and naive Bayes
+are the next chapter.
 
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
