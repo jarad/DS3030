@@ -582,8 +582,7 @@ $n_{kj}$, the error rate is $1 - \sum_k n_{kk}/n$, sensitivity
 $n_{kk}/\sum_j n_{kj}$ and specificity
 $\sum_{l\ne k}\sum_{j\ne k} n_{lj} / \sum_{l\ne k}\sum_j n_{lj}$ are
 computed one class versus the rest, and the threshold $t = 0.5$ generalizes
-to "assign the largest posterior" (multinomial logistic regression is not
-covered in this course). Why lowering $t$ can only raise sensitivity and
+to "assign the largest posterior". Why lowering $t$ can only raise sensitivity and
 lower specificity, an interactive figure with checkboxes plotting the
 overall error rate, sensitivity, specificity, and false positive rate
 against $t$, and a table at $t = 0.5$ and $t = 0.2$ for LDA (balance only and
@@ -604,13 +603,14 @@ is near the diagonal, and the balance-only and two-feature curves cross, so
 the classifier with the larger AUC can still be the worse one over the false
 positive rates that matter for a given application. The fitted
 equal-variance model understates the empirical AUC, while the same formula
-with each class's own standard deviation comes close. A short "Credit card
-findings" subsection answers the opening question: LDA orders the customers
-almost exactly as logistic regression does, income adds little to
-classification beyond balance although it is a real feature in the logistic
-regression, and a lender worried about missed defaults would use a threshold
-below 0.5. All rates are training rates; test-error estimation is
-deferred to resampling.
+with each class's own standard deviation comes close. All rates are training
+rates; test-error estimation is deferred to resampling.
+
+A short "Credit card findings" section, after classifier evaluation, answers
+the opening question: LDA orders the customers almost exactly as logistic
+regression does, income adds little to classification beyond balance
+although its logistic regression coefficient is clearly nonzero, and a
+lender worried about missed defaults would use a threshold below 0.5.
 
 An additional "Student strata" section first tabulates the strata (students
 default more often and have far lower incomes) and plots income against
@@ -631,72 +631,81 @@ are the next chapter.
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
 
 Two relaxations of LDA's model for $f_k(x)$, then a comparison of every
-classifier so far. **QDA**: $X \mid Y = k \sim N_p(\mu_k, \Sigma_k)$ with a
-class-specific covariance matrix; derivation of
+classifier so far, all worked through one running example:
+`ISLR2::Default` with `balance` and `income` (the LDA chapter's features),
+split once at random into training and test halves at the start of the
+chapter, with every model fit to the training half. The chapter opens with
+the training data: a scatterplot with each class's 95% normal-theory ellipse
+shows balance less spread out among defaulters (the QDA motivation), income
+about equally spread, small within-class balance-income correlations (the
+naive Bayes motivation), and bimodal income because students have much lower
+incomes; a short recap of Bayes' theorem and LDA's shared covariance follows.
+
+**QDA**: $X \mid Y = k \sim N_p(\mu_k, \Sigma_k)$ with a class-specific
+covariance matrix, estimated by each class's sample covariance (divisor
+$n_k - 1$, invertible only if $n_k > p$); `MASS::qda()` fit to the training
+half, with the two $\hat\Sigma_k$ written out. Derivation of
 $\delta_k(x) = -\tfrac12 x^\top\Sigma_k^{-1}x + x^\top\Sigma_k^{-1}\mu_k -
 \tfrac12\mu_k^\top\Sigma_k^{-1}\mu_k - \tfrac12\log|\Sigma_k| + \log\pi_k$
-(the quadratic term and $\log|\Sigma_k|$ no longer cancel), log posterior odds
-quadratic in $x$ (squares and cross-products), a quadratic-curve boundary,
-and for $p = 1$ up to two boundary points with the larger-variance class
-assigned in both tails. Estimates use class-specific sample covariances with
-divisor $n_k - 1$ (invertible only if $n_k > p$). **Bias-variance tradeoff**
-via parameter counts (excluding priors): LDA $Kp + p(p+1)/2$, QDA
-$Kp + Kp(p+1)/2$; figures of repeated LDA/QDA boundaries at small and large
-$n_k$ show LDA's bias and QDA's variance. **Naive Bayes**: features
-conditionally independent given the class, $f_k(x) = \prod_j f_{kj}(x_j)$,
-each one-feature density of its own type (Gaussian for a quantitative
-feature, Bernoulli/categorical probabilities for a binary/categorical one);
-two-class log posterior odds additive,
-$\log(\pi_2/\pi_1) + \sum_j g_j(x_j)$, with no interactions; Gaussian naive
-Bayes is QDA (class-specific variances) or LDA (shared variances) with a
-diagonal covariance matrix; $2Kp$ parameters, sidestepping the curse of
-dimensionality (e.g. $2^p$ cells, $2^p - 1$ free probabilities, for a joint
-pmf of $p$ binary features versus $p$ probabilities). **Comparison**: KNN classification as a neighbor
-vote $\hat p_k(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = k)$ (in
-that section $K$ counts neighbors and the class count is written as 2);
-boundary shapes (linear for logistic regression and LDA, quadratic for QDA,
-quadratic without cross-products for Gaussian naive Bayes, any shape for
-KNN), parametric vs. nonparametric, and how $n$ and $p$ favor flexible vs.
-restricted methods. A simulation study of four scenarios (linear, quadratic,
-independent features with $p = 10$, non-linear sine boundary) shows each
-scenario won by the method whose assumptions are the most restrictive ones
-that still hold — QDA in the quadratic, naive Bayes in the independent, KNN
-in the non-linear — while in the linear scenario LDA and logistic regression
-(both correct) essentially tie, within about a hundredth of a percentage
-point, and no method wins in every scenario; KNN uses standardized features and fixed $K$ values (no
-tuning, since resampling is not yet taught).
+(the quadratic term and $\log|\Sigma_k|$ no longer cancel) and of the two-class
+log posterior odds, quadratic in $x$ (squares and cross-products), with the
+fitted coefficients in a table (no single coefficient gives a feature's
+effect). The boundary is a conic section for $p = 2$ and up to two points for
+$p = 1$, with the larger-variance class assigned in both tails. Shown on the
+data: QDA's boundary beside LDA's line over the training scatterplot (close
+within the data, with a second branch beyond the largest training balance),
+and, for balance alone, the prior-weighted densities and the two discriminant
+parabolas crossing twice; the negative $\texttt{balance}^2$ coefficient makes
+the posterior cross 0.5 again at very high balances, beyond any customer.
+**Bias-variance tradeoff** via parameter counts (excluding priors): LDA
+$Kp + p(p+1)/2$, QDA $Kp + Kp(p+1)/2$; a simulated figure of repeated
+LDA/QDA boundaries at small and large $n_k$ (simulated because the point is
+about repeated training sets) shows LDA's bias and QDA's variance.
 
-Worked example: `ISLR2::Default` with `balance` and `income` as the two
-features, the same features as the LDA chapter, split once at random into
-training and test halves. A scatterplot with each class's normal-theory
-ellipse shows what the methods respond to: balance is less spread out among
-defaulters (the QDA motivation), income is about equally spread, the
-within-class balance-income correlations are small (so naive Bayes's
-independence assumption nearly holds), and income is bimodal because students
-have much lower incomes. `MASS::qda()` and `e1071::naiveBayes()` fit beside
-LDA, logistic regression, and KNN ($K = 1$ and $K$ the smallest odd integer
-above $\sqrt n$, on standardized features). QDA's coefficient of
-$\texttt{balance}^2$ is negative, so its posterior crosses 0.5 twice at a
-fixed income, the second crossing far beyond the training balances (naive
-Bayes's too); its boundary depends on income as well as balance. Naive
-Bayes, having dropped the within-class correlation, gives income a term that
-compares the classes' income distributions without adjusting for balance
-(slightly curved, since the class income SDs differ), unlike LDA's
-correlation-adjusted income slope. On the test set the four
-model-based classifiers have nearly identical error rates and AUCs (naive
-Bayes close to QDA), differing mainly in how many customers each flags at
-$t = 0.5$ and so in sensitivity; KNN with $K = 71$ has a lower test AUC than
-any of them, and KNN with $K = 1$ has zero training error but a much higher
-test error, illustrating why training error rates are optimistic. A final **student
-strata** subsection fits QDA separately to students and non-students and
-compares it with the single QDA, the additive logistic regression, and the
-logistic regression with every coefficient interacted with student status
-(shown numerically to equal separate per-stratum logistic fits); stratifying
-doubles the parameters (priors not counted, as in the chapter's
-parameter-count table) without meaningfully changing test error rates or
-AUCs. The chapter stresses that training error rates are optimistic on
-average, though on a single split chance can outweigh that, that test rates
-are the fair comparison, and that a single split is one draw.
+**Naive Bayes**: features conditionally independent given the class,
+$f_k(x) = \prod_j f_{kj}(x_j)$, each one-feature density of its own type
+(Gaussian for a quantitative feature, Bernoulli/categorical probabilities for
+a binary/categorical one); `e1071::naiveBayes()` fit to the training half;
+two-class log posterior odds additive, $\log(\pi_2/\pi_1) + \sum_j g_j(x_j)$,
+with no interactions; Gaussian naive Bayes is QDA (class-specific variances)
+or LDA (shared variances) with a diagonal covariance matrix, and on the data
+its standard deviations equal the square roots of QDA's diagonals; $2Kp$
+parameters, sidestepping the curse of dimensionality (e.g. $2^p$ cells,
+$2^p - 1$ free probabilities, for a joint pmf of $p$ binary features versus
+$p$ probabilities). Its boundary runs close to QDA's within the data, and its
+income term compares the classes' income distributions without adjusting for
+balance (slightly curved, since the class income SDs differ), unlike LDA's
+correlation-adjusted income slope.
+
+**Comparison**: KNN classification as a neighbor vote
+$\hat p_k(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = k)$ on
+standardized features (in that section $K$ counts neighbors and the class
+count is written as 2), with $K = 1$ and $K$ the smallest odd integer above
+$\sqrt n$, fixed in advance; boundary shapes (linear for logistic regression
+and LDA, quadratic for QDA, quadratic without cross-products for Gaussian
+naive Bayes, any shape for KNN), parametric vs. nonparametric, and how $n$
+and $p$ favor flexible vs. restricted methods. A simulation study of four
+scenarios (linear, quadratic, independent features with $p = 10$, non-linear
+sine boundary) shows each scenario won by the method whose assumptions are
+the most restrictive ones that still hold (QDA, naive Bayes, and KNN in the
+last three), while in the linear scenario LDA and logistic regression (both
+correct) essentially tie, and no method wins in every scenario. On the credit
+card test half the four model-based classifiers have nearly identical error
+rates and AUCs (naive Bayes close to QDA), differing mainly in how many
+customers each flags at $t = 0.5$ and so in sensitivity; KNN with the larger
+$K$ has a lower test AUC than any of them, and KNN with $K = 1$ has zero
+training error but a much higher test error. Training error rates are
+optimistic on average, though on a single split chance can outweigh that;
+test rates are the fair comparison, and a single split is one draw.
+
+A final **student strata** section fits QDA separately to students and
+non-students (each stratum's priors are its own default rates, so all
+posteriors are on one scale) and compares it with the single QDA, the
+additive logistic regression, and the logistic regression with every
+coefficient interacted with student status (shown numerically to equal
+separate per-stratum logistic fits); stratifying doubles the parameters
+(priors not counted, as in the chapter's parameter-count table) without
+meaningfully changing test error rates or AUCs.
 
 ### 15. Generalized Linear Models
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
