@@ -81,9 +81,8 @@ $-8$ to $39$ degrees Celsius, and
 - `weathersit`, the weather, a factor with levels
 `r paste0("\x60", levels(Bikeshare$weathersit), "\x60", collapse = ", ")`.
 
-`bikers` is the sum of two other columns, `casual` and `registered`. Those are
-pieces of the response rather than explanatory variables, and no model below
-uses them.
+`bikers` is the sum of `casual` and `registered`; those are pieces of the
+response, not explanatory variables, and no model below uses them.
 
 ### Hourly counts
 
@@ -107,6 +106,11 @@ hour_groups <- bike |>
             .groups = "drop")
 
 mv_slope <- unname(coef(lm(log(variance) ~ log(mean), data = hour_groups))[2])
+
+# Poisson probability mass functions for the slider below.
+poisson_pmf <- expand_grid(mu = seq(1, 40, by = 0.5), y = 0:70) |>
+  mutate(prob = dpois(y, mu)) |>
+  filter(prob > 5e-4)
 
 count_hist_plot <- ggplot(bike, aes(x = bikers)) +
   geom_histogram(binwidth = 10, boundary = 0, fill = "grey70",
@@ -142,6 +146,13 @@ mean_variance_plot <- ggplot(hour_groups,
 ```
 :::
 
+The first tab is a histogram of the hourly counts. The second plots each
+hour's count, jittered horizontally, against the hour of the day, with the
+hourly means joined by a line, separately for non-working and working days.
+The third places each of the `r nrow(hour_groups)` hour-by-working-day groups
+at its mean and variance on log scales, with a dashed line where the variance
+equals the mean.
+
 ::: {.panel-tabset}
 #### Distribution
 ```{r count-hist-figure}
@@ -151,7 +162,7 @@ mean_variance_plot <- ggplot(hour_groups,
 count_hist_plot
 ```
 
-#### By hour
+#### Hourly profile
 ```{r count-hour-figure}
 #| echo: false
 #| fig-width: 8
@@ -180,391 +191,48 @@ the commute. On non-working days they rise to a single midday plateau. The two
 hourly profiles differ in shape, not just in level. Across hours, the points
 spread out more where the mean is higher.
 
-The third tab makes that precise. Each point is the mean and variance of the
-counts in one of the `r nrow(hour_groups)` combinations of hour and
-working-day status. The variance climbs steadily with the mean; on these
-log-log axes the points lie near a line of slope
-`r sprintf("%.2f", mv_slope)`.
+In the third tab the variance climbs steadily with the mean; on these log-log
+axes the points lie near a line of slope `r sprintf("%.2f", mv_slope)`.
 `r if (all(hour_groups$variance > hour_groups$mean)) paste("All", nrow(hour_groups), "points lie") else paste(sum(hour_groups$variance > hour_groups$mean), "of the", nrow(hour_groups), "points lie")`
-above the dashed line on which the variance equals the mean.
-Month, temperature, and weather vary within each group, so part of each
-group's variance is variation those explanatory variables could explain.
-
-### Linear regression fails
-
-A linear regression fit by least squares uses these features:
-
-- `r nlevels(bike$hr) - 1` dummy features for `hr`, with hour `0` the reference,
-- the indicator $\mathrm{I}(\texttt{workingday} = 1)$,
-- `r nlevels(bike$hr) - 1` products of each hour dummy with the working-day
-indicator, because the two hourly profiles differ in shape,
-- `r nlevels(bike$mnth) - 1` dummy features for `mnth`, with January the
-reference,
-- the temperature in degrees Celsius, the feature $h(\texttt{temp}) = 47\,\texttt{temp} - 8$, and
-- `r nlevels(bike$weather) - 1` dummy features for the weather, with `clear`
-the reference, after merging `heavy rain/snow` into `light rain/snow` as
-`rain/snow`: `heavy rain/snow` occurs in
-`r sum(Bikeshare$weathersit == "heavy rain/snow")` hour, and its dummy's
-coefficient would be estimated from that hour alone.
-
-```{r bike-lm}
-bike_formula <- bikers ~ hr * working + mnth + temp_c + weather
-bike_lm <- lm(bike_formula, data = bike)
-```
-
-::: {.callout-note collapse="true"}
-### Code
-```{r bike-lm-residuals}
-#| output: false
-bike <- bike |>
-  mutate(fit_lm = fitted(bike_lm), resid_lm = residuals(bike_lm))
-
-n_negative <- sum(bike$fit_lm < 0)
-sd_low  <- sd(bike$resid_lm[bike$fit_lm < 50])
-sd_high <- sd(bike$resid_lm[bike$fit_lm > 300])
-b_lm    <- coef(bike_lm)
-
-lm_residual_plot <- ggplot(bike, aes(x = fit_lm, y = resid_lm)) +
-  geom_point(alpha = 0.1, size = 0.6) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "#D55E00") +
-  geom_hline(yintercept = 0, color = "grey40") +
-  labs(x = "Fitted value from least squares",
-       y = "Residual", title = "Linear regression residuals")
-```
-:::
-
-```{r lm-residual-figure}
-#| echo: false
-#| fig-width: 7
-#| fig-height: 3.6
-lm_residual_plot
-```
-
-Three failures appear.
-
-1. **Negative fitted means.** Every point left of the dashed line has a
-negative fitted value: `r fmt(n_negative)` of the `r fmt(nrow(bike))` hours,
-`r sprintf("%.1f", 100 * n_negative / nrow(bike))`%, with the smallest at
-`r fmt(min(bike$fit_lm), 1)` bikers. A mean count cannot be negative.
-2. **Variance growing with the mean.** The residuals fan out to the right. Their
-standard deviation is `r fmt(sd_low, 1)` among hours with fitted values below
-$50$ and `r fmt(sd_high, 1)` among hours with fitted values above $300$, while
-every $t$-test and interval from `lm()` assumes one common variance.
-3. **Additive effects.** Every additive effect — month, temperature, and
-weather — shifts every hour by the same number of riders. The
-hour-by-working-day terms set each combination's average, so an hour whose
-shift is smaller than average — a winter month, a cold hour, rain — sits the
-same number of riders below its combination's mean at 3 a.m. as at 5 p.m., and
-at night that is enough to push the fit below zero:
-`r fmt(sum(bike$fit_lm < 0 & bike$weather == "clear"))` of the
-`r fmt(n_negative)` negative fitted values are in clear weather, and their
-median temperature is `r sprintf("%.1f", median(bike$temp_c[bike$fit_lm < 0]))`
-degrees Celsius against `r sprintf("%.1f", median(bike$temp_c))` for all
-hours. The `rain/snow` coefficient, `r fmt(b_lm["weatherrain/snow"], 1)`, is
-one such shift: it removes as many riders from an early-morning hour averaging
-a handful as from a rush hour averaging hundreds. Rain plausibly removes a
-*proportion* of the riders who would otherwise ride, which is an effect that
-multiplies the mean.
-
-A count needs a model whose mean is positive for every value of the
-features, whose effects multiply the mean, and whose variance grows with the
-mean.
-
-## Generalized linear models
-
-The problems in logistic regression lecture wrote each model as one
-distributional statement: $Y_i \mid x_i \stackrel{ind}{\sim} N(x_i\beta, \sigma^2)$
-for linear regression, and
-$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left[p(x_i)\right]$ with
-$\log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta$ for logistic
-regression. Both statements have the same three parts, and generalized linear
-models keep those parts while letting each one vary.
-
-### Three components
-
-A **generalized linear model** (GLM) assumes the statistical model
-
-$$Y_i \mid x_i \stackrel{ind}{\sim} \text{a distribution with mean } \mu_i, \qquad g(\mu_i) = \eta_i, \qquad \eta_i = x_i\beta,$$
-
-where
-
-- $\mu_i = E[Y_i \mid x_i]$ is the mean of the response of observation $i$
-(unrelated to the class means $\mu_k$ of the discriminant analysis lectures),
-- $x_i = (1, x_{i1}, \ldots, x_{ip})$ is the $i$th row of the model matrix
-$\mathbf{X}$ and $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of
-coefficients,
-- $\eta_i$ is the **linear predictor**, as in the logistic regression
-lectures, and
-- $g$ is the **link function**, a strictly monotone function.
-
-The three parts have names:
-
-1. The **random component** is the distribution of $Y_i$ given $x_i$:
-normal, Bernoulli, Poisson, or another family chosen to suit the response.
-2. The **linear predictor** $\eta_i = x_i\beta$ is where the features enter.
-Dummy variables, polynomials, step functions, and interactions all enter it
-exactly as they entered a linear or logistic regression.
-3. The **link function** connects the two. Inverting it,
-$\mu_i = g^{-1}(\eta_i) = g^{-1}(x_i\beta)$.
-
-The link is what keeps the mean in range. A linear predictor can take any real
-value, and for the three links in this lecture $g^{-1}$ carries the real line
-onto the values the mean is allowed to take — $(0, 1)$ for a probability,
-$(0, \infty)$ for a count — so every $\beta$ gives a valid mean.
-
-For the bike counts, $Y_i$ is `bikers` in hour $i$, and $x_i$ is the row of
-`r length(coef(bike_lm))` entries — a leading $1$ and the features listed
-under Linear regression fails — so $\eta_i$ is the same linear predictor in
-every model of this lecture. The mean $\mu_i$ must be positive. The linear
-regression above is the GLM with a normal random component and the identity
-link, $g(\mu_i) = \mu_i$, which does nothing to keep $x_i\hat\beta$ positive:
-that is how `r fmt(n_negative)` of its fitted means fell below zero.
-
-ISLR2 writes $\eta$ for the link function itself. These notes keep $\eta$ for
-the linear predictor, as in the logistic regression lectures, and write $g$
-for the link.
-
-### Special cases
-
-::: {.callout-note collapse="true"}
-### Code
-```{r glm-table}
-#| output: false
-glm_table <- tibble(
-  Model = c("Linear regression", "Logistic regression", "Poisson regression"),
-  Response = c("Quantitative", "Binary ($0/1$)", "Count"),
-  Distribution = c("$N(\\mu_i, \\sigma^2)$", "$\\text{Bernoulli}(\\mu_i)$",
-                   "$\\text{Poisson}(\\mu_i)$"),
-  Link = c("identity, $\\mu_i$", "logit, $\\log\\left[\\mu_i/(1 - \\mu_i)\\right]$",
-           "log, $\\log \\mu_i$"),
-  Mean = c("$\\eta_i$", "$e^{\\eta_i}/\\left(1 + e^{\\eta_i}\\right)$",
-           "$e^{\\eta_i}$"),
-  Variance = c("$\\sigma^2$", "$\\mu_i(1 - \\mu_i)$", "$\\mu_i$"),
-  family = c("`gaussian`", "`binomial`", "`poisson`")
-) |>
-  knitr::kable(col.names = c("Model", "Response", "Distribution of $Y_i$",
-                             "Link $g(\\mu_i)$", "Mean $\\mu_i$",
-                             "Variance", "`glm()` family"),
-               align = "lllllll")
-```
-:::
-
-```{r glm-table-display}
-#| echo: false
-#| tbl-colwidths: [17, 12, 15, 22, 16, 10, 8]
-glm_table
-```
-
-In logistic regression the mean $\mu_i = P(Y_i = 1 \mid x_i)$ is the
-probability the logistic regression lectures wrote $p(x_i)$; those lectures,
-with the credit card default data, are this table's logistic regression row.
-
-Each distribution fixes how the variance depends on the mean,
-
-$$Var[Y_i \mid x_i] = \phi\, V(\mu_i),$$
-
-where
-
-- $V$ is the **variance function**: $V(\mu) = 1$ for the normal,
-$V(\mu) = \mu(1 - \mu)$ for the Bernoulli, and $V(\mu) = \mu$ for the Poisson,
-and
-- $\phi$ is the **dispersion parameter**: $\phi = \sigma^2$ for the normal,
-and $\phi = 1$ for the Bernoulli and the Poisson, which have no variance
-parameter separate from the mean.
-
-Linear regression's constant variance is the special case $V(\mu) = 1$, the
-assumption the fanning residuals of the bike-count linear regression
-contradicted. The two other models require the variance to change with the
-mean, as the bike counts' variance did in the mean–variance plot.
-
-A GLM transforms the **mean**, not the response. The regression lectures'
-remedy for a skewed response was to model $\log Y_i$, which describes
-$E[\log Y_i \mid x_i]$ — under normal errors the logarithm of the median of
-$Y_i$ — and fails outright for a count of zero (`bikers` happens to have
-none, but counts in general can). A log link models
-$\log E[Y_i \mid x_i]$, the logarithm of the mean itself, and is defined for
-any count because it never takes the logarithm of $y_i$.
-
-`glm()` fits every model in the table: its `family` argument, given in the
-table's last column, chooses the distribution and, by default, the link shown,
-and `family = gaussian` gives the same estimates as `lm()`.
-
-::: {.callout-note collapse="true"}
-### Beyond this course
-The normal, Bernoulli, and Poisson distributions all belong to the
-**exponential family**, and each table row uses its family's **canonical
-link**, the link under which the score equations take the form
-$\sum_i x_{ij}(y_i - \mu_i) = 0$ derived below. The same three-part template
-covers other distributions, other links for the same distribution, and
-responses with more than two classes:
-
-- **Gamma regression**, for a positive, continuous, right-skewed response such
-as an insurance claim amount, has $V(\mu) = \mu^2$ and usually a log link:
-`glm(y ~ x, family = Gamma(link = "log"))`.
-- **Probit regression** keeps the Bernoulli distribution and replaces the logit
-link with the inverse of the standard normal cumulative distribution
-function: `family = binomial(link = "probit")`.
-- **Multinomial logistic regression**, for an unordered response with $K > 2$
-classes (ISLR2 Section 4.3.5), extends the Bernoulli to a categorical
-distribution with $K - 1$ linear predictors, one for each class other than a
-reference class; it is fit with `nnet::multinom()`.
-- **Ordinal (proportional-odds) regression**, for ordered classes, uses one
-linear predictor together with $K - 1$ cutpoints; it is fit with
-`MASS::polr()`.
-
-None of these is taught or tested here.
-:::
-
-## Poisson regression
-
-### Log-linear model
-
-**Poisson regression** is the GLM with a Poisson random component and a log
-link:
-
-$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Poisson}(\mu_i), \qquad \log \mu_i = x_i\beta = \beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}.$$
-
-Inverting the link,
-
-$$\mu_i = e^{x_i\beta} = e^{\beta_0} \times e^{\beta_1 x_{i1}} \times \cdots \times e^{\beta_p x_{ip}},$$
-
-which is positive for every $\beta$ and every row $x_i$. The features add on
-the log scale and multiply on the scale of the mean.
-
-Fitting it to the bike counts with the features of the linear regression:
-
-```{r bike-glm}
-bike_glm <- glm(bike_formula, data = bike, family = poisson)
-```
-
-The model has `r length(coef(bike_glm))` coefficients, the same number as
-`bike_lm`.
-
-### Fitted means
-
-The figure below splits the hours by weather (rows) and working-day status
-(columns). Each point is the observed mean count for one hour of the day in
-that panel; each line is the average, over the same hours, of a model's fitted
-means; the dotted line marks zero. The first tab shows the data alone, and the
-other two add one model each.
-
-::: {.callout-note collapse="true"}
-### Code
-```{r fitted-means}
-#| output: false
-bike <- bike |>
-  mutate(fit_glm = fitted(bike_glm))
-
-cell_means <- bike |>
-  group_by(weather, working, hour) |>
-  summarize(n = n(), observed = mean(bikers),
-            `Linear regression` = mean(fit_lm),
-            `Poisson regression` = mean(fit_glm), .groups = "drop")
-
-cell_long <- cell_means |>
-  pivot_longer(c(`Linear regression`, `Poisson regression`),
-               names_to = "model", values_to = "fitted")
-
-rain_night <- filter(cell_means, weather == "rain/snow", hour <= 6)
-
-fitted_base <- ggplot(cell_means, aes(x = hour, y = observed)) +
-  geom_hline(yintercept = 0, color = "grey50", linetype = "dotted") +
-  geom_point(size = 1.3, shape = 1) +
-  facet_grid(weather ~ working, scales = "free_y",
-             labeller = labeller(working = working_labels)) +
-  scale_x_continuous(breaks = seq(0, 24, by = 4)) +
-  labs(x = "Hour of the day", y = "Mean bikes rented in the hour",
-       color = NULL, linetype = NULL) +
-  theme(legend.position = "bottom")
-
-fitted_observed_plot <- fitted_base +
-  labs(title = "Observed hourly means")
-
-model_layer <- function(m) {
-  list(geom_line(data = filter(cell_long, model == m),
-                 aes(y = fitted, color = model, linetype = model),
-                 linewidth = 0.8),
-       scale_color_manual(values = model_colors),
-       scale_linetype_manual(values = model_linetypes))
-}
-fitted_lm_plot <- fitted_base + model_layer("Linear regression") +
-  labs(title = "Linear regression fitted means")
-fitted_glm_plot <- fitted_base + model_layer("Poisson regression") +
-  labs(title = "Poisson regression fitted means")
-```
-:::
-
-::: {.panel-tabset}
-#### Observed
-```{r fitted-observed-figure}
-#| echo: false
-#| fig-width: 8
-#| fig-height: 6.5
-fitted_observed_plot
-```
-
-#### Linear regression
-```{r fitted-lm-figure}
-#| echo: false
-#| fig-width: 8
-#| fig-height: 6.5
-fitted_lm_plot
-```
-
-#### Poisson regression
-```{r fitted-glm-figure}
-#| echo: false
-#| fig-width: 8
-#| fig-height: 6.5
-fitted_glm_plot
-```
-:::
-
-In the `rain/snow` row, linear regression subtracts its constant weather
-coefficient from every hour, and its lines fall below zero overnight, as low as
-`r fmt(min(rain_night$"Linear regression"), 1)` bikers, where the observed
-means never fall below `r fmt(min(rain_night$observed), 1)`. The Poisson lines
-scale the hourly profile down instead and follow the points much more
-closely, overnight included. In the `clear` row the two models' lines nearly
-coincide.
+above the dashed line. Month, temperature, and weather vary within each
+group, so part of each group's variance is variation those explanatory
+variables could explain.
 
 ### Poisson distribution
 
-Under the model a count $Y_i$ has the **Poisson distribution** with mean
-$\mu_i$, whose probability mass function is
+The dashed line is the variance of the standard model for a count. A count
+$Y$ with a **Poisson distribution** with mean $\mu$ has probability mass
+function
 
-$$P(Y_i = y \mid x_i) = \frac{\mu_i^{y} e^{-\mu_i}}{y!}, \qquad y = 0, 1, 2, \ldots,$$
+$$P(Y = y) = \frac{\mu^{y} e^{-\mu}}{y!}, \qquad y = 0, 1, 2, \ldots,$$
 
 where
 
-- $\mu_i > 0$ is the mean, and
+- $\mu > 0$ is the mean, and
 - $y! = 1 \times 2 \times \cdots \times y$, with $0! = 1$.
 
-ISLR2 writes $\lambda$ for the Poisson mean; these notes write $\mu_i$, the
-GLM symbol for a mean.
+ISLR2 writes $\lambda$ for the Poisson mean; these notes write $\mu$, the
+symbol the generalized linear models below use for a mean.
 
-The mean and the variance are both $\mu_i$. Dropping the $y = 0$ term and
+The mean and the variance are both $\mu$. Dropping the $y = 0$ term and
 cancelling $y$ against $y!$,
 
-$$E[Y_i \mid x_i] = \sum_{y=1}^\infty y\, \frac{\mu_i^{y} e^{-\mu_i}}{y!} = \mu_i \sum_{y=1}^\infty \frac{\mu_i^{y-1} e^{-\mu_i}}{(y-1)!} = \mu_i,$$
+$$E[Y] = \sum_{y=1}^\infty y\, \frac{\mu^{y} e^{-\mu}}{y!} = \mu \sum_{y=1}^\infty \frac{\mu^{y-1} e^{-\mu}}{(y-1)!} = \mu,$$
 
 because the last sum adds the probability mass function over every count. The
-same step applied twice gives $E[Y_i(Y_i - 1) \mid x_i] = \mu_i^2$, so
+same step applied twice gives $E[Y(Y - 1)] = \mu^2$, so
 
-$$Var[Y_i \mid x_i] = E[Y_i(Y_i - 1) \mid x_i] + E[Y_i \mid x_i] - \mu_i^2 = \mu_i^2 + \mu_i - \mu_i^2 = \mu_i.$$
+$$Var[Y] = E[Y(Y - 1)] + E[Y] - \mu^2 = \mu^2 + \mu - \mu^2 = \mu.$$
 
-The slider below moves $\mu$. The black lollipops are the probability mass
-function, the dashed line marks the mean, and the shaded band runs one
-standard deviation, $\sqrt{\mu}$, either side of it. The horizontal axis
-widens with $\mu$, so read the spread from its labels.
-
-```{r poisson-slider-data}
+```{r poisson-slider-define}
 #| echo: false
-poisson_pmf <- expand_grid(mu = seq(1, 40, by = 0.5), y = 0:70) |>
-  mutate(prob = dpois(y, mu)) |>
-  filter(prob > 5e-4)
 ojs_define(poisson_pmf = poisson_pmf)
 ```
+
+The slider below moves $\mu$. The black lollipops are the probability mass
+function, the dashed line marks the mean, the shaded band runs one standard
+deviation, $\sqrt{\mu}$, either side of it, and the horizontal axis widens
+with $\mu$.
 
 ```{ojs}
 //| label: poisson-slider
@@ -604,16 +272,426 @@ viewof mu = Inputs.range([1, 40], {value: 1, step: 0.5, label: "Mean μ"})
 At a mean near $1$ most of the probability sits at $0$, $1$, and $2$, and the
 distribution is strongly right-skewed. As $\mu$ grows the distribution moves
 right, becomes nearly symmetric, and widens: its standard deviation $\sqrt\mu$
-grows with its mean. The bike counts' variance also grew with the mean, but
+grows with its mean. The slider stops at $40$; the busiest bike group's mean,
+`r fmt(max(hour_groups$mean))`, would have Poisson standard deviation
+`r fmt(sqrt(max(hour_groups$mean)), 1)`. The bike counts' variance also grew with the
+mean, but
 `r if (all(hour_groups$variance > hour_groups$mean)) "every hour-by-working-day group lay" else "most hour-by-working-day groups lay"`
 above the line variance $=$ mean.
+
+### Linear regression fails
+
+A linear regression fit by least squares uses these features:
+
+- `r nlevels(bike$hr) - 1` dummy features for `hr`, with hour `0` the reference,
+- the indicator $\mathrm{I}(\texttt{workingday} = 1)$,
+- `r nlevels(bike$hr) - 1` products of each hour dummy with the working-day
+indicator, because the two hourly profiles differ in shape,
+- `r nlevels(bike$mnth) - 1` dummy features for `mnth`, with January the
+reference,
+- the temperature in degrees Celsius, the feature $h(\texttt{temp}) = 47\,\texttt{temp} - 8$, and
+- `r nlevels(bike$weather) - 1` dummy features for the weather, with `clear`
+the reference, after merging `heavy rain/snow` into `light rain/snow` as
+`rain/snow`, since `heavy rain/snow` occurs in
+`r n_heavy <- sum(Bikeshare$weathersit == "heavy rain/snow"); paste(n_heavy, if (n_heavy == 1) "hour" else "hours")`.
+
+```{r bike-lm}
+bike_formula <- bikers ~ hr * working + mnth + temp_c + weather
+bike_lm <- lm(bike_formula, data = bike)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r bike-lm-residuals}
+#| output: false
+bike <- bike |>
+  mutate(fit_lm = fitted(bike_lm), resid_lm = residuals(bike_lm))
+
+n_negative <- sum(bike$fit_lm < 0)
+fit_low  <- 50
+fit_high <- 300
+sd_low  <- sd(bike$resid_lm[bike$fit_lm < fit_low])
+sd_high <- sd(bike$resid_lm[bike$fit_lm > fit_high])
+b_lm    <- coef(bike_lm)
+
+lm_residual_plot <- ggplot(bike, aes(x = fit_lm, y = resid_lm)) +
+  geom_point(alpha = 0.1, size = 0.6) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "#D55E00") +
+  geom_hline(yintercept = 0, color = "grey40") +
+  labs(x = "Fitted value from least squares",
+       y = "Residual", title = "Linear regression residuals")
+```
+:::
+
+The figure plots each hour's residual against its least squares fitted value;
+the dashed vertical line marks a fitted value of zero and the solid horizontal
+line a residual of zero.
+
+```{r lm-residual-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.6
+lm_residual_plot
+```
+
+Three failures appear.
+
+1. **Negative fitted means.** Every point left of the dashed line has a
+negative fitted value: `r fmt(n_negative)` of the `r fmt(nrow(bike))` hours,
+`r sprintf("%.1f", 100 * n_negative / nrow(bike))`%, with the smallest at
+`r fmt(min(bike$fit_lm), 1)` bikers. A mean count cannot be negative.
+2. **Variance growing with the mean.** The residuals fan out to the right. Their
+standard deviation is `r fmt(sd_low, 1)` among hours with fitted values below
+$`r fit_low`$ and `r fmt(sd_high, 1)` among hours with fitted values above
+$`r fit_high`$, while every $t$-test and interval from `lm()` assumes one common
+variance.
+3. **Additive effects.** Every additive effect — month, temperature, and
+weather — shifts every hour by the same number of riders. Within each
+combination of hour and working-day status, an hour whose shift is smaller
+than average — a winter month, a cold hour, rain — sits the same number of
+riders below the combination's mean at 3 a.m. as at 5 p.m., and at night that
+is enough to push the fit below zero:
+`r fmt(sum(bike$fit_lm < 0 & bike$weather == "clear"))` of the
+`r fmt(n_negative)` negative fitted values are in clear weather, and the
+median temperature of all `r fmt(n_negative)` is
+`r sprintf("%.1f", median(bike$temp_c[bike$fit_lm < 0]))` degrees Celsius,
+against `r sprintf("%.1f", median(bike$temp_c))` for all hours.
+
+## Generalized linear models
+
+The mean–variance plot and the residual plot of the hourly counts showed what
+a model for them needs: a mean that stays positive and a variance that grows
+with it. The linear regression had neither. The problems in
+logistic regression lecture wrote each model as one distributional statement:
+$Y_i \mid x_i \stackrel{ind}{\sim} N(x_i\beta, \sigma^2)$ for linear
+regression, and
+$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left[p(x_i)\right]$ with
+$\log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta$ for logistic
+regression. Both statements have the same three parts, and generalized linear
+models keep those parts while letting each one vary.
+
+### Three components
+
+A **generalized linear model** (GLM) assumes the statistical model
+
+$$Y_i \mid x_i \stackrel{ind}{\sim} \text{a distribution with mean } \mu_i, \qquad g(\mu_i) = \eta_i, \qquad \eta_i = x_i\beta,$$
+
+where
+
+- $\mu_i = E[Y_i \mid x_i]$ is the mean of the response of observation $i$
+(unrelated to the class means $\mu_k$ of the discriminant analysis lectures),
+- $x_i = (1, x_{i1}, \ldots, x_{ip})$ is the $i$th row of the model matrix
+$\mathbf{X}$ and $\beta = (\beta_0, \ldots, \beta_p)^\top$ is the vector of
+coefficients,
+- $\eta_i$ is the **linear predictor**, as in the problems in logistic
+regression lecture, and
+- $g$ is the **link function**, a strictly monotone function.
+
+The distribution of $Y_i$ given $x_i$ is the **random component**. The linear
+predictor is where the features enter: dummy variables, polynomials, step
+functions, and interactions enter it exactly as they entered a linear or
+logistic regression. The link connects the two; inverting it,
+$\mu_i = g^{-1}(\eta_i) = g^{-1}(x_i\beta)$.
+
+The link is what keeps the mean in range. A linear predictor can take any real
+value, and for the three links in this lecture $g^{-1}$ carries the real line
+onto the values the mean is allowed to take — $(0, 1)$ for a probability,
+$(0, \infty)$ for a count — so every $\beta$ gives a valid mean.
+
+For the bike counts, $Y_i$ is `bikers` in hour $i$, and $x_i$ is the row of
+`r length(coef(bike_lm))` entries — a leading $1$ and the features of the
+linear regression above — so $\eta_i$ is the same linear predictor in both the
+linear and the Poisson regression. The linear regression is the GLM with a
+normal random component and the identity link, $g(\mu_i) = \mu_i$, which does
+nothing to keep $x_i\hat\beta$ positive: that is how `r fmt(n_negative)` of its
+fitted means fell below zero.
+
+(ISLR2 writes $\eta$ for the link itself; these notes write $g$.)
+
+### Special cases
+
+::: {.callout-note collapse="true"}
+### Code
+```{r glm-table}
+#| output: false
+glm_table <- tibble(
+  Model = c("Linear regression", "Logistic regression", "Poisson regression"),
+  Response = c("Quantitative", "Binary ($0/1$)", "Count"),
+  Distribution = c("$N(\\mu_i, \\sigma^2)$", "$\\text{Bernoulli}(\\mu_i)$",
+                   "$\\text{Poisson}(\\mu_i)$"),
+  Link = c("identity, $\\mu_i$", "logit, $\\log\\left[\\mu_i/(1 - \\mu_i)\\right]$",
+           "log, $\\log \\mu_i$"),
+  Mean = c("$\\eta_i$", "$e^{\\eta_i}/\\left(1 + e^{\\eta_i}\\right)$",
+           "$e^{\\eta_i}$"),
+  Variance = c("$\\sigma^2$", "$\\mu_i(1 - \\mu_i)$", "$\\mu_i$"),
+  family = c("`gaussian`", "`binomial`", "`poisson`")
+) |>
+  knitr::kable(col.names = c("Model", "Response", "Distribution of $Y_i$",
+                             "Link $g(\\mu_i)$", "Mean $\\mu_i$",
+                             "Variance", "`glm()` family"),
+               align = "lllllll")
+```
+:::
+
+For each model the table gives the response type, the distribution of $Y_i$,
+the link, the mean as a function of $\eta_i$, the variance, and the `glm()`
+family that fits it (`family = gaussian` gives the same estimates as `lm()`).
+
+```{r glm-table-display}
+#| echo: false
+#| tbl-colwidths: [14, 12, 15, 20, 16, 12, 11]
+glm_table
+```
+
+In logistic regression the mean $\mu_i = P(Y_i = 1 \mid x_i)$ is the
+probability the logistic regression lectures wrote $p(x_i)$; those lectures,
+with the credit card default data, are this table's logistic regression row.
+
+Each distribution fixes how the variance depends on the mean,
+
+$$Var[Y_i \mid x_i] = \phi\, V(\mu_i),$$
+
+where
+
+- $V$ is the **variance function**: $V(\mu) = 1$ for the normal,
+$V(\mu) = \mu(1 - \mu)$ for the Bernoulli, and $V(\mu) = \mu$ for the Poisson,
+and
+- $\phi$ is the **dispersion parameter**: $\phi = \sigma^2$ for the normal,
+and $\phi = 1$ for the Bernoulli and the Poisson, which have no variance
+parameter separate from the mean.
+
+Linear regression's constant variance is the special case $V(\mu) = 1$, the
+assumption the fanning residuals of the bike-count linear regression
+contradicted. The two other models require the variance to change with the
+mean, as the bike counts' variance did in the mean–variance plot.
+
+A GLM transforms the **mean**, not the response. The regression lectures'
+remedy for a variance that grows with the mean was to model $\log Y_i$, which
+describes $E[\log Y_i \mid x_i]$ and fails for a count of zero (`bikers` has
+none, but counts in general can). A log link models $\log E[Y_i \mid x_i]$
+and never takes the logarithm of $y_i$.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The three distributions belong to the **exponential family**, and each row
+uses its **canonical link**, under which the score equations take the form
+$\sum_i x_{ij}(y_i - \mu_i) = 0$ derived below. The same template covers
+other distributions, other links, and more than two classes:
+
+- **Gamma regression**, for a positive, right-skewed response such as a claim
+amount, has $V(\mu) = \mu^2$: `family = Gamma(link = "log")`.
+- **Probit regression** keeps the Bernoulli and uses the inverse standard
+normal cumulative distribution function as link: `binomial(link = "probit")`.
+- **Multinomial logistic regression**, for an unordered response with $K > 2$
+classes (ISLR2 Section 4.3.5), extends the Bernoulli to a categorical
+distribution with $K - 1$ linear predictors, one for each class other than a
+reference class; it is fit with `nnet::multinom()`.
+- **Ordinal (proportional-odds) regression**, for ordered classes, uses one
+linear predictor together with $K - 1$ cutpoints; it is fit with
+`MASS::polr()`.
+
+None of these is taught or tested here.
+:::
+
+## Poisson regression
+
+::: {.callout-note collapse="true"}
+### Code
+```{r observed-means}
+#| output: false
+cell_means <- bike |>
+  group_by(weather, working, hour) |>
+  summarize(n = n(), observed = mean(bikers), .groups = "drop")
+
+fitted_base <- ggplot(cell_means, aes(x = hour, y = observed)) +
+  geom_hline(yintercept = 0, color = "grey50", linetype = "dotted") +
+  geom_point(size = 1.3, shape = 1) +
+  facet_grid(weather ~ working, scales = "free_y",
+             labeller = labeller(working = working_labels)) +
+  scale_x_continuous(breaks = seq(0, 24, by = 4)) +
+  labs(x = "Hour of the day", y = "Mean bikes rented in the hour",
+       color = NULL, linetype = NULL) +
+  theme(legend.position = "none")
+
+observed_plot <- fitted_base + labs(title = "Observed hourly means")
+
+# Rain/snow vs. clear on working days: ratio and difference of hourly means.
+rain_vs_clear <- cell_means |>
+  filter(working == "Yes", weather %in% c("clear", "rain/snow")) |>
+  pivot_wider(id_cols = hour, names_from = weather, values_from = observed) |>
+  mutate(ratio = `rain/snow` / clear, diff = clear - `rain/snow`)
+at_3  <- unlist(filter(rain_vs_clear, hour == 3))
+at_17 <- unlist(filter(rain_vs_clear, hour == 17))
+```
+:::
+
+The figure splits the hours by weather (rows) and working-day status
+(columns); each point is the observed mean count for one hour of the day in
+that panel, and the dotted line marks zero.
+
+```{r observed-means-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 6.5
+observed_plot
+```
+
+Each weather row repeats the hourly profile of the clear row at a lower
+level. On working days the `rain/snow` mean is `r sprintf("%.2f", at_3["ratio"])`
+times the clear mean at 3 a.m. and `r sprintf("%.2f", at_17["ratio"])` times
+at 5 p.m., while the differences are `r fmt(at_3["diff"], 1)` and
+`r fmt(at_17["diff"], 1)` riders: rain scales the profile, which is a
+multiplicative effect, rather than lowering every hour by the same number.
+
+### Log-linear model
+
+**Poisson regression** is the GLM with a Poisson random component and a log
+link:
+
+$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Poisson}(\mu_i), \qquad \log \mu_i = x_i\beta = \beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}.$$
+
+Inverting the link,
+
+$$\mu_i = e^{x_i\beta} = e^{\beta_0} \times e^{\beta_1 x_{i1}} \times \cdots \times e^{\beta_p x_{ip}},$$
+
+which is positive for every $\beta$ and every row $x_i$. The features add on
+the log scale and multiply on the scale of the mean.
+
+### Maximum likelihood estimation
+
+For independent observations the log-likelihood is the sum of the logarithms
+of the probability mass functions,
+
+$$\ell(\beta) = \sum_{i=1}^n \left[y_i \log \mu_i - \mu_i - \log(y_i!)\right] = \sum_{i=1}^n \left[y_i\, x_i\beta - e^{x_i\beta} - \log(y_i!)\right],$$
+
+where
+
+- $y_i$ is the observed count for observation $i$, and
+- $\log(y_i!)$ does not involve $\beta$ and so does not affect the maximizer.
+
+Differentiating with respect to $\beta_j$, using
+$\partial e^{x_i\beta} / \partial \beta_j = x_{ij} e^{x_i\beta}$, and setting
+the result to zero gives the **score equations**
+
+$$\sum_{i=1}^n x_{ij}\left(y_i - \mu_i\right) = 0, \qquad j = 0, 1, \ldots, p,$$
+
+with $x_{i0} = 1$. They have exactly the form of the logistic regression score
+equations with $\mu_i$ in place of $p(x_i)$: at the solution the residuals
+$y_i - \hat\mu_i$ sum to zero and are orthogonal to every feature. Because
+$\mu_i = e^{x_i\beta}$ is nonlinear in $\beta$, the equations have no
+closed-form solution.
+
+`glm()` solves them with the iterative algorithm it used for logistic
+regression, **iteratively reweighted least squares**: each iteration solves a
+weighted least squares problem whose weights are recomputed from the current
+estimate. Fitting the bike counts with the features of the linear regression:
+
+```{r bike-glm}
+bike_glm <- glm(bike_formula, data = bike, family = poisson)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r score-check}
+#| output: false
+bike <- bike |>
+  mutate(fit_glm = fitted(bike_glm))
+
+combination_gap <- bike |>
+  group_by(working, hour) |>
+  summarize(gap_glm = abs(mean(bikers) - mean(fit_glm)),
+            gap_lm  = abs(mean(bikers) - mean(fit_lm)), .groups = "drop")
+max_gap <- max(combination_gap$gap_glm, combination_gap$gap_lm)
+```
+:::
+
+The model has `r length(coef(bike_glm))` coefficients, as the linear
+regression does, and `glm()` reports convergence after `r bike_glm$iter`
+iterations. The intercept's score equation makes the fitted means sum to the
+observed counts,
+$\sum_i \hat\mu_i = `r format(round(sum(bike$fit_glm)), big.mark = "{,}")`$ and
+$\sum_i y_i = `r format(sum(bike$bikers), big.mark = "{,}")`$.
+A dummy variable's equation makes the fitted means average to the observed
+mean where that dummy is $1$, as the least squares normal equations also do,
+so both models reproduce the observed mean of each of the
+`r nrow(combination_gap)` combinations of hour and working-day status (largest
+gap $`r if (max_gap > 0) sci(max_gap) else "0"`$ bikers).
+
+### Fitted means
+
+::: {.callout-note collapse="true"}
+### Code
+```{r fitted-means}
+#| output: false
+cell_means <- bike |>
+  group_by(weather, working, hour) |>
+  summarize(`Linear regression` = mean(fit_lm),
+            `Poisson regression` = mean(fit_glm), .groups = "drop") |>
+  right_join(cell_means, by = c("weather", "working", "hour"))
+
+cell_long <- cell_means |>
+  pivot_longer(c(`Linear regression`, `Poisson regression`),
+               names_to = "model", values_to = "fitted")
+
+rain_night <- filter(cell_means, weather == "rain/snow", hour <= 6)
+
+# Every tab draws the fitted means invisibly so all three share y axes.
+shared_axes <- geom_blank(data = cell_long, aes(y = fitted))
+
+model_layer <- function(m) {
+  list(geom_line(data = filter(cell_long, model == m),
+                 aes(y = fitted, color = model, linetype = model),
+                 linewidth = 0.8),
+       scale_color_manual(values = model_colors),
+       scale_linetype_manual(values = model_linetypes))
+}
+fitted_lm_plot <- fitted_base + shared_axes +
+  model_layer("Linear regression") +
+  labs(title = "Linear regression fitted means")
+fitted_glm_plot <- fitted_base + shared_axes +
+  model_layer("Poisson regression") +
+  labs(title = "Poisson regression fitted means")
+```
+:::
+
+Each tab adds to the observed hourly means of the figure above a line for the
+average of one model's fitted means over the same hours; the tab's title
+names the model.
+
+::: {.panel-tabset}
+#### Linear regression
+```{r fitted-lm-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 6.5
+fitted_lm_plot
+```
+
+#### Poisson regression
+```{r fitted-glm-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 6.5
+fitted_glm_plot
+```
+:::
+
+Pooled over weather, the two models agree, since both reproduce each
+hour-by-working-day mean; they differ only in how they split each combination
+across the weather rows. In the `rain/snow` row, linear regression subtracts
+its constant weather coefficient from every hour, and its lines fall below
+zero overnight, as low as `r fmt(min(rain_night$"Linear regression"), 1)`
+bikers, where the observed means never fall below
+`r fmt(min(rain_night$observed), 1)`. The Poisson lines scale the hourly
+profile down instead and follow the points much more closely, overnight
+included.
 
 ### Coefficient interpretation
 
 Write $\mu(x)$ for the mean count at a row of feature values
-$x = (1, x_1, \ldots, x_p)$. Setting every feature to zero gives
-$\log \mu = \beta_0$, so $e^{\beta_0}$ is the **mean count when every feature
-is zero** — for dummy variables, at the reference levels.
+$x = (1, x_1, \ldots, x_p)$. At $x = (1, 0, \ldots, 0)$,
+$\log \mu(x) = \beta_0$, so $e^{\beta_0}$ is the **mean count when every
+feature is zero** — for dummy variables, at the reference levels.
 
 Increasing feature $j$ by one unit from $x_j$ while holding every other
 feature fixed, every term of the linear predictor except the $j$th cancels:
@@ -626,15 +704,13 @@ where
 differ only in feature $j$, by one unit.
 
 So $\beta_j$ is the change in the log mean count per one-unit increase in
-$x_j$, and $e^{\beta_j}$, the **rate ratio**, is the factor by which the mean
-count is multiplied, holding the other features fixed. This parallels the odds
-ratio of logistic regression with the mean count in place of the odds:
-$e^{\beta_j} = 1$ ($\beta_j = 0$) means no association, and the mean changes
-by $100\left(e^{\beta_j} - 1\right)$ percent per unit. A change of $c$ units
-multiplies the mean by $e^{c\beta_j}$. For a dummy variable, $e^{\beta_j}$ is
-the mean at the indicated level divided by the mean at the reference level.
-With an interaction $x_j x_l$ in the model, the rate ratio for $x_j$ depends
-on $x_l$, as an odds ratio did in the flexible logistic regression lecture.
+$x_j$, and $e^{\beta_j}$, the **rate ratio**, is the factor multiplying the
+mean count, holding the other features fixed — the odds ratio of logistic
+regression with the mean count in place of the odds. $e^{\beta_j} = 1$ means
+no association; $c$ units multiply the mean by $e^{c\beta_j}$; for a dummy
+variable, $e^{\beta_j}$ is the mean at the indicated level divided by the mean
+at the reference level; and with an interaction $x_j x_l$ the rate ratio for
+$x_j$ depends on $x_l$.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -656,6 +732,12 @@ rate_ratio_table <- tibble(
                              "$e^{\\hat\\beta_j}$"),
                align = "lcc")
 
+z  <- summary(bike_glm)$coefficients[, "z value"]
+ci <- confint.default(bike_glm)
+rr_ci <- function(term, c = 1) {
+  sprintf("(%.3f, %.3f)", exp(c * ci[term, 1]), exp(c * ci[term, 2]))
+}
+
 rr_working_8 <- exp(b["workingYes"] + b["hr8:workingYes"])
 rr_temp_5    <- exp(5 * b["temp_c"])
 rr_rain      <- exp(b["weatherrain/snow"])
@@ -671,11 +753,10 @@ temperature, and weather, with their exponentials:
 rate_ratio_table
 ```
 
-The intercept comes first. $e^{\hat\beta_0} = `r sprintf("%.1f", exp(b[1]))`$
-is the estimated mean count at hour $0$ (midnight to 1 a.m.) on a non-working
-day in January, in clear weather at $0$ degrees Celsius — a realistic winter
-night, unlike the linear regression's intercept of
-`r fmt(b_lm[1], 1)` bikers for the same conditions.
+$e^{\hat\beta_0} = `r sprintf("%.1f", exp(b[1]))`$ is the estimated mean count
+at hour $0$ (midnight to 1 a.m.) on a non-working day in January, in clear
+weather at $0$ degrees Celsius — a realistic winter night, unlike the linear
+regression's intercept of `r fmt(b_lm[1], 1)` bikers for the same conditions.
 
 Because hour and working day interact, the working-day coefficient compares
 the two kinds of day at the reference hour only: at midnight a working day's
@@ -697,58 +778,6 @@ temperature, the scaling seen in the `rain/snow` row of the fitted-means
 figure — and cloudy or misty weather multiplies it by
 `r sprintf("%.3f", exp(b["weathercloudy/misty"]))`.
 
-### Maximum likelihood estimation
-
-For independent observations the log-likelihood is the sum of the logarithms
-of the probability mass functions,
-
-$$\ell(\beta) = \sum_{i=1}^n \left[y_i \log \mu_i - \mu_i - \log(y_i!)\right] = \sum_{i=1}^n \left[y_i\, x_i\beta - e^{x_i\beta} - \log(y_i!)\right],$$
-
-where
-
-- $y_i$ is the observed count for observation $i$, and
-- $\log(y_i!)$ does not involve $\beta$ and so does not affect the maximizer.
-
-Differentiating with respect to $\beta_j$, using
-$\partial e^{x_i\beta} / \partial \beta_j = x_{ij} e^{x_i\beta}$, and setting
-the result to zero gives the **score equations**
-
-$$\sum_{i=1}^n x_{ij}\left(y_i - \mu_i\right) = 0, \qquad j = 0, 1, \ldots, p,$$
-
-with $x_{i0} = 1$. They have exactly the form of the logistic regression score
-equations with $\mu_i$ in place of $p(x_i)$: the residuals $y_i - \mu_i$ sum
-to zero and are orthogonal to every feature. Because $\mu_i = e^{x_i\beta}$ is
-nonlinear in $\beta$, the equations have no closed-form solution.
-
-`glm()` solves them with the iterative algorithm it used for logistic
-regression, **iteratively reweighted least squares**: each iteration solves a
-weighted least squares problem whose weights are recomputed from the current
-estimate. For the bike counts it reports convergence after
-`r bike_glm$iter` iterations.
-
-```{r score-check}
-#| include: false
-combination_gap <- bike |>
-  group_by(working, hour) |>
-  summarize(gap_glm = abs(mean(bikers) - mean(fit_glm)),
-            gap_lm  = abs(mean(bikers) - mean(fit_lm)), .groups = "drop")
-max_gap <- max(combination_gap$gap_glm, combination_gap$gap_lm)
-```
-
-The fitted bike-count model satisfies them. The intercept's equation makes the
-fitted means sum to the observed counts:
-$\sum_i \hat\mu_i = `r format(round(sum(bike$fit_glm)), big.mark = "{,}")`$ and
-$\sum_i y_i = `r format(sum(bike$bikers), big.mark = "{,}")`$. The equation for
-a dummy variable makes the fitted means average to the observed mean among the
-observations with that dummy equal to $1$, and the normal equations of least
-squares do the same. The hour dummies, the working-day indicator, and their
-products therefore make both models reproduce the observed mean of each
-combination of hour and working-day status: the largest gap over the
-`r nrow(combination_gap)` combinations, for either model, is
-$`r if (max_gap > 0) sci(max_gap) else "0"`$ bikers. Pooled over weather, the
-fitted-means figure's two models agree; they differ only in how they split
-each combination across the weather rows.
-
 ### Inference
 
 Inference repeats the logistic regression lectures. In large samples
@@ -761,15 +790,6 @@ $\text{SE}\left(\hat\beta_j\right)$ comes from the curvature of $\ell$ at $\hat\
 Wald interval $\hat\beta_j \pm z_{1-\alpha/2}\,\text{SE}\left(\hat\beta_j\right)$ is
 returned by `confint.default()`, and exponentiating its endpoints gives an
 interval for the rate ratio $e^{\beta_j}$.
-
-```{r wald-inference}
-#| include: false
-z  <- summary(bike_glm)$coefficients[, "z value"]
-ci <- confint.default(bike_glm)
-rr_ci <- function(term, c = 1) {
-  sprintf("(%.3f, %.3f)", exp(c * ci[term, 1]), exp(c * ci[term, 2]))
-}
-```
 
 For the four rate ratios of the bike-count table, $|z|$ ranges from
 `r sprintf("%.1f", min(abs(z[shown[-1]])))` to
@@ -787,12 +807,11 @@ $$D = 2\left[\ell_{\text{sat}} - \ell\left(\hat\beta\right)\right],$$
 
 where
 
+- $D$ is the deviance, as in the multiple logistic regression lecture, not an
+indicator variable, and
 - $\ell_{\text{sat}}$ is the log-likelihood of the **saturated** model, which
 gives each observation its own mean $\mu_i = y_i$, the largest log-likelihood
 any mean model can reach.
-
-Here $D$ is the deviance, as in the multiple logistic regression lecture, not
-an indicator variable.
 
 $\ell_{\text{sat}}$ does not involve $\beta$, so for a reduced model nested in
 a full one, $G^2 = D_r - D_f = -2\left[\ell\left(\hat\beta_r\right) - \ell\left(\hat\beta_f\right)\right]$,
@@ -812,28 +831,20 @@ bike_additive <- glm(bikers ~ hr + working + mnth + temp_c + weather,
                      data = bike, family = poisson)
 interaction_test <- anova(bike_additive, bike_glm, test = "Chisq")
 interaction_test
-```
-
-```{r interaction-test-values}
-#| include: false
 G2 <- interaction_test$Deviance[2]
 k  <- interaction_test$Df[2]
-log10_p <- pchisq(G2, df = k, lower.tail = FALSE, log.p = TRUE) / log(10)
 ```
 
-The deviance drops by $G^2 = `r format(round(G2), big.mark = "{,}")`$ on $k = `r k`$ degrees of freedom.
-A $\chi^2_{`r k`}$ variable has mean `r k`, and the upper tail probability
-beyond $G^2$ is about $10^{`r format(round(log10_p), big.mark = "{,}")`}$,
-far below the smallest value `anova()` prints,
-$`r sci(.Machine$double.eps)`$. The
-data are inconsistent with one hourly profile shared by both kinds of day.
+The deviance drops by $G^2 = `r format(round(G2), big.mark = "{,}")`$ on
+$k = `r k`$ degrees of freedom, against a $\chi^2_{`r k`}$ mean of `r k`. The
+data are inconsistent with one hourly profile, up to a constant factor, shared
+by both kinds of day.
 
 ### Overdispersion
 
-The Poisson model has no variance parameter: once $\mu_i$ is specified,
-$Var[Y_i \mid x_i] = \mu_i$ is determined, and every standard error and
-deviance test above is computed under that variance. **Overdispersion** is
-the failure $Var[Y_i \mid x_i] > \mu_i$.
+The Poisson model has no variance parameter: $Var[Y_i \mid x_i] = \mu_i$, and
+every standard error and deviance test above is computed under that variance.
+**Overdispersion** is the failure $Var[Y_i \mid x_i] > \mu_i$.
 
 The **Pearson residual** $\left(y_i - \hat\mu_i\right)/\sqrt{\hat\mu_i}$ standardizes a
 residual by the Poisson standard deviation. If $Var[Y_i \mid x_i] = \mu_i$,
@@ -842,14 +853,13 @@ squared Pearson residual,
 
 $$\hat\phi = \frac{1}{n - (p+1)}\sum_{i=1}^n \frac{\left(y_i - \hat\mu_i\right)^2}{\hat\mu_i},$$
 
-should be close to $1$, where
+should be close to $1$, and a value well above $1$ is evidence of
+overdispersion, where
 
 - $\hat\phi$ estimates the dispersion parameter $\phi$, which the Poisson
 model fixes at $1$, and
 - the divisor $n - (p+1)$ accounts for the $p + 1$ estimated coefficients, as
 in $\hat\sigma^2 = RSS/[n - (p+1)]$.
-
-A value well above $1$ is evidence of overdispersion.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -861,8 +871,9 @@ pearson_phi <- function(fit) {
 phi_full     <- pearson_phi(bike_glm)
 phi_additive <- pearson_phi(bike_additive)
 
+n_bins <- 20
 variance_bins <- bike |>
-  mutate(bin = ntile(fit_glm, 20)) |>
+  mutate(bin = ntile(fit_glm, n_bins)) |>
   group_by(bin) |>
   summarize(mean_fit = mean(fit_glm),
             mean_sq_resid = mean((bikers - fit_glm)^2), .groups = "drop")
@@ -879,7 +890,8 @@ variance_check_plot <- ggplot(variance_bins,
   labs(x = expression(paste("Average ", hat(mu)[i], " in the bin (log scale)")),
        y = expression(paste("Average ", (y[i] - hat(mu)[i])^2,
                             " in the bin (log scale)")),
-       title = "Poisson regression, hours binned into 20 groups by fitted mean")
+       title = paste("Poisson regression, hours binned into", n_bins,
+                     "groups by fitted mean"))
 
 rain_se    <- summary(bike_glm)$coefficients["weatherrain/snow", "Std. Error"]
 rain_ci_q  <- exp(b["weatherrain/snow"] +
@@ -887,9 +899,9 @@ rain_ci_q  <- exp(b["weatherrain/snow"] +
 ```
 :::
 
-For the bike-count fit, the figure below places each of `r nrow(variance_bins)`
-groups of hours, binned by fitted mean, at its average fitted mean and its
-average squared residual, on log scales; the dashed line is variance $=$ mean.
+For the bike-count fit, the figure below places each of `r n_bins` groups of
+hours, binned by fitted mean, at its average fitted mean and its average
+squared residual, on log scales; the dashed line is variance $=$ mean.
 
 ```{r variance-check-figure}
 #| echo: false
@@ -900,31 +912,30 @@ variance_check_plot
 
 `r if (all(variance_bins$mean_sq_resid > variance_bins$mean_fit)) paste("All", nrow(variance_bins), "bins have") else paste(sum(variance_bins$mean_sq_resid > variance_bins$mean_fit), "of the", nrow(variance_bins), "bins have")`
 an average squared residual above the dashed line. The average squared Pearson
-residual is $\hat\phi = `r sprintf("%.1f", phi_full)`$: the hourly counts vary
-about `r round(phi_full)` times as much around their fitted means as a Poisson
-distribution allows. The additive model's $\hat\phi$ is
+residual is $\hat\phi = `r sprintf("%.1f", phi_full)`$: the hourly counts have
+about `r round(phi_full)` times the variance around their fitted means that a
+Poisson distribution allows. The additive model's $\hat\phi$ is
 `r sprintf("%.1f", phi_additive)`, so the hour-by-working-day features
 explained part of the excess variation, but $\hat\phi$ remains far above
 $1$.
 
 The score equations involve $y_i$ only through $y_i - \mu_i$, never through
-its variance, so if the mean model is right $\hat\beta$ remains a sensible
-estimate under overdispersion, and so do the fitted means and rate ratios.
-The standard errors do not. Computed as if the variance were $\mu_i$, they are
-too small when it is larger, so $z$-statistics and $G^2$ are too large,
-$p$-values too small, and confidence intervals too narrow. For the bike
-counts, the interaction test's conclusion survives the correction: dividing
-$G^2$ by $\hat\phi$ gives $`r format(round(G2 / phi_full), big.mark = "{,}")`$,
-still `r fmt(G2 / phi_full / k)` times its $`r k`$ degrees of freedom.
+its variance, so if the mean model is right $\hat\beta$, the fitted means, and
+the rate ratios remain sensible estimates under overdispersion. The standard
+errors, computed as if the variance were $\mu_i$, are too small, so
+$z$-statistics and $G^2$ are too large and confidence intervals too narrow. If
+$Var[Y_i \mid x_i] = \phi\,\mu_i$, $G^2$ is approximately $\phi\,\chi^2_k$, so
+$G^2/\hat\phi$ is approximately $\chi^2_k$. For the bike counts
+$G^2/\hat\phi = `r format(round(G2 / phi_full), big.mark = "{,}")`$, still
+`r fmt(G2 / phi_full / k)` times its $`r k`$ degrees of freedom: the
+interaction test's conclusion survives.
 
-Overdispersion has the same sources as in the problems in logistic regression
+Overdispersion has two sources, as in the problems in logistic regression
 lecture: explanatory variables missing from the model that vary among
-observations with the same $x_i$ — for the bike counts, plausibly conditions
-shared by the hours of one day — and events within one count that are not
-independent, such as riders who rent together. The remedy within this course,
-adding features that explain the extra variation, addresses only the first
-source; events within one count that are not independent cannot be fixed by
-a feature, and fall under the remedies of the callout below.
+observations with the same $x_i$ (for the bike counts, plausibly conditions
+shared by the hours of one day), and events within one count that are not
+independent, such as riders who rent together. Adding features addresses only
+the first; the second falls under the remedies of the callout below.
 
 ::: {.callout-note collapse="true"}
 ### Beyond this course
@@ -948,16 +959,14 @@ taught or tested here.
 
 A generalized linear model has three components: a distribution for the
 response given the features, with mean $\mu_i$; a linear predictor
-$\eta_i = x_i\beta$, into which every feature-engineering device of the
-earlier lectures enters unchanged; and a link function with
-$g(\mu_i) = \eta_i$, whose inverse keeps the mean within the values the
-response allows. Linear regression is the normal distribution with the
-identity link, logistic regression the Bernoulli with the logit link, and
-Poisson regression the Poisson with the log link. Each distribution also fixes
-its variance function: constant, $\mu(1-\mu)$, and $\mu$.
+$\eta_i = x_i\beta$, into which every feature-engineering device enters
+unchanged; and a link function with $g(\mu_i) = \eta_i$, whose inverse keeps
+the mean in range. Linear, logistic, and Poisson regression pair the normal,
+Bernoulli, and Poisson distributions with the identity, logit, and log links,
+and variance functions $1$, $\mu(1-\mu)$, and $\mu$.
 
 Poisson regression models a count. Its mean $e^{x_i\beta}$ is positive for
-every $\beta$, so $e^{\beta_0}$ is the mean count when every feature is zero
+every $\beta$; $e^{\beta_0}$ is the mean count when every feature is zero,
 and $e^{\beta_j}$ a rate ratio, the factor multiplying the mean count
 per unit of feature $j$ with the other features held fixed. Its coefficients
 are maximum likelihood estimates; the score equations
@@ -972,8 +981,7 @@ mean; a value well above $1$ signals overdispersion, under which the estimates
 remain usable if the mean model is right, but standard errors are too small,
 tests too liberal, and intervals too narrow.
 
-The next lecture begins the resampling unit, ISLR2 Chapter 5. Every error
-rate and fit measure so far has been computed on the data the model was fit
-to, or on a single held-out split; cross-validation estimates test error by
-repeatedly holding out part of the data, and uses those estimates to choose
-among models and flexibility settings.
+The next lecture begins the resampling unit, ISLR2 Chapter 5:
+cross-validation estimates test error by repeatedly holding out part of the
+data, and uses those estimates to choose among models and flexibility
+settings.

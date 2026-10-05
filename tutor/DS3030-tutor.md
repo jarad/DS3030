@@ -716,7 +716,12 @@ meaningfully changing test error rates or AUCs.
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
 
 A count response, and the framework that contains linear, logistic, and
-Poisson regression. Motivation: least squares on hourly bike-rental counts
+Poisson regression. The chapter opens with the hourly bike-rental counts and
+their mean-variance plot, and introduces the **Poisson distribution** there:
+pmf $\mu^y e^{-\mu}/y!$ with mean and variance both $\mu$ (derived, plus a
+slider showing the pmf skewed at small $\mu$ and spreading as $\mu$ grows), the
+dashed variance = mean line that every hour-by-working-day group lies above.
+Motivation: least squares on the counts
 gives negative fitted means, residuals that fan out as the mean grows, and
 additive month, temperature, and weather effects that shift every hour by the
 same number of riders, so an hour whose shift is below average (a winter
@@ -737,9 +742,9 @@ $\phi = 1$ for Bernoulli and Poisson); `glm()` families `gaussian`,
 `binomial`, `poisson`. A GLM transforms the mean, $\log E[Y_i]$, not the
 response, $E[\log Y_i]$.
 
-**Poisson regression**: the Poisson pmf $\mu^y e^{-\mu}/y!$ with mean and
-variance both $\mu$ (derived, plus a slider showing the pmf skewed at small
-$\mu$ and spreading as $\mu$ grows); $\log\mu_i = x_i\beta$, so
+**Poisson regression**, opened with the observed hourly means by weather
+(rain scales the hourly profile rather than shifting it, motivating the log
+link): $\log\mu_i = x_i\beta$, so
 $\mu_i = e^{x_i\beta}$ is positive and features act multiplicatively;
 $e^{\beta_0}$ is the mean count with every feature at zero (reference levels)
 and $e^{\beta_j}$ the **rate ratio**, the factor multiplying the mean count
@@ -769,10 +774,10 @@ hour as a 24-level factor interacted with working day, month, temperature
 converted to degrees Celsius, and weather with its one-hour `heavy rain/snow`
 level merged into `rain/snow`. The same 62-column linear predictor serves the
 linear regression (the identity-link GLM, whose fitted means go negative) and
-the Poisson regression, fit right after the log-linear model is stated. A
-tabset of observed versus fitted hourly means by weather and working day shows
-linear regression going negative overnight in rain while Poisson regression
-scales the profile down. Interpretation reads the intercept first (mean count
+the Poisson regression, fit once maximum likelihood estimation has been
+introduced. A two-tab figure of fitted versus observed hourly means by weather
+and working day shows linear regression going negative overnight in rain while
+Poisson regression scales the profile down. Interpretation reads the intercept first (mean count
 at midnight on a non-working January day, clear, 0 °C), then the working-day
 ratio at the reference hour, the per-5 °C rate ratio (about 1.08), and the
 rain/snow rate ratio (about 0.56). The fitted score equations are checked on
