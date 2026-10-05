@@ -1,0 +1,188 @@
+---
+title: "Linear Discriminant Analysis"
+format:
+  revealjs:
+    slide-number: true
+    footer: "DS 3030"
+    include-in-header:
+      text: |
+        <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({"HTML-CSS": {availableFonts: [], preferredFont: null, webFont: "TeX"}});
+        </script>
+        <style>
+        .reveal table { font-size: 0.8em; }
+        .reveal .panel-tabset-tabby a { font-size: 0.6em; }
+        .reveal .panel-tabset .tab-content { margin-top: 0.2em; }
+        .reveal .panel-tabset .tab-content p { margin: 0; }
+        .reveal .panel-tabset .tab-content img { display: block; margin: 0 auto; width: auto; max-height: 420px; }
+        .reveal section:has(> .panel-tabset) > p { font-size: 0.7em; }
+        .reveal #fitted-densities-and-priors .tab-content img { max-height: 455px; }
+        </style>
+execute:
+  enabled: false
+---
+
+## Today
+
+<!-- derived-from: 04-classification/50-lda.qmd @ 63ba15d -->
+
+- Bayes' theorem
+- LDA, one feature and several
+- Comparison with logistic regression
+
+## Credit card default data
+
+ISLR2::Default · analyzed in the logistic regression lectures
+
+| Default | Customers | Proportion | Mean balance (\$) | SD of balance (\$) | Zero balances |
+|:-------:|:---------:|:----------:|:-----------------:|:------------------:|:-------------:|
+|   No    |   9,667   |   0.9667   |        804        |        456         |      499      |
+|   Yes   |    333    |   0.0333   |       1,748       |        341         |       0       |
+
+::: notes
+The data run through the whole lecture.
+:::
+
+## Balance within each class
+
+![Defaulters carry larger balances](../_freeze/04-classification/50-lda/figure-html/default-hist-figure-1.png)
+
+## Balance, all customers
+
+![Stacked counts: each class's share of a bar is its share of customers](../_freeze/04-classification/50-lda/figure-html/default-stack-figure-1.png)
+
+## Bayes' theorem and Bayes classifier
+
+$$p_k(x) = P(Y = k \mid X = x) = \frac{\pi_k f_k(x)}{\sum_{l=1}^K \pi_l f_l(x)} \propto \pi_k f_k(x)$$
+
+$\pi_k$ — prior · $f_k(x)$ — class density · $p_k(x)$ — posterior
+
+$$\widehat y(x) = \arg\max_k\, p_k(x)$$
+
+$$P\left(Y \ne \widehat y(x) \mid X = x\right) = 1 - p_{\widehat y(x)}(x)$$
+
+Model $f_k(x)$ and $\pi_k$, reverse the conditioning, assign the class with the largest posterior
+
+## Fitted Gaussian densities
+
+![One-feature LDA: Gaussian densities fitted to each class](../_freeze/04-classification/50-lda/figure-html/balance-gauss-figure-1.png)
+
+::: notes
+The start of 13.2: the histograms with the fitted $N(\widehat\mu_k, \widehat\sigma^2)$ over them.
+:::
+
+## Gaussian class-conditional densities
+
+::: {style="font-size: 0.88em"}
+$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N\left(\mu_k, \sigma^2\right), \qquad k = 1, \ldots, K$$
+:::
+
+Same $\sigma^2$ in every class
+
+## Discriminant function and decision boundary {.smaller}
+
+$$\delta_k(x) = \left(\log \pi_k - \frac{\mu_k^2}{2\sigma^2}\right) + \frac{\mu_k}{\sigma^2}\, x$$
+
+$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \underbrace{\log\frac{\pi_2}{\pi_1} - \frac{\mu_2^2 - \mu_1^2}{2\sigma^2}}_{\beta_0} + \underbrace{\frac{\mu_2 - \mu_1}{\sigma^2}}_{\beta_1}\, x$$
+
+$$x^* = \frac{\mu_1 + \mu_2}{2} + \frac{\sigma^2}{\mu_2 - \mu_1}\log\frac{\pi_1}{\pi_2}$$
+
+Linear in $x$; the boundary is where the two discriminants are equal
+
+## Prior-weighted densities
+
+Equal priors put the boundary at the midpoint; the small prior for Yes moves it toward the defaulters' mean
+
+::: {.panel-tabset}
+
+### Equal priors
+
+![](../_freeze/04-classification/50-lda/figure-html/balance-equal-figure-1.png)
+
+### Estimated priors
+
+![](../_freeze/04-classification/50-lda/figure-html/balance-weighted-figure-1.png)
+
+### Discriminant functions
+
+![](../_freeze/04-classification/50-lda/figure-html/balance-delta-figure-1.png)
+
+:::
+
+## Parameter estimation
+
+::: {style="font-size: 0.8em"}
+$$\widehat\pi_k = \frac{n_k}{n}, \qquad \widehat\mu_k = \frac{1}{n_k}\sum_{i:\, y_i = k} x_i, \qquad \widehat\sigma^2 = \frac{1}{n - K}\sum_{k=1}^K \sum_{i:\, y_i = k}\left(x_i - \widehat\mu_k\right)^2$$
+:::
+
+Closed form: proportions, means, pooled variance
+
+## Balance and income
+
+![Two continuous features; one contour set per class](../_freeze/04-classification/50-lda/figure-html/additive-densities-figure-1.png)
+
+::: notes
+The start of 13.3; the same image is the first tab of slide 13.
+:::
+
+## Multivariate Gaussian model and parameter estimation
+
+::: {style="font-size: 0.85em"}
+$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N_p\left(\mu_k, \Sigma\right), \qquad k = 1, \ldots, K$$
+
+$$\widehat\mu_k = \frac{1}{n_k}\sum_{i:\, y_i = k} x_i, \qquad \widehat\Sigma = \frac{1}{n - K}\sum_{k=1}^K \sum_{i:\, y_i = k}\left(x_i - \widehat\mu_k\right)\left(x_i - \widehat\mu_k\right)^\top$$
+:::
+
+Shared $\Sigma$, pooled over classes with divisor $n - K$
+
+## Matrix-form discriminant and linear decision boundary
+
+$$\delta_k(x) = \left(\log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k\right) + x^\top \Sigma^{-1} \mu_k$$
+
+$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\beta$$
+
+Still linear in $x$; a hyperplane, a line when $p = 2$
+
+## Fitted densities and priors
+
+Boundary through the crossings of the prior-weighted contours
+
+::: {.panel-tabset}
+
+### Fitted densities
+
+![](../_freeze/04-classification/50-lda/figure-html/additive-densities-figure-1.png)
+
+### Equal priors
+
+![](../_freeze/04-classification/50-lda/figure-html/additive-equal-figure-1.png)
+
+### Estimated priors
+
+![](../_freeze/04-classification/50-lda/figure-html/additive-estimated-figure-1.png)
+
+:::
+
+::: notes
+The first tab repeats slide 10's image, which is fine here because it keeps the tabs in one flow.
+:::
+
+## Simple logistic regression comparison
+
+![Balance alone: LDA is a logistic curve, slightly flatter than logistic regression](../_freeze/04-classification/50-lda/figure-html/balance-posterior-figure-1.png)
+
+## Multiple logistic regression comparison
+
+![Balance and income: posterior probability by income quartile](../_freeze/04-classification/50-lda/figure-html/additive-posterior-figure-1.png)
+
+## Student strata
+
+![Separate models for students and non-students; each panel over its own incomes](../_freeze/04-classification/50-lda/figure-html/strata-figure-1.png)
+
+## Conclusion
+
+- Bayes' theorem
+- Generative classifier
+- LDA
+- Discriminant function
+- Linear boundary
