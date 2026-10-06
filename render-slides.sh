@@ -29,13 +29,14 @@ find . -name '*_slides.qmd' -not -path './docs/*' | while read -r f; do
   cp "$dir/$base.html" "docs/$dir/$base.html"
   rm -f "$dir/$base.html"
   if [ -d "$dir/${base}_files" ]; then
-    cp -r "$dir/${base}_files" "docs/$dir/${base}_files"
+    mkdir -p "docs/$dir/${base}_files"
+    cp -R "$dir/${base}_files/." "docs/$dir/${base}_files/"
     rm -rf "$dir/${base}_files"
   fi
   chapter=${base%_slides}
   freeze_dir="_freeze/$dir/$chapter/figure-html"
   if [ -d "$freeze_dir" ]; then
-    mkdir -p "docs/_freeze/$dir/$chapter"
-    cp -r "$freeze_dir" "docs/_freeze/$dir/$chapter/figure-html"
+    mkdir -p "docs/_freeze/$dir/$chapter/figure-html"
+    cp -R "$freeze_dir/." "docs/_freeze/$dir/$chapter/figure-html/"
   fi
 done

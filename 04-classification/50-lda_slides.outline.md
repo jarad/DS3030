@@ -102,10 +102,10 @@ say: the start of 13.2; the histograms with the fitted N(μ̂_k, σ̂²) over th
 
 ## 8. Gaussian model and parameter estimation
 tag: core
-show: equation — 13.2.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N(\mu_k,\sigma^2)`, and equation — 13.2.2, `\hat\pi_k`, `\hat\mu_k`, `\hat\sigma^2` (pooled, divisor n − K), on one slide
+show: equation — 13.2.1, the model `Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N\left(\mu_k, \sigma^2\right), \qquad i = 1, \ldots, n`, and equation — 13.2.2, `\hat\pi_k`, `\hat\mu_k`, `\hat\sigma^2` (pooled, divisor n − K), on one slide
 words: between the model and the estimates, "Same σ² in every class"; after the estimates, "Closed-form estimates: proportions, means, pooled variance"
 reveal: on arrival: the model and "Same σ² in every class"; click 1: the estimating equations and the closing line
-note: this puts the one-feature parameter estimation on the model slide, as slide 14 does for the multivariate case; the model display is larger than the estimates
+note: this puts the one-feature parameter estimation on the model slide, as slide 14 does for the multivariate case; the model display is larger than the estimates; updated 2026-10-06 to the chapter's `\stackrel{ind}{\sim}` model statement (Categorical prior, index range), set at 0.75 of the slide font so the one-line display fits 1280 px
 
 ## 9. Discriminant function
 tag: core
@@ -145,10 +145,10 @@ say: the start of 13.3; the same image is the first tab of slide 16
 
 ## 14. Multivariate Gaussian model
 tag: core
-show: equation — 13.3.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N_p(\mu_k, \Sigma)`, and equation — 13.3.2, `\hat\mu_k` and `\hat\Sigma`, on one slide
+show: equation — 13.3.1, the model `Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right), \qquad i = 1, \ldots, n`, and equation — 13.3.2, `\hat\mu_k` and `\hat\Sigma`, on one slide
 words: between the model and the estimates, "Shared Σ"; after the estimates, "Pooled over classes with divisor n − K"
 reveal: on arrival: the model and "Shared Σ"; click 1: the estimating equations and the closing line
-note: this puts the statistical model and its parameter estimation on one slide
+note: this puts the statistical model and its parameter estimation on one slide; updated 2026-10-06 to the chapter's `\stackrel{ind}{\sim}` model statement (Categorical prior, index range), set at 0.75 of the slide font so the one-line display fits 1280 px
 
 ## 15. Matrix-form discriminant
 tag: core

@@ -86,8 +86,8 @@ The start of 13.2: the histograms with the fitted $N(\widehat\mu_k, \widehat\sig
 
 ## Gaussian model and parameter estimation
 
-::: {style="font-size: 0.85em"}
-$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N\left(\mu_k, \sigma^2\right), \qquad k = 1, \ldots, K$$
+::: {style="font-size: 0.75em"}
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N\left(\mu_k, \sigma^2\right), \qquad i = 1, \ldots, n$$
 :::
 
 Same $\sigma^2$ in every class
@@ -197,8 +197,8 @@ The start of 13.3; the same image is the first tab of slide 18.
 
 ## Multivariate Gaussian model
 
-::: {style="font-size: 0.85em"}
-$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N_p\left(\mu_k, \Sigma\right), \qquad k = 1, \ldots, K$$
+::: {style="font-size: 0.75em"}
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right), \qquad i = 1, \ldots, n$$
 :::
 
 Shared $\Sigma$
