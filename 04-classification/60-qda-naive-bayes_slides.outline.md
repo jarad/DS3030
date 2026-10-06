@@ -8,41 +8,39 @@ exactly these slides.
 
 Drafted 2026-10-06 against `60-qda-naive-bayes.qmd` at `e347c90`; revised the
 same day after the chapter's rewrite (independence notation, KNN section,
-rewritten Boundary shapes). Refreshed 2026-10-06 against the chapter's
-uncommitted edits (last commit `f0c4ab8`): the pairing table puts each $p = 2$
-value on its own line below the formula, the Student strata table gains two
-naive Bayes rows, and the KNN section gains a KNN-only boundary figure, so the
-deck gained slide 21 (KNN boundary) and every later slide moved up by one. The chapter is the largest of the unit, so the core
-line is: the data and the three-way setup, QDA (model, fit, class contours,
-discriminant, boundary), naive Bayes (conditional independence, fit, additive
-log odds, diagonal covariance, boundary), KNN, then the comparison of methods
-(fitted boundaries, boundary shapes, the five-method table, the bias-variance
-tradeoff, simulated scenarios, test performance).
+rewritten Boundary shapes) and refreshed against the committed chapter at
+`9ae5029` (the pairing table puts each $p = 2$ value on its own line below the
+formula, the Student strata table gains two naive Bayes rows, the KNN section
+gains a KNN-only boundary figure). Revised again 2026-10-06 on request: the KNN
+transition is titled "K-Nearest Neighbors", a code slide for fitting KNN
+(21) follows KNN classification, and four Comparing methods slides (Parameter
+count, Five classifiers, Bias-variance tradeoff, Boundary variability) are
+parked below, so the deck is now 32 slides (0 to 31). The chapter is the
+largest of the unit, so the core line is: the data and the three-way setup, QDA
+(model, fit, class contours, discriminant, boundary), naive Bayes (conditional
+independence, fit, additive log odds, diagonal covariance, boundary), KNN (vote,
+fit), then the comparison of methods (fitted boundaries, boundary shapes,
+simulated scenarios, test performance).
 
 **Final order of the last section (2026-10-06):** Comparing methods opens with
 Fitted boundaries, then Boundary shapes (equations, the pairing table, the
-paired boundaries), Parameter count, Five classifiers, Bias-variance tradeoff,
-Boundary variability. Parameter count was placed right after Boundary shapes,
-as the pairing table already carries parameter counts, and the five-method
-table's closing line ("increasing p favors naive Bayes and LDA") then follows
-both counts. The bias-variance tradeoff and the boundary variability figure
-moved here from the QDA section, since the comparison needs all the methods
-presented first; Boundary variability is optional and last in that run. $K$ is
-the number of neighbors from the KNN slide on; the Bias-variance tradeoff and
-Parameter count slides count parameters with $K$ classes (the slides say so
-with "$K = 2$ classes").
+paired boundaries), Simulated scenarios, Test performance, Student strata. The
+Parameter count, Five classifiers, Bias-variance tradeoff and Boundary
+variability slides were removed from the body on request and are parked under
+"Not in this deck". $K$ is the number of neighbors from the KNN slide on; no
+slide in the body counts parameters with $K$ classes any more.
 
 Cut to optional, in the order they would go: Boundary shapes, fitted pairs
-(slide 26), Boundary variability (30), Parameter count (27), Mixed feature
-types (14), KNN boundary (21), Student strata (33), and the Conclusion slide
-(34). Cut from the
+(slide 27), Mixed feature types (14), KNN boundary (22), Student strata (30),
+and the Conclusion slide (31). Cut from the
 deck entirely and parked below: the repeated scatterplot (`nb-data-figure` is
 the same image as `default-eda-figure`), the class density display, the
 one-feature log odds display, the QDA covariance-matrix display and coefficient
-table (removed 2026-10-06), the fitted-KNN details (standardization, the rule
-for K), the tilt and income-slope comparison of naive Bayes with LDA, and the
-strata summary table and scatterplot. Two R-code slides (6 and 15), and five
-transition slides (1, 4, 12, 19, 22) as in the LDA deck.
+table (removed 2026-10-06), the fitted-KNN details that are not on slide 21
+(the rule for K), the tilt and income-slope comparison of naive Bayes with
+LDA, the strata summary table and scatterplot, and the four removed Comparing
+methods slides. Three R-code slides (6, 15 and 21), and five
+transition slides (1, 4, 12, 19, 23) as in the LDA deck.
 
 Nothing here is new content. Every `show:` points at something that already
 exists in `60-qda-naive-bayes.qmd`, so the deck distills the notes and never
@@ -87,20 +85,19 @@ Equations use the bracket convention for the logarithm of a product,
 `\log\left[\frac{p_2(x)}{1 - p_2(x)}\right]`, as the chapter does. No equation
 writes the terms that do not involve k: they are dropped in words.
 
-**Timing:** 35 slides: 5 transitions (no time), 23 `core` content slides
-(slide 0 and 22 more) and 7 `optional`. At about 2 to 3 minutes each, 22
-content slides fits 50 minutes only because the quick ones (7, 10, 18, 23, 31)
-take a minute or less, so this is a tight lecture. If time runs short, drop in
-this order: 26 (paired boundaries), 30 (boundary variability), 27 (parameter
-count), 14 (mixed feature types), 21 (KNN boundary), 11 (one-feature second
-branch), 24 (boundary shapes equations; keep the pairing table on 25).
+**Timing:** 32 slides: 5 transitions (no time), 22 `core` content slides
+(slide 0 and 21 more) and 5 `optional`. At about 2 to 3 minutes each, 21
+content slides fits 50 minutes only because the quick ones (7, 10, 18, 24, 28)
+take a minute or less. If time runs short, drop in this order: 27 (paired
+boundaries), 14 (mixed feature types), 22 (KNN boundary), 11 (one-feature
+second branch), 25 (boundary shapes equations; keep the pairing table on 26).
 
 ---
 
 ## 0. Today
 tag: core
 show: none
-words: agenda as noun phrases — QDA · Naive Bayes · KNN · Comparing methods and the bias-variance tradeoff
+words: agenda as noun phrases — QDA · Naive Bayes · KNN · Comparing methods
 
 ## 1. Motivation
 tag: core
@@ -240,9 +237,9 @@ say: the two boundaries stay close within the training balances; naive Bayes's b
 
 ---
 
-# KNN
+# K-Nearest Neighbors
 
-## 19. KNN
+## 19. K-Nearest Neighbors
 tag: core
 show: none (transition slide, title only)
 words: none
@@ -253,108 +250,86 @@ show: equation — `\widehat p_k(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\ma
 words: "x_0 — feature vector to classify", "N_0 — the K training points closest to x_0", "K — number of neighbors, not the number of classes"; then "Assign x_0 to the class with the largest p̂_k(x_0)"; then "Two classes: p̂_No(x_0) = 1 − p̂_Yes(x_0), so assign Yes when p̂_Yes(x_0) > 0.5"
 reveal: on arrival: the equation and the three labels; click 1: the assignment line; click 2: the two-class line
 say: the flexibility lecture's KNN, now with a vote; features are standardized first; K is fixed at the smallest odd integer above √n here (71 for these 5,000 training customers, a rule of thumb, since choosing K from the data is the next unit); from here to the end of the comparison K is the number of neighbors, not the number of classes
-note: general first, as in the chapter; the two-class case is the chapter's last sentences of the subsection (the Yes/0.5 specialization is stated in words and inline math there, not as a displayed sum, so it is a one-line fragment, not an equation). The standardization sentence, the tie-breaking rule and the rule for K are parked; the K = 71 is inline R in the chapter.
+note: general first, as in the chapter; the two-class case is the chapter's last sentences of the subsection (the Yes/0.5 specialization is stated in words and inline math there, not as a displayed sum, so it is a one-line fragment, not an equation). The standardization sentence, the tie-breaking rule and the rule for K are parked (slide 21 shows `standardize()` as code); the K = 71 is inline R in the chapter.
 
-## 21. KNN boundary
+## 21. Fitting KNN
+tag: core
+show: none, code — the setup the call needs, then `class::knn()` on three new customers with the printed output of `knn_new`: `k_default <- odd_above_sqrt(nrow(train))`, the chapter's `standardize()` function, `new_customers <- tibble(balance = c(1000, 2000, 2500), income = 40000)`, and `knn_new <- class::knn(train = standardize(train), test = standardize(new_customers), cl = train$default, k = k_default, prob = TRUE)` followed by `knn_new`
+words: none beyond the code
+say: `class::knn()` fits and classifies in one call; it takes the standardized training features, the standardized features of the customers to classify, the training classes and the number of neighbors; with `prob = TRUE` it also returns the winning class's share of the vote; three customers with the same income and increasing balances: No with every neighbor in the vote, then Yes with 0.535, then Yes with 0.718; the estimate p̂_Yes(x_0) is the vote share when the class is Yes and one minus it when the class is No
+note: code on the left (52%), the printed output on the right (48%), code lines under about 38 characters (the long `standardize()` and `class::knn()` lines are wrapped; the call itself is unchanged). The output is the frozen `knn-new-customers` console block, copied verbatim. The pieces come from the chapter: `k_default` from its `knn-fit` chunk (a visible-on-expansion Code callout under "KNN boundary", `k_default <- odd_above_sqrt(nrow(train))`, which equals 71 for the 5,000 training customers); `odd_above_sqrt()` itself is defined in the chapter's setup chunk and is not shown on the slide; `standardize()` from the same `knn-fit` chunk, with its two long expressions wrapped; `new_customers` and the `class::knn()` call from the visible `knn-new-customers` chunk; `train` is the split on slide 6.
+
+## 22. KNN boundary
 tag: optional
 show: figure — knn-boundary-figure (the KNN boundary with K = 71, black long-and-short dashes, over the training customers, balances beyond the largest training balance shaded)
 words: "The boundary follows no formula: a jagged curve traced by the vote of the nearest training customers"
-say: the KNN-only boundary, K = 71 as fixed on the previous slide; it follows no formula, it is traced by the vote of the nearest training customers, and beyond the largest training balance it is still a vote among the same customers at the edge of the data; the Fitted boundaries slide draws this same curve beside the other four
-note: new 2026-10-06 with the chapter's KNN section (subsections Neighbor vote, Number of neighbors, KNN boundary); the title is the chapter's subsection title. The words line is the chapter's first sentence of the subsection's closing paragraph, trimmed to one line; the rest of that paragraph is in the say line. Optional because the five-boundary figure draws the same curve. The "Number of neighbors" subsection has no slide of its own: the rule for K stays in slide 20's say line.
+say: the KNN-only boundary, K = 71 as in Fitting KNN; it follows no formula, it is traced by the vote of the nearest training customers, and beyond the largest training balance it is still a vote among the same customers at the edge of the data; the Fitted boundaries slide draws this same curve beside the other four
+note: new 2026-10-06 with the chapter's KNN section (subsections Neighbor vote, Number of neighbors, KNN boundary); the title is the chapter's subsection title. The words line is the chapter's first sentence of the subsection's closing paragraph, trimmed to one line; the rest of that paragraph is in the say line. Optional because the five-boundary figure draws the same curve. The "Number of neighbors" subsection has no slide of its own: the rule for K stays in slide 20's say line, and slide 21 shows `k_default`.
 
 ---
 
 # Comparing methods
 
-## 22. Comparing methods
+## 23. Comparing methods
 tag: core
 show: none (transition slide, title only)
 words: none
 note: the chapter's heading is "Classifier comparison"; the deck calls the section "Comparing methods", as requested.
 
-## 23. Fitted boundaries
+## 24. Fitted boundaries
 tag: core
 show: figure — comparison-boundaries-figure (all five classifiers' 0.5 boundaries over the training customers)
 words: "Logistic regression, LDA: lines · QDA, naive Bayes: curves · KNN, K = 71: jagged"
 say: at middle incomes, near where most defaulters sit, the five boundaries lie close together; QDA and naive Bayes have second branches beyond the training balances; KNN's course out there is also an extrapolation
-note: "K = 71" is confirmed by the chapter ("KNN with $K = 71$ neighbors black long-and-short dashes", inline R in the frozen markdown) and by the figure's legend ("KNN, K = 71"); the KNN-only version of this boundary is slide 21.
+note: "K = 71" is confirmed by the chapter ("KNN with $K = 71$ neighbors black long-and-short dashes", inline R in the frozen markdown) and by the figure's legend ("KNN, K = 71"); the KNN-only version of this boundary is slide 22.
 
-## 24. Boundary shapes
+## 25. Boundary shapes
 tag: core
 show: equation — the aligned display of the log posterior odds forms: LDA `\beta_0 + \sum_{j=1}^p \beta_j x_j`; QDA `\beta_0 + \sum_{j=1}^p \beta_j x_j + \sum_{j \le l} \gamma_{jl} x_j x_l`; Gaussian naive Bayes `\beta_0 + \sum_{j=1}^p \left(\beta_j x_j + \gamma_{jj} x_j^2\right)`
 words: "KNN: no formula, any shape"
 say: LDA's log odds are linear in x, QDA's quadratic with squares and cross-products, Gaussian naive Bayes's additive, quadratic in each feature; the chapter's display no longer lists logistic regression, which is the next slide's point
-note: the chapter's aligned display is one block with three lines (LDA, QDA, Gaussian naive Bayes); it cannot be revealed line by line without being split, so it is static. Second to drop if time is short, since slide 25 states the same forms.
+note: the chapter's aligned display is one block with three lines (LDA, QDA, Gaussian naive Bayes); it cannot be revealed line by line without being split, so it is static. Second to drop if time is short, since slide 26 states the same forms.
 
-## 25. Boundary shapes: pairs
+## 26. Boundary shapes: pairs
 tag: core
 show: table — pair-table-display (log-odds form, generative classifier, its parameters, logistic regression features, its coefficients, with the count for p = 2 in parentheses on its own line below each formula)
 words: "Logistic regression: linear in whatever features it is given" and "Parameter counts for two classes; below each formula, in parentheses, p = 2"
 say: logistic regression is linear in whatever features it is given, so with squares among its features it has naive Bayes's form, and with squares and the product, QDA's; each generative classifier and the logistic regression of its form can produce exactly the same boundaries; the difference is estimation, joint likelihood against conditional likelihood, and the generative classifier has more free parameters because it also describes the features' distribution within each class
 note: the table is the chapter's pairing table, copied from the frozen markdown, each $p = 2$ value after a `<br>` below its formula (as the chapter's `count_with_p2` builds it); the slide's table rule (0.6em) is kept for the width of the formula columns. The chapter's long paragraph on when each estimation wins is in the say line only.
 
-## 26. Boundary shapes: fitted pairs
+## 27. Boundary shapes: fitted pairs
 tag: optional
 show: tabset — three tabs: "Linear" (pair-linear-figure), "Squares" (pair-squares-figure), "Squares and product" (pair-quadratic-figure)
 words: "Each pair's fitted 0.5 boundary; beyond the training balances the pairs part"
 say: within the training balances each pair's two boundaries cross 0.5 at nearly the same balances; beyond them the pairs part: naive Bayes and the logistic regression with squares both bend back below 0.5, naive Bayes near $3,800 and the logistic regression only near $21,900; of QDA and the logistic regression with squares and product, only QDA crosses back; the pairs agree where there are data and part where there are none
 note: the three figures are the chapter's three-tab figure; the tab titles inside each figure are its own (for example "Squares: naive Bayes and logistic regression"). The balance gaps the chapter quotes are inline R and are not on the slide.
 
-## 27. Parameter count
-tag: optional
-show: equation — Gaussian naive Bayes's `2Kp` parameters against QDA's `Kp + Kp(p+1)/2`, from the chapter's inline math, then "K = 2, p = 50: 200 against 2,650" (quoted from the frozen markdown)
-words: "Linear in p, each parameter from one feature in one class"
-say: the saving is larger still for binary features: a joint probability mass function has 2^p cells per class, against p Bernoulli probabilities; the price is bias whenever features are dependent within a class, which only matters if it changes the side of the threshold; here K is the number of classes again, counting means and variances, not neighbors
-note: optional because it repeats the pairing table's point for naive Bayes; the chapter has no table with a naive Bayes column, so this is an inline-math slide, not a table. The 200 and 2,650 are inline R in the chapter; copy from the frozen markdown, never retype. Placed after Boundary shapes and before Five classifiers, the order requested 2026-10-06.
-
-## 28. Five classifiers
-tag: core
-show: table — comparison-table-display (Method, Assumption, Estimation for the five classifiers)
-words: "Increasing n favors QDA and KNN · increasing p favors naive Bayes and LDA"
-say: the table summarizes all five; increasing n favors the more flexible methods whose lower bias becomes affordable; increasing p favors the more restricted ones, since naive Bayes's count grows linearly in p and LDA's like p²/2 against QDA's p²; KNN suffers most from the curse of dimensionality and has no coefficients to interpret
-note: the table sits under "Boundary shapes" in the chapter, so the title is new; the table's wording changed in the rewrite (logistic regression: "Log odds linear in its features", "Conditional likelihood, iterative"; the generative methods: "Joint likelihood, closed form"). The words line is the chapter's last paragraph of that subsection, compressed.
-
-## 29. Bias-variance tradeoff
-tag: core
-show: equation — the parameter counts, `\text{LDA: } Kp + \frac{p(p+1)}{2}, \qquad \text{QDA: } Kp + K\,\frac{p(p+1)}{2}`, then table — parameter-table (p = 1, 2, 5, 10, 50 for K = 2)
-words: after the equation, "With K = 2 classes:"; after the table, "Shared Σ: bias · Class Σ_k: variance"
-reveal: on arrival: the parameter-count equation; click 1: the "With K = 2 classes" line, the table and the closing line
-say: moved here from the QDA section, now that every method has been presented; K is the number of classes in these counts, not neighbors; QDA's count grows like Kp²/2 against LDA's p²/2; LDA's shared Σ makes its boundary the wrong shape however much data it sees; each of QDA's covariance estimates comes from one class's observations alone and varies from one training set to the next; for the credit card data QDA estimates the defaulters' three covariance entries from only the training defaulters
-note: the counts exclude the K − 1 free priors, as the chapter states
-
-## 30. Boundary variability
-tag: optional
-show: tabset — two tabs: "Small training sets" (variability-small-figure), "Large training sets" (variability-large-figure)
-words: "LDA's bias stays; QDA's variance shrinks with n"
-say: simulated data with a known Bayes boundary, since the credit card data cannot supply one: 20 fitted boundaries per panel; small n_k: LDA lines vary in angle and miss the curvature, QDA curves follow the shape but scatter; large n_k: LDA tightens around one line that still misses the curvature, QDA collapses onto the Bayes boundary; so LDA wins when n is small relative to the covariance parameters or the Σ_k are close to equal, QDA when they clearly differ and n is large enough
-note: moved here from the QDA section and made optional (the instructor said it could be removed altogether); it stays the last slide of the bias-variance run. It is the one place this lecture uses simulated parameters; it is the chapter's own choice, for the stated reason (a known Bayes boundary).
-
-## 31. Simulated scenarios
+## 28. Simulated scenarios
 tag: core
 show: tabset — two tabs: "Scenarios" (scenario-data-figure), "Test error rates" (scenario-error-figure)
 words: "Each scenario makes a different method's assumptions hold"
 say: four scenarios with equal priors: linear, quadratic, independent with p = 10, non-linear (a sine boundary with 10% of labels flipped); 100 training sets of 100 observations per scenario, scored on one large test set; the dashed line is the Bayes error rate, the floor no classifier beats on average; the winner in the quadratic, independent and non-linear scenarios is the most restrictive method whose assumptions still hold; with K = 1 KNN's variance erases its non-linear advantage
 note: the scenario descriptions are the chapter's four bullets; they are in the say line, not on the slide.
 
-## 32. Test performance
+## 29. Test performance
 tag: core
 show: table — performance-table (training error, test error, test sensitivity, test specificity, test AUC for the six classifiers)
 words: "Fit on the training half; scored on the test half at threshold 0.5"
 say: the four model-based classifiers have test error rates within a narrow range, only a few points better than predicting No for every customer, and differ more in sensitivity; KNN with K = 1 shows the optimism plainly, a training error rate of 0.00% against its test rate; to answer the opening question on this split, QDA and naive Bayes do no better than LDA and logistic regression, and both KNN classifiers do worse than every model-based classifier
 note: every number in the say line is inline R in the chapter's frozen markdown; quote it from there at build time if any is put on the slide.
 
-## 33. Student strata
+## 30. Student strata
 tag: optional
 show: table — strata-table (training error, test error, test sensitivity, test AUC for six rows: QDA and logistic regression, single fit against stratified, then naive Bayes with balance and income against naive Bayes with student as a feature)
 words: two lines — "Stratifying changes test error by at most 0.14 percentage points" and "Adding student to naive Bayes: test error rises 0.10 points, AUC falls 0.0022"
 say: an additional analysis: QDA fit separately to students and non-students beside a logistic regression interacted with student status; each stratified model estimates twice as many parameters, which tends to make its training error rate more optimistic, so the test rates are the fair comparison; the 0.14 is the largest change in test error rate from stratifying QDA or logistic regression; naive Bayes can instead take student as one more feature, a Bernoulli term assumed independent of balance and income given default, so students and non-students share one set of balance and income densities; this costs 2 parameters against its 8 means and standard deviations; its two rows are the fit with balance and income alone and the fit with student added
 note: the 0.14, the AUC change of at most 0.0017 (not on the slide), the 0.10 and the 0.0022 are inline R in the chapter, copied from the frozen markdown (the chapter says the naive Bayes error rate "rises by 0.10 percentage points" and its AUC "falls by 0.0022"). The table is rebuilt in the chapter with the two naive Bayes rows after the four QDA and logistic regression rows; the slide sets its table at 0.65em to fit six rows. The strata summary table and the scatterplot by student status are parked.
 
-## 34. Conclusion
+## 31. Conclusion
 tag: optional
 show: none
-words: the bare concept names from the chapter's `## Conclusion`, no recap sentences — QDA · Quadratic boundary · Bias-variance tradeoff · Naive Bayes · Conditional independence · Diagonal covariance · K-nearest neighbors · Comparing methods
-note: optional; the lecture may end on slide 32 or 33 with the next lecture's preview said aloud (generalized linear models). The last item is "Classifier comparison" in the chapter's wording, renamed to match the section title.
+words: the bare concept names from the chapter's `## Conclusion`, no recap sentences — QDA · Quadratic boundary · Naive Bayes · Conditional independence · Diagonal covariance · K-nearest neighbors · Comparing methods
+note: optional; the lecture may end on slide 29 or 30 with the next lecture's preview said aloud (generalized linear models). The last item is "Classifier comparison" in the chapter's wording, renamed to match the section title.
 
 ---
 
@@ -383,7 +358,55 @@ Cut from the lecture's core line, with their assets, so they can come back.
   balance threshold moves with income, and naive Bayes's income term against
   LDA's income slope (text only in the chapter; no figure).
 - **KNN details:** the standardization rule, the tie-breaking rule and the rule
-  for K.
+  for K (the `standardize()` code is on slide 21; the rule for K is only the
+  `k_default <- odd_above_sqrt(nrow(train))` line there).
+- **Parameter count (removed 2026-10-06, was slide 27, optional):**
+  `equation` — Gaussian naive Bayes's `2Kp` parameters against QDA's
+  `Kp + Kp(p+1)/2` (the chapter's inline math), then "K = 2, p = 50: 200 against
+  2,650" (inline R in the chapter's frozen markdown, never retyped). Words:
+  "Linear in p, each parameter from one feature in one class". Say: the saving
+  is larger still for binary features: a joint probability mass function has
+  2^p cells per class, against p Bernoulli probabilities; the price is bias
+  whenever features are dependent within a class, which only matters if it
+  changes the side of the threshold; here K is the number of classes again,
+  counting means and variances, not neighbors. Sat after Boundary shapes: fitted
+  pairs.
+- **Five classifiers (removed 2026-10-06, was slide 28, core):**
+  `table — comparison-table-display` (Method, Assumption, Estimation for the
+  five classifiers: logistic regression "Log odds linear in its features",
+  "Conditional likelihood, iterative"; LDA, QDA, Gaussian naive Bayes "Joint
+  likelihood, closed form"; KNN "None (stores data)"). Words: "Increasing n
+  favors QDA and KNN · increasing p favors naive Bayes and LDA". Say: the table
+  summarizes all five; increasing n favors the more flexible methods whose lower
+  bias becomes affordable; increasing p favors the more restricted ones, since
+  naive Bayes's count grows linearly in p and LDA's like p^2/2 against QDA's
+  p^2; KNN suffers most from the curse of dimensionality and has no
+  coefficients to interpret. The table sits under "Boundary shapes" in the
+  chapter.
+- **Bias-variance tradeoff (removed 2026-10-06, was slide 29, core):**
+  `equation` — `\text{LDA: } Kp + \frac{p(p+1)}{2}, \qquad \text{QDA: } Kp + K\,\frac{p(p+1)}{2}`,
+  then `table — parameter-table` (p = 1, 2, 5, 10, 50 for K = 2: LDA 3, 7, 25,
+  75, 1,375; QDA 4, 10, 40, 130, 2,650). Words: "With K = 2 classes:" and
+  "Shared Σ: bias · Class Σ_k: variance"; reveal: on arrival the equation,
+  click 1 the "With K = 2 classes" line, the table and the closing line. Say: K
+  is the number of classes in these counts, not neighbors; QDA's count grows like
+  Kp^2/2 against LDA's p^2/2; LDA's shared Σ makes its boundary the wrong shape
+  however much data it sees; each of QDA's covariance estimates comes from one
+  class's observations alone and varies from one training set to the next; for
+  the credit card data QDA estimates the defaulters' three covariance entries
+  from only the training defaulters. The counts exclude the K − 1 free priors.
+- **Boundary variability (removed 2026-10-06, was slide 30, optional):**
+  `tabset` — two tabs: "Small training sets" (`variability-small-figure`),
+  "Large training sets" (`variability-large-figure`). Words: "LDA's bias stays;
+  QDA's variance shrinks with n". Say: simulated data with a known Bayes
+  boundary, since the credit card data cannot supply one: 20 fitted boundaries
+  per panel; small n_k: LDA lines vary in angle and miss the curvature, QDA
+  curves follow the shape but scatter; large n_k: LDA tightens around one line
+  that still misses the curvature, QDA collapses onto the Bayes boundary; so LDA
+  wins when n is small relative to the covariance parameters or the Σ_k are
+  close to equal, QDA when they clearly differ and n is large enough. The one
+  place the lecture uses simulated parameters. The agenda and Conclusion no
+  longer name the bias-variance tradeoff, since no slide covers it.
 - **Student strata, other outputs:** `table — strata-summary-table`,
   `figure — strata-data-figure`.
 
@@ -393,22 +416,21 @@ Cut from the lecture's core line, with their assets, so they can come back.
 
 - **Figures (PNG in `_freeze/04-classification/60-qda-naive-bayes/figure-html/`):**
   default-eda-figure, qda-data-figure, qda-boundary-figure, qda-one-qda-figure,
-  qda-one-delta-figure, nb-boundary-figure, knn-boundary-figure (slide 21),
+  qda-one-delta-figure, nb-boundary-figure, knn-boundary-figure (slide 22),
   comparison-boundaries-figure,
   pair-linear-figure, pair-squares-figure, pair-quadratic-figure,
-  variability-small-figure, variability-large-figure, scenario-data-figure,
-  scenario-error-figure.
-- **Tables (kable):** pair-table-display, comparison-table-display,
-  parameter-table, performance-table, strata-table.
-- **Console output (frozen markdown):** the `default-qda` and `default-nb`
-  printouts (slides 6 and 15). The slide-6 split lines come from
+  scenario-data-figure, scenario-error-figure.
+- **Tables (kable):** pair-table-display, performance-table, strata-table.
+- **Console output (frozen markdown):** the `default-qda`, `default-nb` and
+  `knn-new-customers` printouts (slides 6, 15 and 21). The slide-6 split lines come from
   `default-split`; no console output on any code slide has to come from
-  running the code.
+  running the code. Slide 21's setup code comes from the `knn-fit` and
+  `knn-new-customers` chunks.
 - **Equations:** the displays in the Bayes' theorem recap, the three model
   statements (LDA recap, QDA, naive Bayes, Gaussian naive Bayes as
   `N_p(\mu_k, \Lambda_k)`), QDA (covariance estimate, expanded log and
   discriminant, log odds), naive Bayes (product, additive log odds) and
-  KNN (vote) and Comparing methods (boundary shapes, parameter counts); refer to
+  KNN (vote) and Comparing methods (boundary shapes); refer to
   them by subsection and a few words, as above.
 - **Chunk names to confirm at build time:** the chapter's figure chunks that
   the freeze directory has under `figure-html/` match the names above; a

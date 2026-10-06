@@ -33,12 +33,12 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/60-qda-naive-bayes.qmd @ f0c4ab8 -->
+<!-- derived-from: 04-classification/60-qda-naive-bayes.qmd @ 9ae5029 -->
 
 - QDA
 - Naive Bayes
 - KNN
-- Comparing methods and the bias-variance tradeoff
+- Comparing methods
 
 # Motivation
 
@@ -353,7 +353,7 @@ The product of the p independent marginals is the same distribution as the multi
 The two boundaries stay close within the training balances. Naive Bayes's balance term is quadratic for the same reason as QDA's.
 :::
 
-# KNN
+# K-Nearest Neighbors
 
 ## KNN classification
 
@@ -375,6 +375,53 @@ Two classes: $\widehat p_{\text{No}}(x_0) = 1 - \widehat p_{\text{Yes}}(x_0)$, s
 The flexibility lecture's KNN, now with a vote. Features are standardized first. K is fixed at the smallest odd integer above the square root of n here: 71 for these 5,000 training customers, a rule of thumb, since choosing K from the data is the next unit. From here to the end of the comparison K is the number of neighbors, not the number of classes.
 :::
 
+## Fitting KNN
+
+:::: {.columns}
+::: {.column width="52%"}
+::: {style="font-size: 0.8em"}
+```r
+k_default <-
+  odd_above_sqrt(nrow(train))
+
+standardize <- function(d) {
+  cbind(
+    (d$balance -
+       mean(train$balance)) /
+      sd(train$balance),
+    (d$income -
+       mean(train$income)) /
+      sd(train$income))
+}
+
+new_customers <- tibble(
+  balance = c(1000, 2000, 2500),
+  income = 40000)
+knn_new <- class::knn(
+  train = standardize(train),
+  test = standardize(new_customers),
+  cl = train$default,
+  k = k_default, prob = TRUE)
+knn_new
+```
+:::
+:::
+::: {.column width="48%"}
+```
+[1] No  Yes Yes
+attr(,"prob")
+[1] 1.0000000 0.5352113 0.7183099
+Levels: No Yes
+```
+:::
+::::
+
+::: notes
+class::knn() fits and classifies in one call. It takes the standardized training features, the standardized features of the customers to classify, the training classes and the number of neighbors; with prob = TRUE it also returns the winning class's share of the vote. Three customers with the same income and increasing balances: No with every neighbor in the vote, then Yes with 0.535, then Yes with 0.718. The estimate p-hat_Yes(x_0) is the vote share when the class is Yes and one minus it when the class is No.
+
+Sources: k_default and standardize() are the chapter's knn-fit chunk (the Code callout under KNN boundary); k_default is 71 here. odd_above_sqrt() is defined in the chapter's setup chunk and is not on the slide. standardize() has its two long expressions wrapped. new_customers and the class::knn() call are the chapter's visible knn-new-customers chunk, and the printout is its frozen console output, verbatim. train is the split from the Fitting QDA slide.
+:::
+
 ## KNN boundary
 
 The boundary follows no formula: a jagged curve traced by the vote of the nearest training customers
@@ -382,7 +429,7 @@ The boundary follows no formula: a jagged curve traced by the vote of the neares
 ![KNN boundary, K = 71, over the training customers; shading beyond the largest training balance](../_freeze/04-classification/60-qda-naive-bayes/figure-html/knn-boundary-figure-1.png)
 
 ::: notes
-Optional. The KNN-only boundary, K = 71 as fixed on the previous slide. It is the chapter's own description: the boundary follows no formula, it is traced by the vote of the nearest training customers, and beyond the largest training balance it is still a vote among the same customers at the edge of the data. The Fitted boundaries slide draws this same curve beside the other four.
+Optional. The KNN-only boundary, K = 71 as in Fitting KNN. It is the chapter's own description: the boundary follows no formula, it is traced by the vote of the nearest training customers, and beyond the largest training balance it is still a vote among the same customers at the edge of the data. The Fitted boundaries slide draws this same curve beside the other four.
 :::
 
 # Comparing methods
@@ -451,78 +498,6 @@ Each pair's fitted $0.5$ boundary; beyond the training balances the pairs part
 Within the training balances each pair's two boundaries cross 0.5 at nearly the same balances. Beyond them the pairs part: naive Bayes and the logistic regression with squares both bend back below 0.5, naive Bayes near $3,800 and the logistic regression only near $21,900; of QDA and the logistic regression with squares and product, only QDA crosses back. The pairs agree where there are data and part where there are none.
 :::
 
-## Parameter count
-
-$$\text{Gaussian naive Bayes: } 2Kp, \qquad \text{QDA: } Kp + Kp(p+1)/2$$
-
-$K = 2$, $p = 50$: 200 against 2,650
-
-Linear in $p$, each parameter from one feature in one class
-
-::: notes
-The saving is larger still for binary features: a joint probability mass function has 2^p cells per class, against p Bernoulli probabilities. The price is bias whenever features are dependent within a class, which only matters if it changes the side of the threshold. Here K is the number of classes again, not the number of neighbors.
-:::
-
-## Five classifiers
-
-|Method               |Assumption                                      |Estimation                        |
-|:--------------------|:-----------------------------------------------|:---------------------------------|
-|Logistic regression  |Log odds linear in its features                 |Conditional likelihood, iterative |
-|LDA                  |Gaussian, shared covariance                     |Joint likelihood, closed form     |
-|QDA                  |Gaussian, class covariances                     |Joint likelihood, closed form     |
-|Gaussian naive Bayes |Gaussian features independent within each class |Joint likelihood, closed form     |
-|KNN                  |Smooth class probabilities                      |None (stores data)                |
-
-Increasing $n$ favors QDA and KNN · increasing $p$ favors naive Bayes and LDA
-
-::: notes
-Increasing n favors the more flexible methods, whose lower bias becomes affordable. Increasing p favors the more restricted ones, since naive Bayes's count grows linearly in p and LDA's like p^2 / 2 against QDA's p^2. KNN suffers most from the curse of dimensionality and has no coefficients to interpret.
-:::
-
-## Bias-variance tradeoff
-
-::: {style="font-size: 0.9em"}
-$$\text{LDA: } Kp + \frac{p(p+1)}{2}, \qquad \text{QDA: } Kp + K\,\frac{p(p+1)}{2}$$
-:::
-
-::: {.fragment}
-With $K = 2$ classes:
-
-| Features $p$ |  LDA  |  QDA  |
-|:------------:|:-----:|:-----:|
-|      1       |   3   |   4   |
-|      2       |   7   |  10   |
-|      5       |  25   |  40   |
-|      10      |  75   |  130  |
-|      50      | 1,375 | 2,650 |
-
-Shared $\Sigma$: bias · Class $\Sigma_k$: variance
-:::
-
-::: notes
-Here K is the number of classes, not the number of neighbors. The counts exclude the K - 1 free priors. QDA's count grows like K p^2 / 2 against LDA's p^2 / 2. LDA's shared Sigma makes its boundary the wrong shape however much data it sees. Each of QDA's covariance estimates comes from one class's observations alone and varies from one training set to the next. For the credit card data QDA estimates the defaulters' three covariance entries from only the training defaulters.
-:::
-
-## Boundary variability
-
-LDA's bias stays; QDA's variance shrinks with $n$
-
-::: {.panel-tabset}
-
-### Small training sets
-
-![](../_freeze/04-classification/60-qda-naive-bayes/figure-html/variability-small-figure-1.png)
-
-### Large training sets
-
-![](../_freeze/04-classification/60-qda-naive-bayes/figure-html/variability-large-figure-1.png)
-
-:::
-
-::: notes
-Simulated data with a known Bayes boundary, since the credit card data cannot supply one: 20 fitted boundaries per panel. Small n_k: LDA lines vary in angle and miss the curvature, QDA curves follow the shape but scatter. Large n_k: LDA tightens around one line that still misses the curvature, QDA collapses onto the Bayes boundary. So LDA wins when n is small relative to the covariance parameters or the Sigma_k are close to equal, QDA when they clearly differ and n is large enough.
-:::
-
 ## Simulated scenarios
 
 Each scenario makes a different method's assumptions hold
@@ -585,7 +560,6 @@ An additional analysis: QDA fit separately to students and non-students beside a
 
 - QDA
 - Quadratic boundary
-- Bias-variance tradeoff
 - Naive Bayes
 - Conditional independence
 - Diagonal covariance
