@@ -2597,6 +2597,6 @@ ranks classifiers without fixing a threshold.
 
 The next lecture relaxes LDA's shared covariance assumption. Quadratic
 discriminant analysis gives each class its own covariance matrix, so the
-quadratic term no longer cancels and the boundary curves, and naive Bayes
+quadratic term no longer drops out and the boundary curves, and naive Bayes
 replaces the multivariate Gaussian with a product of one-feature densities.
 That lecture then compares all five classifiers, adding KNN.

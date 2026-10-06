@@ -339,9 +339,9 @@ ellipses.
 ### Quadratic discriminant
 
 As in LDA, the class with the largest posterior probability is the class with
-the largest $\log\left(\pi_k f_k(x)\right)$,
+the largest $\log\left[\pi_k f_k(x)\right]$,
 
-$$\log\left(\pi_k f_k(x)\right) = \log \pi_k - \frac{p}{2}\log(2\pi) - \frac{1}{2}\log\left|\Sigma_k\right| - \frac{1}{2}\left(x - \mu_k\right)^\top \Sigma_k^{-1}\left(x - \mu_k\right).$$
+$$\log\left[\pi_k f_k(x)\right] = \log \pi_k - \frac{p}{2}\log(2\pi) - \frac{1}{2}\log\left|\Sigma_k\right| - \frac{1}{2}\left(x - \mu_k\right)^\top \Sigma_k^{-1}\left(x - \mu_k\right).$$
 
 Only the term $-\frac{p}{2}\log(2\pi)$ is common to every class. Dropping it
 gives the **quadratic discriminant function**
@@ -349,7 +349,7 @@ gives the **quadratic discriminant function**
 $$\delta_k(x) = -\frac{1}{2}x^\top \Sigma_k^{-1} x + x^\top \Sigma_k^{-1}\mu_k - \frac{1}{2}\mu_k^\top \Sigma_k^{-1}\mu_k - \frac{1}{2}\log\left|\Sigma_k\right| + \log \pi_k,$$
 
 after expanding the quadratic form as in the previous lecture. Two terms that
-cancelled in LDA survive here:
+LDA dropped survive here:
 
 - $-\frac{1}{2}x^\top \Sigma_k^{-1} x$ is quadratic in $x$ and carries a
 different matrix in each class, and
