@@ -21,6 +21,7 @@ format:
         .reveal section:has(> .panel-tabset) > p { font-size: 0.7em; }
         .reveal #simulated-scenarios .tab-content img { max-height: 460px; }
         .reveal #boundary-shapes-pairs table { font-size: 0.6em; }
+        .reveal #student-strata table { font-size: 0.65em; }
         .reveal .columns pre { margin: 0; }
         .reveal .columns pre code { max-height: none; }
         .reveal h2 { white-space: nowrap; font-size: 1.35em; }
@@ -32,7 +33,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/60-qda-naive-bayes.qmd @ e347c90 -->
+<!-- derived-from: 04-classification/60-qda-naive-bayes.qmd @ f0c4ab8 -->
 
 - QDA
 - Naive Bayes
@@ -374,6 +375,16 @@ Two classes: $\widehat p_{\text{No}}(x_0) = 1 - \widehat p_{\text{Yes}}(x_0)$, s
 The flexibility lecture's KNN, now with a vote. Features are standardized first. K is fixed at the smallest odd integer above the square root of n here: 71 for these 5,000 training customers, a rule of thumb, since choosing K from the data is the next unit. From here to the end of the comparison K is the number of neighbors, not the number of classes.
 :::
 
+## KNN boundary
+
+The boundary follows no formula: a jagged curve traced by the vote of the nearest training customers
+
+![KNN boundary, K = 71, over the training customers; shading beyond the largest training balance](../_freeze/04-classification/60-qda-naive-bayes/figure-html/knn-boundary-figure-1.png)
+
+::: notes
+Optional. The KNN-only boundary, K = 71 as fixed on the previous slide. It is the chapter's own description: the boundary follows no formula, it is traced by the vote of the nearest training customers, and beyond the largest training balance it is still a vote among the same customers at the edge of the data. The Fitted boundaries slide draws this same curve beside the other four.
+:::
+
 # Comparing methods
 
 ## Fitted boundaries
@@ -404,13 +415,13 @@ LDA's log odds are linear in x, QDA's quadratic with squares and cross-products,
 
 Logistic regression: linear in whatever features it is given
 
-|Log-odds form                       |Generative classifier |     Its parameters      | Logistic regression features |    Its coefficients    |
-|:-----------------------------------|:---------------------|:-----------------------:|:----------------------------:|:----------------------:|
-|Linear                              |LDA                   | $1 + 2p + p(p+1)/2$ (8) |            $x_j$             |      $1 + p$ (3)       |
-|Additive, quadratic in each feature |Gaussian naive Bayes  |      $1 + 4p$ (9)       |        $x_j$, $x_j^2$        |      $1 + 2p$ (5)      |
-|Quadratic                           |QDA                   | $1 + 2p + p(p+1)$ (11)  |  $x_j$, $x_j^2$, $x_j x_l$   | $1 + p + p(p+1)/2$ (6) |
+|Log-odds form                       |Generative classifier |       Its parameters       | Logistic regression features |     Its coefficients      |
+|:-----------------------------------|:---------------------|:--------------------------:|:----------------------------:|:-------------------------:|
+|Linear                              |LDA                   | $1 + 2p + p(p+1)/2$<br>(8) |            $x_j$             |      $1 + p$<br>(3)       |
+|Additive, quadratic in each feature |Gaussian naive Bayes  |      $1 + 4p$<br>(9)       |        $x_j$, $x_j^2$        |      $1 + 2p$<br>(5)      |
+|Quadratic                           |QDA                   | $1 + 2p + p(p+1)$<br>(11)  |  $x_j$, $x_j^2$, $x_j x_l$   | $1 + p + p(p+1)/2$<br>(6) |
 
-Parameter counts for two classes; in parentheses, $p = 2$
+Parameter counts for two classes; below each formula, in parentheses, $p = 2$
 
 ::: notes
 Logistic regression is linear in whatever features it is given, so with squares among its features it has naive Bayes's form, and with squares and the product, QDA's. Each generative classifier and the logistic regression of its form can produce exactly the same boundaries. The difference is estimation, joint likelihood against conditional likelihood, and the generative classifier has more free parameters because it also describes the features' distribution within each class.
@@ -551,7 +562,11 @@ The four model-based classifiers have test error rates within a narrow range, on
 
 ## Student strata
 
-Stratifying changes no test error rate by more than 0.14 percentage points
+::: {style="font-size: 0.7em"}
+Stratifying changes test error by at most 0.14 percentage points
+
+Adding student to naive Bayes: test error rises 0.10 points, AUC falls 0.0022
+:::
 
 |Model                                        | Training error | Test error | Test sensitivity | Test AUC |
 |:--------------------------------------------|:--------------:|:----------:|:----------------:|:--------:|
@@ -559,9 +574,11 @@ Stratifying changes no test error rate by more than 0.14 percentage points
 |QDA, by student stratum                      |     2.78%      |   2.66%    |      24.84%      |  0.9533  |
 |Logistic regression, additive                |     2.78%      |   2.46%    |      31.85%      |  0.9551  |
 |Logistic regression, interacted with student |     2.82%      |   2.56%    |      30.57%      |  0.9547  |
+|Naive Bayes, balance and income              |     3.12%      |   2.46%    |      28.03%      |  0.9533  |
+|Naive Bayes, student as a feature            |     3.28%      |   2.56%    |      28.66%      |  0.9511  |
 
 ::: notes
-An additional analysis: QDA fit separately to students and non-students beside a logistic regression interacted with student status. Each stratified model estimates twice as many parameters, which tends to make its training error rate more optimistic, so the test rates are the fair comparison.
+An additional analysis: QDA fit separately to students and non-students beside a logistic regression interacted with student status. Each stratified model estimates twice as many parameters, which tends to make its training error rate more optimistic, so the test rates are the fair comparison. The 0.14 is the largest change in test error rate from stratifying QDA or logistic regression. Naive Bayes can instead take student as one more feature, a Bernoulli term assumed independent of balance and income given default, so students and non-students share one set of balance and income densities; this costs 2 parameters (one student proportion per class) against its 8 means and standard deviations. Its two rows are the fit with balance and income alone and the fit with student added; the numbers on the slide are the change from the first to the second.
 :::
 
 ## Conclusion
@@ -572,4 +589,5 @@ An additional analysis: QDA fit separately to students and non-students beside a
 - Naive Bayes
 - Conditional independence
 - Diagonal covariance
+- K-nearest neighbors
 - Comparing methods

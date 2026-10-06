@@ -643,8 +643,9 @@ are the next chapter.
 ### 14. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
 
-Two relaxations of LDA's model for $f_k(x)$, then a comparison of every
-classifier so far, all worked through one running example:
+Two relaxations of LDA's model for $f_k(x)$, then KNN, which models no
+density, then a comparison of every classifier so far, all worked through one
+running example:
 `ISLR2::Default` with `balance` and `income` (the LDA chapter's features),
 split once at random into training and test halves at the start of the
 chapter, with every model fit to the training half. The chapter opens with
@@ -654,8 +655,8 @@ shows balance less spread out among defaulters (the QDA motivation), income
 about equally spread, small within-class balance-income correlations (the
 naive Bayes motivation), and bimodal income because students have much lower
 incomes; a short recap of Bayes' theorem and LDA's shared covariance follows.
-The QDA and naive Bayes sections each reopen with the same scatterplot and
-what it shows for that model.
+The QDA, naive Bayes, and KNN sections each reopen with the same scatterplot
+and what it shows for that model.
 
 **QDA**: $Y_i \stackrel{ind}{\sim} \text{Categorical}(\pi_1, \ldots, \pi_K)$,
 $X_i \mid Y_i = k \stackrel{ind}{\sim} N_p(\mu_k, \Sigma_k)$ with a
@@ -709,17 +710,29 @@ because its income term compares the classes' income distributions without
 adjusting for balance (slightly curved, since the class income SDs differ),
 unlike LDA's correlation-adjusted income slope.
 
+**K-nearest neighbors** (its own section, between naive Bayes and the
+comparison): reopens with the training scatterplot (the local share of
+defaulters estimates the probability of default; KNN assumes no density, so
+the ellipses play no part). From here through the comparison $K$ counts
+neighbors and the class count is written as 2. The neighbor vote stated
+generally,
+$\hat p_k(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = k)$ for class
+$k$, on standardized features, assigning the class with the largest
+$\hat p_k(x_0)$ (ties broken by a rule, at random in `class::knn()`), then
+applied to the credit card data ($k = $ `Yes`, threshold 0.5 for two
+classes); $K$ fixed in advance as the smallest odd integer above $\sqrt n$
+(71 for the training half); a figure of the jagged KNN boundary over the
+training data, and a visible `class::knn()` call (standardized training and
+new features, training classes, `k`, `prob = TRUE`) classifying three
+customers of equal income and increasing balance, with the vote share read
+as $\hat p_{\text{Yes}}$ or $1 - \hat p_{\text{Yes}}$. The learning
+objectives include defining the KNN estimate of $p_k(x_0)$ and fitting KNN
+with `class::knn()`.
+
 **Comparison**: opens with one figure of all five classifiers' 0.5
 boundaries over the training data (logistic regression and LDA straight, QDA
 and naive Bayes curved with second branches, KNN jagged; the legend names
-KNN's $K$). KNN classification stated generally as a neighbor vote,
-$\hat p_k(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = k)$ for class
-$k$ with $K$ the number of neighbors, assigning the class with the largest
-$\hat p_k(x_0)$ (ties broken by a rule, at random in `class::knn()`), then
-applied to the credit card data ($k = $ `Yes`, threshold 0.5 for two classes)
-on standardized features (in that section $K$ counts neighbors and the class
-count is written as 2), with $K = 1$ and $K$ the smallest odd integer above
-$\sqrt n$ (71 for the training half), fixed in advance. **Boundary shapes**:
+KNN's $K$), with KNN also at $K = 1$ later. **Boundary shapes**:
 two-class log odds linear for LDA, quadratic with squares and cross-products
 for QDA, additive for Gaussian naive Bayes (quadratic in each feature without
 cross-products when class variances differ, linear when shared), any shape
@@ -761,8 +774,12 @@ additive logistic regression, and the logistic regression with every
 coefficient interacted with student status (shown numerically to equal
 separate per-stratum logistic fits); stratifying doubles the parameters
 (priors not counted, as in the bias-variance section's LDA and QDA
-parameter table) without
-meaningfully changing test error rates or AUCs.
+parameter table) without meaningfully changing test error rates or AUCs.
+Naive Bayes instead takes student as one more (Bernoulli) feature, assumed
+independent of balance and income given default, so students and
+non-students share one set of balance and income densities; this adds only
+one proportion per class. On this split, adding it slightly raises naive
+Bayes's test error rate and lowers its test AUC.
 
 ### 15. Generalized Linear Models
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
