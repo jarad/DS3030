@@ -109,10 +109,10 @@ note: this puts the one-feature parameter estimation on the model slide, as slid
 
 ## 9. Discriminant function
 tag: core
-show: equation — 13.2.3, δ_k(x) as intercept + slope · x; then, in order, "Linear in x", "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)", equation — the log posterior odds, and equation — 13.2.4, x*, on one slide
-words: "Linear in x" and "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)"
-reveal: on arrival: δ_k and "Linear in x"; click 1: the decision-boundary line and the log-odds equation; click 2: x*
-note: this combines the discriminant-function and decision-boundary slides; the title stays on one line
+show: equation — 13.2.3, the expanded `\log[\pi_k f_k(x)]` display; then, in order, "Dropping the terms that do not involve k gives the discriminant function", equation — δ_k(x) as intercept + slope · x, "Linear in x", "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)", equation — the log posterior odds, and equation — 13.2.4, x*, on one slide
+words: "Dropping the terms that do not involve k gives the discriminant function", "Linear in x" and "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)"
+reveal: on arrival: the expanded log[π_k f_k(x)]; click 1: the "Dropping…" line, δ_k and "Linear in x"; click 2: the decision-boundary line and the log-odds equation; click 3: x*
+note: this combines the discriminant-function and decision-boundary slides, and follows the notes in dropping the k-free terms rather than writing them into δ_k; the title stays on one line
 
 ## 10. Prior-weighted densities
 tag: core
@@ -152,9 +152,9 @@ note: this puts the statistical model and its parameter estimation on one slide
 
 ## 15. Matrix-form discriminant
 tag: core
-show: equation — 13.3.3, δ_k(x) intercept + slope form, and equation — 13.3.4, `\beta_0 + x^\top\beta`, on one slide
-words: "Still linear in x; a hyperplane, a line when p = 2"
-reveal: on arrival: δ_k; click 1: the log-odds equation and "Still linear in x; a hyperplane, a line when p = 2"
+show: equation — 13.3.3, the expanded `\log[\pi_k f_k(x)]` display; "Dropping the terms that do not involve k gives the discriminant function"; δ_k(x) intercept + slope form; "Linear in x"; then the boundary line and equation — 13.3.4, `\beta_0 + x^\top\beta`, on one slide
+words: "Dropping the terms that do not involve k gives the discriminant function", "Linear in x" and "Decision boundary δ_1(x) = δ_2(x): a hyperplane, a line when p = 2"
+reveal: on arrival: the expanded log[π_k f_k(x)]; click 1: the "Dropping…" line, δ_k and "Linear in x"; click 2: the boundary line and the log-odds equation
 note: this combines the matrix-form and linear-boundary slides
 
 ## 16. Fitted densities and priors

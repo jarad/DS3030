@@ -518,14 +518,10 @@ collecting terms,
 $$\log\left[\pi_k f_k(x)\right] = \log \pi_k - \frac{\mu_k^2}{2\sigma^2} + \frac{\mu_k}{\sigma^2}\, x - \log\left(\sqrt{2\pi}\,\sigma\right) - \frac{x^2}{2\sigma^2}.$$
 
 The last two terms do not involve $k$ because $\sigma^2$ is shared, so they
-cannot change which class is largest. The last is the only term involving
-$x^2$, so moving it leaves a function linear in $x$. Moving them to the left
-side defines the **discriminant function**
+cannot change which class is largest. Dropping them gives the **discriminant
+function**
 
-$$\begin{aligned}
-\delta_k(x) &= \log\left[\pi_k f_k(x)\right] + \log\left(\sqrt{2\pi}\,\sigma\right) + \frac{x^2}{2\sigma^2} \\
-&= \left(\log \pi_k - \frac{\mu_k^2}{2\sigma^2}\right) + \frac{\mu_k}{\sigma^2}\, x,
-\end{aligned}$$
+$$\delta_k(x) = \left(\log \pi_k - \frac{\mu_k^2}{2\sigma^2}\right) + \frac{\mu_k}{\sigma^2}\, x,$$
 
 where
 
@@ -534,8 +530,9 @@ where
 at $x = 0$, and
 - $\mu_k/\sigma^2$ is its slope.
 
-Each $\delta_k$ is linear in $x$, with the same intercept-plus-slope form as a
-regression's linear predictor. The classifier assigns an observation to the
+The dropped term $-x^2/\left(2\sigma^2\right)$ was the only one quadratic in
+$x$, so each $\delta_k$ is linear in $x$, with the same intercept-plus-slope form as a regression's
+linear predictor. The classifier assigns an observation to the
 class with the largest $\delta_k(x)$. The slope $\mu_k/\sigma^2$ is not the
 coefficient of the linear discriminant printed by `MASS::lda()`, which is
 Fisher's scaling of the discriminant direction.
@@ -546,9 +543,9 @@ and stay in each intercept, and the term $-x^2/\left(2\sigma_k^2\right)$ would
 carry a different coefficient in each class, would not drop out, and would
 make each discriminant quadratic in $x$.
 
-The terms added to $\log\left[\pi_k f_k(x)\right]$ to form $\delta_k(x)$ are
-the same in every class, so $e^{\delta_k(x)}$ is $\pi_k f_k(x)$ multiplied by a
-factor common to every class. That factor cancels from the ratio in Bayes'
+The terms dropped from $\log\left[\pi_k f_k(x)\right]$ to form $\delta_k(x)$
+are the same in every class, so $e^{\delta_k(x)}$ is $\pi_k f_k(x)$ multiplied
+by a factor common to every class. That factor cancels from the ratio in Bayes'
 theorem and the posterior probabilities can be recovered from the discriminant
 values alone:
 
@@ -975,14 +972,9 @@ Then, collecting terms in the same order as before,
 $$\log\left[\pi_k f_k(x)\right] = \log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k + x^\top \Sigma^{-1} \mu_k - \frac{p}{2}\log(2\pi) - \frac{1}{2}\log|\Sigma| - \frac{1}{2}x^\top \Sigma^{-1} x.$$
 
 The last three terms do not involve $k$: the first is a constant, and the
-other two because $\Sigma$ is shared. The last is the only term quadratic in
-$x$, so moving it leaves a function linear in $x$. Moving them to the left
-side,
+other two because $\Sigma$ is shared. Dropping them gives
 
-$$\begin{aligned}
-\delta_k(x) &= \log\left[\pi_k f_k(x)\right] + \frac{p}{2}\log(2\pi) + \frac{1}{2}\log|\Sigma| + \frac{1}{2}x^\top \Sigma^{-1} x \\
-&= \left(\log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k\right) + x^\top \Sigma^{-1} \mu_k,
-\end{aligned}$$
+$$\delta_k(x) = \left(\log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k\right) + x^\top \Sigma^{-1} \mu_k,$$
 
 where
 
@@ -990,7 +982,8 @@ where
 class $k$'s discriminant, and
 - $\Sigma^{-1}\mu_k$ is its $p$-vector of slopes, one per feature.
 
-The discriminant is linear in $x$ and reduces to the one-feature discriminant
+The dropped term $-\frac{1}{2}x^\top \Sigma^{-1} x$ was the only one quadratic
+in $x$, so the discriminant is linear in $x$ and reduces to the one-feature discriminant
 when $\Sigma = \sigma^2$. As before, the classifier assigns the class with the
 largest $\delta_k(x)$, and $p_k(x) = e^{\delta_k(x)} / \sum_l e^{\delta_l(x)}$.
 
@@ -2580,7 +2573,7 @@ it by estimating $\pi_k$ and $f_k$ from training data.
 Linear discriminant analysis assumes Gaussian class-conditional densities with
 class-specific means and a covariance matrix shared by every class. Because
 the covariance is shared, the quadratic term in $x$ is the same for every
-class, so it can be moved out of the discriminant functions $\delta_k(x)$,
+class, so it can be dropped from the discriminant functions $\delta_k(x)$,
 leaving them linear in $x$ and a decision boundary that is a point, a line, or a
 hyperplane. With two classes the log posterior odds are linear in the
 features, the same form as logistic regression, but the coefficients come

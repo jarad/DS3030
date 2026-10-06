@@ -102,9 +102,17 @@ Closed-form estimates: proportions, means, pooled variance
 
 ## Discriminant function {.smaller}
 
+::: {style="font-size: 0.8em"}
+$$\log\left[\pi_k f_k(x)\right] = \log \pi_k - \frac{\mu_k^2}{2\sigma^2} + \frac{\mu_k}{\sigma^2}\, x - \log\left(\sqrt{2\pi}\,\sigma\right) - \frac{x^2}{2\sigma^2}$$
+:::
+
+::: {.fragment}
+Dropping the terms that do not involve $k$ gives the discriminant function
+
 $$\delta_k(x) = \left(\log \pi_k - \frac{\mu_k^2}{2\sigma^2}\right) + \frac{\mu_k}{\sigma^2}\, x$$
 
 Linear in $x$
+:::
 
 ::: {.fragment}
 Decision boundary: where the two discriminants are equal, $\delta_1(x) = \delta_2(x)$
@@ -205,12 +213,22 @@ Pooled over classes with divisor $n - K$
 
 ## Matrix-form discriminant
 
-$$\delta_k(x) = \left(\log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k\right) + x^\top \Sigma^{-1} \mu_k$$
+::: {style="font-size: 0.8em"}
+$$\log\left[\pi_k f_k(x)\right] = \log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k + x^\top \Sigma^{-1} \mu_k - \frac{p}{2}\log(2\pi) - \frac{1}{2}\log|\Sigma| - \frac{1}{2}x^\top \Sigma^{-1} x$$
+:::
 
 ::: {.fragment}
-$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\beta$$
+Dropping the terms that do not involve $k$ gives the discriminant function
 
-Still linear in $x$; a hyperplane, a line when $p = 2$
+$$\delta_k(x) = \left(\log \pi_k - \frac{1}{2}\mu_k^\top \Sigma^{-1} \mu_k\right) + x^\top \Sigma^{-1} \mu_k$$
+
+Linear in $x$
+:::
+
+::: {.fragment}
+Decision boundary $\delta_1(x) = \delta_2(x)$: a hyperplane, a line when $p = 2$
+
+$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\beta$$
 :::
 
 ## Fitted densities and priors
