@@ -77,6 +77,12 @@ the semester in which they were noted.
   `\exp\left(...\right)` with parentheses inside, which the settled rule in
   `CONVENTIONS.md` (outer bracket of a function argument is square when
   parentheses are nested inside) would change to `\exp\left[...\right]`.
+  The log posterior odds `\log\left[\frac{p}{1 - p}\right]` were converted
+  2026-10-06. Still to convert: `\log\left(f_{2j}(x_j)/f_{1j}(x_j)\right)` in
+  `60-qda-naive-bayes.qmd`, `\log\left(1 + e^{\beta_1(x_i - 5.5)}\right)` in
+  `40-problems-in-logistic-regression.qmd`, and
+  `\log\left(L(\hat\beta_r)/L(\hat\beta_f)\right)` in
+  `20-multiple-logistic-regression.qmd`.
 - Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
   has a callout headed `### Two questions, two verdicts`, which is not one of
   the three fixed callout headings in `CONVENTIONS.md`.
