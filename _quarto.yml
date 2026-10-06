@@ -27,6 +27,7 @@ book:
       - 04-classification/30-flexible-logistic-regression.qmd
       - 04-classification/40-problems-in-logistic-regression.qmd
       - 04-classification/50-lda.qmd
+      - 04-classification/55-classifier-evaluation.qmd
       - 04-classification/60-qda-naive-bayes.qmd
       - 04-classification/70-generalized-linear-models.qmd
 

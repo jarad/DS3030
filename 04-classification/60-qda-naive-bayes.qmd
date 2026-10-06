@@ -117,9 +117,11 @@ change LDA's model of the features in different directions, classify credit card
 LDA and logistic regression, and how does K-nearest neighbors (KNN) compare?
 
 These customers were analyzed in the logistic regression lectures and, with
-`balance` and `income` as the features, in the previous lecture, which modeled
-each class's features by a Gaussian density with one covariance matrix
-shared by both classes.
+`balance` and `income` as the features, in the
+[Linear Discriminant Analysis](50-lda.qmd) lecture, which modeled each
+class's features by a Gaussian density with one covariance matrix shared by
+both classes. The [Classifier Evaluation](55-classifier-evaluation.qmd)
+lecture then measured how well those fits classify them.
 
 **Data.** `ISLR2::Default` is a simulated data set of
 `r format(nrow(Default), big.mark = ",")` credit card customers. The response
@@ -218,7 +220,7 @@ non-defaulters and
 $r = `r sprintf("%.3f", summary_of("Yes", "cor_balance_income"))`$ among
 defaulters, so both ellipses are only slightly tilted. Among non-defaulters
 the points are densest in two horizontal bands, the bimodal income of the
-previous lecture's histograms. The lower band is mostly students: in the
+LDA lecture's histograms. The lower band is mostly students: in the
 training half students' median income is
 `r dollar_text(student_income("Yes"))`, against
 `r dollar_text(student_income("No"))` for non-students. No Gaussian density
@@ -313,7 +315,7 @@ $$\hat\Sigma_k = \frac{1}{n_k - 1}\sum_{i:\, y_i = k}\left(x_i - \hat\mu_k\right
 where
 
 - $x_i$ is the observed $p$-vector of feature values of observation $i$, as
-in the previous lecture, and
+in the LDA lecture, and
 - $\hat\Sigma_k$ is the **class-$k$ sample covariance matrix**, whose divisor
 $n_k - 1$ accounts for the one estimated mean.
 
@@ -346,7 +348,7 @@ matrix_tex <- function(S) {
 
 The output reports the prior probabilities and the class means of balance and
 income, the same priors and means `MASS::lda()` reports for these training
-customers; the priors differ slightly from the previous lecture's
+customers; the priors differ slightly from the LDA lecture's
 all-customer fit, $\hat\pi_{\text{Yes}} = `r sprintf("%.4f", mean(Default$default == "Yes"))`$.
 The covariance matrices are not printed. They are each class's sample
 covariance matrix of (`balance`, `income`), in squared dollars,
@@ -369,7 +371,7 @@ gives the **quadratic discriminant function**
 
 $$\delta_k(x) = -\frac{1}{2}x^\top \Sigma_k^{-1} x + x^\top \Sigma_k^{-1}\mu_k - \frac{1}{2}\mu_k^\top \Sigma_k^{-1}\mu_k - \frac{1}{2}\log\left|\Sigma_k\right| + \log \pi_k,$$
 
-after expanding the quadratic form as in the previous lecture. Two terms that
+after expanding the quadratic form as in the LDA lecture. Two terms that
 LDA dropped survive here:
 
 - $-\frac{1}{2}x^\top \Sigma_k^{-1} x$ is quadratic in $x$ and carries a
@@ -662,7 +664,7 @@ spike at zero balance. They cross at `r dollar_text(roots_qda_1[1])` and
 again at `r dollar_text(roots_qda_1[2])`, where both are too small to see; the
 discriminant functions, two downward parabolas, visibly cross a second time.
 Past that point the wider non-defaulter parabola is the higher one again, so
-`No` is assigned in both tails. With the previous lecture's one shared
+`No` is assigned in both tails. With the LDA lecture's one shared
 standard deviation, the two discriminant functions were straight lines that
 cross once.
 
@@ -1147,7 +1149,7 @@ median income each additional \$1,000 `r raises(nb_income_slope)` naive
 Bayes's log posterior odds by `r small_num(abs(nb_income_slope))`. The term is
 slightly curved, because the two classes' income standard deviations differ.
 LDA's income slope, adjusted for balance through the pooled within-class
-covariance as the [previous lecture](50-lda.qmd#balance-and-income)
+covariance as the [LDA lecture](50-lda.qmd#balance-and-income)
 explained, `r raises(lda_income_slope)` them by
 `r small_num(abs(lda_income_slope))` per \$1,000,
 `r if (sign(nb_income_slope) == sign(lda_income_slope)) "the same direction" else "the opposite direction"`.
@@ -1989,7 +1991,7 @@ knn_vs_text <- if (knn_best > max(err4[model_based$model])) {
 KNN uses $K = 1$ and $K = `r k_default`$. The table
 gives each classifier's training error rate and its test error rate,
 sensitivity, and specificity at threshold $0.5$ (for KNN, a majority vote),
-and test AUC.
+and test AUC, the measures of the previous lecture.
 
 ```{r performance-table}
 #| echo: false

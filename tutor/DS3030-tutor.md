@@ -582,6 +582,27 @@ because $\hat\Sigma^{-1}$ adjusts income for balance; logistic regression's
 boundary lies slightly left of LDA's, and LDA's posterior is flatter at each
 income quartile.
 
+Classifier evaluation (confusion matrix, thresholds, ROC curve, AUC), the
+credit card findings, and the student strata analysis of these fits follow
+in the next chapter.
+
+### 14. Classifier Evaluation
+<https://jarad.github.io/DS3030/04-classification/55-classifier-evaluation.html>
+
+Split out of the LDA chapter (taught as its own lecture). It opens with the
+data and the classifiers being evaluated: the `ISLR2::Default` class-summary
+table, the income-against-balance scatterplot, and the LDA and logistic
+regression fits of the LDA chapter (balance alone, and balance + income),
+whose posterior probabilities are the scores, with the two-feature decision
+boundaries drawn over the scatterplot. Learning objectives: construct a
+confusion matrix and compute error rate, sensitivity, and specificity, and
+explain the threshold tradeoff; interpret an ROC curve and AUC, including
+AUC $= P(S_+ > S_-)$; explain why ROC and AUC depend only on how a classifier
+orders observations and compute the AUC implied by a one-feature
+equal-variance Gaussian model; compare classifiers, including models fit
+within strata, by these measures, and explain why training rates are
+optimistic.
+
 Classifier evaluation, with the balance + income LDA as the running example,
 opens with histograms of that classifier's log posterior odds within each
 true class and a dotted line at 0 ($\hat p = 0.5$): the classes overlap, so
@@ -599,8 +620,9 @@ to "assign the largest posterior". Why lowering $t$ can only raise sensitivity a
 lower specificity, an interactive figure with checkboxes plotting the
 overall error rate, sensitivity, specificity, and false positive rate
 against $t$, and a table at $t = 0.5$ and $t = 0.2$ for LDA (balance only and
-balance + income) and logistic regression (sensitivity about 57% at
-$t = 0.2$); $t = 0.5$ need not minimize an estimated classifier's error rate.
+balance + income) and logistic regression (balance + income); at $t = 0.2$
+the two-feature LDA's sensitivity is about 57% and logistic regression's
+about 60%; $t = 0.5$ need not minimize an estimated classifier's error rate.
 The **ROC curve** (sensitivity vs. $1 -$ specificity over all thresholds,
 depending only on how a classifier orders observations), with a slider that
 moves the threshold on the example's real log posterior odds and its real
@@ -640,7 +662,7 @@ changes training error or AUC, and the stratified models, with twice as many
 parameters, tend to have more optimistic training rates. QDA and naive Bayes
 are the next chapter.
 
-### 14. Quadratic Discriminant Analysis and Naive Bayes
+### 15. Quadratic Discriminant Analysis and Naive Bayes
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
 
 Two relaxations of LDA's model for $f_k(x)$, then KNN, which models no
@@ -781,8 +803,11 @@ non-students share one set of balance and income densities; this adds only
 one proportion per class. On this split, adding it slightly raises naive
 Bayes's test error rate and lowers its test AUC.
 
-### 15. Generalized Linear Models
+### 16. Generalized Linear Models
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
+
+**Notes only in Fall 2026:** this chapter was not taught in class and is not
+assessed; treat it as optional reading for interested students.
 
 A count response, and the framework that contains linear, logistic, and
 Poisson regression. The chapter opens with the hourly bike-rental counts and
@@ -797,7 +822,20 @@ gives negative fitted means, residuals that fan out as the mean grows, and
 additive month, temperature, and weather effects that shift every hour by the
 same number of riders, so an hour whose shift is below average (a winter
 month, a cold hour, rain) sits as far below its hour's mean at night as at
-rush hour and goes negative at night. A
+rush hour and goes negative at night. The regression lectures' remedy, a
+**log-count linear regression** (least squares on $\log Y_i$,
+$\log Y_i \mid x_i \stackrel{ind}{\sim} N(x_i\gamma, \sigma^2)$, same
+features, its own coefficients $\gamma$), follows in the same section: its
+fitted values are positive once exponentiated and its features act
+multiplicatively, but its log-scale residuals narrow as the mean grows (the
+fan reverses rather than disappearing), it needs every $y_i > 0$, and its
+back-transformed fits $e^{x_i\hat\gamma}$ estimate
+$e^{E[\log Y_i \mid x_i]}$, which by Jensen's inequality ($E[g(Y)] \le
+g(E[Y])$ for concave $g$) is at most $E[Y_i \mid x_i]$; under the normal
+model $e^{x_i\gamma}$ is the conditional median of $Y_i$, the regression
+lectures' median reading of a logged response. On the bike counts the
+back-transformed fits fall below the observed hourly means in most cells and
+do not reproduce the observed total. A
 **generalized linear model** has three components: a distribution for
 $Y_i$ given $x_i$ with mean $\mu_i = E[Y_i \mid x_i]$ (random component), a
 linear predictor $\eta_i = x_i\beta$, and a strictly monotone **link function** $g$
@@ -810,8 +848,9 @@ logit link, variance $\mu_i(1-\mu_i)$ with $\mu_i = p(x_i)$), and Poisson
 regression (Poisson, log link, variance $\mu_i$), with
 $Var[Y_i \mid x_i] = \phi V(\mu_i)$ ($\phi = \sigma^2$ for the normal,
 $\phi = 1$ for Bernoulli and Poisson); `glm()` families `gaussian`,
-`binomial`, `poisson`. A GLM transforms the mean, $\log E[Y_i]$, not the
-response, $E[\log Y_i]$.
+`binomial`, `poisson`. A GLM transforms the mean, $\log E[Y_i \mid x_i] =
+x_i\beta$, not the response, $E[\log Y_i \mid x_i] = x_i\gamma$, and a log
+link never takes the logarithm of $y_i$.
 
 **Poisson regression**, opened with the observed hourly means by weather
 (rain scales the hourly profile rather than shifting it, motivating the log
@@ -846,16 +885,18 @@ worked-example section: `ISLR2::Bikeshare` (8,645 hourly records; `casual` and
 hour as a 24-level factor interacted with working day, month, temperature
 converted to degrees Celsius, and weather with its one-hour `heavy rain/snow`
 level merged into `rain/snow`. The same 62-column linear predictor serves the
-linear regression (the identity-link GLM, whose fitted means go negative) and
+linear regression (the identity-link GLM, whose fitted means go negative),
 the Poisson regression, fit once maximum likelihood estimation has been
-introduced. A two-tab figure of fitted versus observed hourly means by weather
-and working day shows linear regression going negative overnight in rain while
-Poisson regression scales the profile down. Interpretation reads the intercept first (mean count
+introduced, and the log-count linear regression. One figure of fitted versus observed hourly means by weather and
+working day, with a legend for linear, log-count linear, and Poisson
+regression, shows linear regression going negative overnight in rain while
+Poisson regression scales the profile down, and the back-transformed
+log-count fit scaling it down too but running below the observed means. Interpretation reads the intercept first (mean count
 at midnight on a non-working January day, clear, 0 °C), then the working-day
 ratio at the reference hour, the per-5 °C rate ratio (about 1.08), and the
 rain/snow rate ratio (about 0.56). The fitted score equations are checked on
-the data (fitted means sum to the observed total, and both models reproduce
-each hour-by-working-day mean). Wald intervals for the rate ratios all exclude
+the data (fitted means sum to the observed total, and linear and Poisson
+regression both reproduce each hour-by-working-day mean). Wald intervals for the rate ratios all exclude
 1. A drop-in-deviance test on 23 df rejects a shared hourly profile, and the
 rejection survives dividing $G^2$ by the dispersion estimate. The Pearson
 dispersion is about 11 (about 26 without the interaction), so the counts are

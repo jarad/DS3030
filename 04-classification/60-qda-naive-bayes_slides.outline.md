@@ -1,6 +1,6 @@
 # Slide outline: Quadratic Discriminant Analysis and Naive Bayes
 
-Outline for `60-qda-naive-bayes_slides.qmd` (Wed 2026-10-07, one 50-minute
+Outline for `60-qda-naive-bayes_slides.qmd` (Fri 2026-10-09, one 50-minute
 period). **This file is the spec; the deck is built from it.** Edit it freely:
 reorder, cut, reword, change `tag:`, add notes. When it says what you want, ask
 for the deck to be built (or refreshed) and `slides-author` will implement
@@ -112,7 +112,7 @@ words: none
 tag: core
 show: figure — default-eda-figure (income against balance for the training customers, each class's 95% normal-theory ellipse)
 words: "ISLR2::Default · fit on a random half, test on the other half"
-say: the data run through the whole lecture; the models are fit to the training half, so every error rate here is a test error rate, unlike the training rates of the LDA lecture; the defaulters' ellipse is narrower in balance, which one shared covariance matrix cannot describe
+say: the data run through the whole lecture; the models are fit to the training half, so every error rate here is a test error rate, unlike the training rates of the Classifier Evaluation lecture; the defaulters' ellipse is narrower in balance, which one shared covariance matrix cannot describe
 note: `qda-data-figure` (start of QDA, reused on slide 7) and `nb-data-figure` (start of naive Bayes) are the same image; the deck uses it here and on slide 7, and says "the same scatterplot" aloud at the start of naive Bayes. The split is the chapter's `default-split` chunk; the two halves' sizes are inline R in the chapter ("5,000 each"), quoted from the frozen markdown at build time if wanted.
 
 ## 3. Generative classifiers

@@ -6,9 +6,17 @@ deck is built from it.** Edit it freely: reorder, cut, reword, change
 (or refreshed) and `slides-author` will implement exactly these slides.
 
 Shortened 2026-10-05 to the lecture's core line: the data, one-feature LDA,
-multiple-feature LDA, then three examples (the two logistic regression comparisons and the student strata). The
-evaluation slides (confusion matrix through AUC) are parked in the last
-section, not deleted. Two R-code slides (11 and 17) and four transition slides (1, 6, 12, 18) were added 2026-10-06.
+multiple-feature LDA, then the two logistic regression comparisons. Two R-code
+slides (11 and 17) and four transition slides (1, 6, 12, 18) were added
+2026-10-06.
+
+**Chapter split 2026-10-06.** The evaluation material (confusion matrix through
+AUC), the credit card findings and the student strata moved out of `50-lda.qmd`
+into the new chapter `55-classifier-evaluation.qmd`, whose own deck is specified
+in `55-classifier-evaluation_slides.outline.md`. The Student strata slide
+(formerly 21) was removed from this deck and outline on the same day, since its
+figure (`strata-figure`) no longer belongs to this chapter; it is parked below.
+The deck was presented 2026-10-05 with that slide; it now matches the chapter.
 
 Nothing here is new content. Every `show:` points at something that already
 exists in `50-lda.qmd`, so the deck distills the notes and never invents. If a
@@ -43,7 +51,7 @@ be a static image), `none` (a words-only slide). A slide may combine two
 Slides never draw from a `### For example,` or `### Beyond this course`
 callout.
 
-**Timing:** 23 slides, 21 tagged `core` and 2 `optional`, about 2 to 3
+**Timing:** 22 slides, 20 tagged `core` and 2 `optional`, about 2 to 3
 minutes each since several slides carry two equations or a whole tabset.
 
 ---
@@ -191,12 +199,7 @@ tag: core
 show: figure — additive-posterior-figure
 words: "Balance and income: posterior probability by income quartile"
 
-## 21. Student strata
-tag: core
-show: figure — strata-figure
-words: "Separate models for students and non-students; each panel over its own incomes"
-
-## 22. Conclusion
+## 21. Conclusion
 tag: optional
 show: none
 words: the bare concept names from the chapter's `## Conclusion`, no recap sentences — Bayes' theorem · generative classifier · LDA · discriminant function · linear boundary
@@ -214,20 +217,32 @@ assets so they can come back, or become the next lecture's deck.
 - **Credit card data detail:** `figure — default-scatter-figure`,
   `figure — default-income-figure` (income histograms, bimodal because of
   students), `table — delta-table-2` (fitted discriminants).
-- **13.4 Classifier evaluation:** `figure — score-hist-figure`,
-  `table — confusion-template-table`, `table — confusion-lda-table`,
-  `equation — 13.4.2` (sensitivity and specificity),
+- **Classifier evaluation (old 13.4), now in `55-classifier-evaluation`
+  (see `55-classifier-evaluation_slides.outline.md`), sections 14.2.x:**
+  `figure — score-hist-figure`, `table — confusion-template-table`,
+  `table — confusion-lda-table`, `equation` (sensitivity and specificity),
   `table — confusion-template-k-table` (multiple classes), the four-checkbox
   rate plot (`link — #threshold-choice`, interactive), `table — compare-table`,
   the ROC slider (`link — #roc-curve`, interactive), `figure — roc-figure`,
-  `equation — 13.4.6` (AUC = P(S₊ > S₋)), `figure — auc-figure-display`
-  (two panels), `table — auc-table`.
-- **13.6 Student strata, other outputs:** `table — strata-summary-table`,
-  `figure — strata-data-figure`, `table — strata-table`.
+  `equation` (AUC = P(S₊ > S₋)), `figure — auc-figure-display` (two panels),
+  `table — auc-table`. Their slides are specified in the new outline
+  (14.2.1 Confusion matrix through 14.2.6 AUC).
+- **Student strata (old 13.6, removed from this deck 2026-10-06), now in
+  `55-classifier-evaluation` section 14.4 (see
+  `55-classifier-evaluation_slides.outline.md`):** was slide 21, tag core,
+  `figure — strata-figure`, words "Separate models for students and
+  non-students; each panel over its own incomes". The other strata outputs
+  moved with it: `table — strata-summary-table`, `figure — strata-data-figure`,
+  `table — strata-table`. The new chapter's strata slides are 27 and 28 (core)
+  and 25 and 26 (optional) in the new outline.
+- **Credit card findings (old 13.5), now in `55-classifier-evaluation` section
+  14.3:** a paragraph of prose with no figure or table; slide 23 of the new
+  outline.
 
 The two interactive figures (the ROC threshold slider and the four-checkbox
-rate plot) cannot run in a static deck. If they come back, they would be
-`link:` slides, or fixed settings exported as PNGs through `notes-author`.
+rate plot) cannot run in a static deck; in the new outline they are `link:`
+slides (12 and 15), with a flagged option to export fixed settings as PNGs
+through `notes-author`.
 
 ---
 
@@ -237,10 +252,17 @@ rate plot) cannot run in a static deck. If they come back, they would be
   default-hist-figure, default-stack-figure, balance-gauss-figure,
   balance-equal-figure, balance-weighted-figure, balance-delta-figure,
   balance-posterior-figure, additive-densities-figure, additive-equal-figure,
-  additive-estimated-figure, additive-posterior-figure, strata-figure.
+  additive-estimated-figure, additive-posterior-figure.
 - **Tables (kable):** class-summary-table.
 - **Equations:** the numbered displays in 13.1 to 13.3; refer to them by
   section and a few words, as above.
+- **No longer in this deck (moved 2026-10-06):** `strata-figure` (was slide 21)
+  and every evaluation, findings and strata asset now live in
+  `55-classifier-evaluation` (sections 14.2.x, 14.3, 14.4); see
+  `55-classifier-evaluation_slides.outline.md` for where each is used. The
+  stale copies still in `_freeze/04-classification/50-lda/figure-html/`
+  (`strata-figure`, `strata-data-figure`, `roc-figure`, `score-hist-figure`,
+  `auc-figure-display`, ...) are unused by this deck.
 
 Not available to slides: anything inside a `### For example,` or
 `### Beyond this course` callout (the toy separation fit, Fisher's

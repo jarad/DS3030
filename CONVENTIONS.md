@@ -57,7 +57,8 @@ convention.
   $\stackrel{iid}{\sim}$; identical distribution is visible from parameters
   that do not depend on $i$. A bare $\sim$ is for a distribution that is not
   a model for the observations, such as a derived one
-  ($S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$). In the
+  ($S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$, in
+  `04-classification/55-classifier-evaluation.qmd`). In the
   generative-classifier chapters (`04-classification/50-lda.qmd` and
   `60-qda-naive-bayes.qmd`) the features of observation $i$ are random and
   written capital, $X_i$ or $X_{ij}$, with observed values $x_i$ and
@@ -84,10 +85,12 @@ convention.
   the model, rather than treating either as a general-purpose synonym for
   the other.
 - **$K$ is the number of classes**, with classes indexed $k = 1, \ldots, K$,
-  matching ISLR2. This applies from `04-classification/50-lda.qmd` onward.
-  $C$ is not used for class count going forward: that chapter already uses
-  $c$ for an ROC cutoff and $c_{FN}$/$c_{FP}$ for misclassification costs, so
-  $C$ would collide. The earlier chapters `02-learning/30-classification.qmd`
+  matching ISLR2. This applies from `04-classification/50-lda.qmd` onward,
+  including `55-classifier-evaluation.qmd` and `60-qda-naive-bayes.qmd`.
+  $C$ is not used for class count going forward:
+  `55-classifier-evaluation.qmd` (split out of `50-lda.qmd`) uses $c$ for an
+  ROC cutoff and $c_{FN}$/$c_{FP}$ for misclassification costs, so $C$ would
+  collide. The earlier chapters `02-learning/30-classification.qmd`
   and `04-classification/10-logistic-regression.qmd` write $C$ (and index
   classes by $c$); that predates this decision and is not being retroactively
   renamed, and `50-lda.qmd` says so in a bridging sentence where $K$ is

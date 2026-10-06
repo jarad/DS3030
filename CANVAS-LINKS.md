@@ -32,3 +32,13 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-01 | New | | 04-classification/50-lda.qmd | |
 | 2026-10-01 | New | | 04-classification/60-qda-naive-bayes.qmd | |
 | 2026-10-01 | New | | 04-classification/70-generalized-linear-models.qmd | |
+| 2026-10-06 | New (split from 04-classification/50-lda.qmd) | | 04-classification/55-classifier-evaluation.qmd | |
+
+The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
+and Student strata sections out of `04-classification/50-lda.html` into
+`04-classification/55-classifier-evaluation.html`. A Canvas link to one of
+those sections by anchor (for example `50-lda.html#threshold-choice`,
+`#roc-curve`, `#auc`, or `#student-strata`) must now point at the same
+anchor on `55-classifier-evaluation.html`. Adding the chapter also shifts
+the book's chapter numbers from it on: QDA and naive Bayes is now chapter 15
+and generalized linear models chapter 16.

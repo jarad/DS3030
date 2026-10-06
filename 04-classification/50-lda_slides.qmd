@@ -307,10 +307,6 @@ income  7.793355e-06
 
 ![Balance and income: posterior probability by income quartile](../_freeze/04-classification/50-lda/figure-html/additive-posterior-figure-1.png)
 
-## Student strata
-
-![Separate models for students and non-students; each panel over its own incomes](../_freeze/04-classification/50-lda/figure-html/strata-figure-1.png)
-
 ## Conclusion
 
 - Bayes' theorem
