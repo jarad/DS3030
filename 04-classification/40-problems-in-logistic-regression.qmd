@@ -780,7 +780,7 @@ is the one assumption logistic regression does not keep in any form.
 Logistic regression replaces the normal distribution with a Bernoulli one and
 the identity link with the logit:
 
-$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left(p(x_i)\right), \qquad \log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta,$$
+$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left(p(x_i)\right), \qquad \log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta,$$
 
 where
 
@@ -882,7 +882,7 @@ excess.
 ::: {.callout-note collapse="true"}
 ### Beyond this course
 The standard remedy keeps the mean model
-$\log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta$
+$\log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta$
 and multiplies the assumed variance by a **dispersion parameter** $\phi$, so
 that $Var[Y_i \mid x_i] = \phi \, m_i p(x_i)[1 - p(x_i)]$. Estimating $\phi$
 from the residuals and inflating every standard error by $\sqrt{\hat\phi}$
@@ -901,7 +901,7 @@ estimating a single multiplier. None of this is taught or tested here.
 What logistic regression does assume is that the *log-odds* are linear in the
 features,
 
-$$\log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta.$$
+$$\log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta.$$
 
 That assumption can fail, and the previous lecture is where it was addressed:
 interactions let a feature's log-odds slope depend on another feature, and

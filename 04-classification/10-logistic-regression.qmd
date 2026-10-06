@@ -284,7 +284,7 @@ $$\frac{p(X)}{1 - p(X)} = e^{\beta_0 + \beta_1 X}.$$
 
 Taking logarithms,
 
-$$\log\left(\frac{p(X)}{1 - p(X)}\right) = \beta_0 + \beta_1 X.$$
+$$\log\left[\frac{p(X)}{1 - p(X)}\right] = \beta_0 + \beta_1 X.$$
 
 The left side is the **logit**, or **log-odds**, of $p(X)$. It is the inverse
 of the logistic function, and it carries $(0,1)$ onto the whole real line.
@@ -303,7 +303,7 @@ $X = 0$.
 
 Now increase the feature by one unit from an arbitrary $x$:
 
-$$\log\left(\frac{p(x+1)}{1-p(x+1)}\right) - \log\left(\frac{p(x)}{1-p(x)}\right) = \left[\beta_0 + \beta_1 (x+1)\right] - \left[\beta_0 + \beta_1 x\right] = \beta_1.$$
+$$\log\left[\frac{p(x+1)}{1-p(x+1)}\right] - \log\left[\frac{p(x)}{1-p(x)}\right] = \left[\beta_0 + \beta_1 (x+1)\right] - \left[\beta_0 + \beta_1 x\right] = \beta_1.$$
 
 So $\beta_1$ is the change in the log-odds of the event per one-unit increase
 in $X$. Exponentiating turns the difference into a ratio,
@@ -353,7 +353,7 @@ $p(x_i)/[1 - p(x_i)] = e^{\beta_0 + \beta_1 x_i}$ to simplify:
 
 $$\begin{array}{rl}
 \ell(\beta_0, \beta_1) &= \displaystyle\sum_{i=1}^n \left\{ y_i \log p(x_i) + (1 - y_i)\log\left[1 - p(x_i)\right] \right\} \\[2mm]
-&= \displaystyle\sum_{i=1}^n \left\{ y_i \log\left(\frac{p(x_i)}{1 - p(x_i)}\right) + \log\left[1 - p(x_i)\right] \right\} \\[2mm]
+&= \displaystyle\sum_{i=1}^n \left\{ y_i \log\left[\frac{p(x_i)}{1 - p(x_i)}\right] + \log\left[1 - p(x_i)\right] \right\} \\[2mm]
 &= \displaystyle\sum_{i=1}^n \left\{ y_i (\beta_0 + \beta_1 x_i) - \log\left(1 + e^{\beta_0 + \beta_1 x_i}\right) \right\}.
 \end{array}$$
 
@@ -832,7 +832,7 @@ ci_or_100 <- exp(100 * ci_beta1)
 
 The estimated log-odds of default are
 
-$$\log\left(\frac{\hat p(X)}{1 - \hat p(X)}\right) = `r round(b[1], 2)` + `r signif(b[2], 4)` \times \texttt{balance}.$$
+$$\log\left[\frac{\hat p(X)}{1 - \hat p(X)}\right] = `r round(b[1], 2)` + `r signif(b[2], 4)` \times \texttt{balance}.$$
 
 The intercept $\hat\beta_0 = `r round(b[1], 2)`$ is the estimated log-odds of
 default for a customer carrying no balance, which corresponds to estimated odds

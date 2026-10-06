@@ -140,7 +140,7 @@ ci_student_alone <- exp(confint.default(student_glm)["studentYes", ])
 
 The estimated log-odds of default are
 
-$$\log\left(\frac{\hat p(D)}{1 - \hat p(D)}\right) = `r sprintf("%.2f", bs[1])` `r sprintf("%+.3f", bs[2])` \, D.$$
+$$\log\left[\frac{\hat p(D)}{1 - \hat p(D)}\right] = `r sprintf("%.2f", bs[1])` `r sprintf("%+.3f", bs[2])` \, D.$$
 
 With a single indicator feature, the two fitted values are the two observed
 log-odds. The intercept $\hat\beta_0 = `r sprintf("%.2f", bs[1])`$ is the
@@ -309,7 +309,7 @@ where
 The same algebra as in the previous lecture — form $1 - p(x_i)$, divide, take
 logarithms — puts the model in its log-odds form,
 
-$$\log\left(\frac{p(X)}{1 - p(X)}\right) = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p.$$
+$$\log\left[\frac{p(X)}{1 - p(X)}\right] = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p.$$
 
 The right side is exactly the linear predictor of the multiple linear
 regression lecture. Using that lecture's model matrix notation together with
@@ -919,7 +919,7 @@ balance is held fixed.
 
 Putting the pieces together algebraically, the fitted log-odds are
 
-$$\log\left(\frac{\hat p(X)}{1 - \hat p(X)}\right) = `r sprintf("%.2f", ba[1])` `r sprintf("%+.6f", ba[2])` \times \texttt{balance} `r sprintf("%+.3f", ba[3])` \times D.$$
+$$\log\left[\frac{\hat p(X)}{1 - \hat p(X)}\right] = `r sprintf("%.2f", ba[1])` `r sprintf("%+.6f", ba[2])` \times \texttt{balance} `r sprintf("%+.3f", ba[3])` \times D.$$
 
 The intercept $\hat\beta_0 = `r sprintf("%.2f", ba[1])`$ is the estimated
 log-odds of default for a non-student carrying no balance — both features at

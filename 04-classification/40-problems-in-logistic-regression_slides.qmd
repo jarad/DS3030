@@ -292,7 +292,7 @@ Four assumptions in one line:
 
 ## Linear regression problems revisited
 
-$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left(p(x_i)\right), \qquad \log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta$$
+$$Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left(p(x_i)\right), \qquad \log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta$$
 
 - $p(x_i) = P(Y_i = 1 \mid x_i)$ — probability of the event for observation $i$
 - Normal $\to$ Bernoulli; identity link $\to$ logit
@@ -357,7 +357,7 @@ Overdispersion: usually a symptom of failed independence
 
 ## Linearity
 
-$$\log\left(\frac{p(x_i)}{1 - p(x_i)}\right) = x_i\beta$$
+$$\log\left[\frac{p(x_i)}{1 - p(x_i)}\right] = x_i\beta$$
 
 - Can fail
 - Interactions — a feature's log-odds slope depends on another feature

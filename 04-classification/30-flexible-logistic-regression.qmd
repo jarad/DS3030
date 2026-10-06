@@ -366,7 +366,7 @@ $$\eta = \beta_0 + \beta_1 X + \beta_2 D + \beta_3 XD.$$
 
 Collecting the terms involving $X$ shows what each coefficient does:
 
-$$\log\left(\frac{p(X,D)}{1 - p(X,D)}\right) = \underbrace{(\beta_0 + \beta_2 D)}_{\text{log-odds intercept}} + \underbrace{(\beta_1 + \beta_3 D)}_{\text{log-odds slope on } X} X.$$
+$$\log\left[\frac{p(X,D)}{1 - p(X,D)}\right] = \underbrace{(\beta_0 + \beta_2 D)}_{\text{log-odds intercept}} + \underbrace{(\beta_1 + \beta_3 D)}_{\text{log-odds slope on } X} X.$$
 
 Setting $X = 0$ and $D = 0$ leaves $\beta_0$, the log-odds of the event in the
 reference group at $X = 0$, so $e^{\beta_0}$ are the odds and
@@ -653,7 +653,7 @@ $$\eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_1 X_2.$$
 Collecting the terms involving $X_1$ puts it in the same form the
 continuous-categorical case took:
 
-$$\log\left(\frac{p(X_1,X_2)}{1 - p(X_1,X_2)}\right) = \underbrace{(\beta_0 + \beta_2 X_2)}_{\text{log-odds intercept}} + \underbrace{(\beta_1 + \beta_3 X_2)}_{\text{log-odds slope on } X_1} X_1.$$
+$$\log\left[\frac{p(X_1,X_2)}{1 - p(X_1,X_2)}\right] = \underbrace{(\beta_0 + \beta_2 X_2)}_{\text{log-odds intercept}} + \underbrace{(\beta_1 + \beta_3 X_2)}_{\text{log-odds slope on } X_1} X_1.$$
 
 Both the intercept and the slope on $X_1$ are now functions of $X_2$, and
 $X_2$ is quantitative, so instead of one intercept and one slope per group

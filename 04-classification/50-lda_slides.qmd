@@ -117,7 +117,7 @@ Linear in $x$
 ::: {.fragment}
 Decision boundary: where the two discriminants are equal, $\delta_1(x) = \delta_2(x)$
 
-$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \underbrace{\log\frac{\pi_2}{\pi_1} - \frac{\mu_2^2 - \mu_1^2}{2\sigma^2}}_{\beta_0} + \underbrace{\frac{\mu_2 - \mu_1}{\sigma^2}}_{\beta_1}\, x$$
+$$\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \delta_2(x) - \delta_1(x) = \underbrace{\log\frac{\pi_2}{\pi_1} - \frac{\mu_2^2 - \mu_1^2}{2\sigma^2}}_{\beta_0} + \underbrace{\frac{\mu_2 - \mu_1}{\sigma^2}}_{\beta_1}\, x$$
 :::
 
 ::: {.fragment}
@@ -228,7 +228,7 @@ Linear in $x$
 ::: {.fragment}
 Decision boundary $\delta_1(x) = \delta_2(x)$: a hyperplane, a line when $p = 2$
 
-$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\beta$$
+$$\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\beta$$
 :::
 
 ## Fitted densities and priors

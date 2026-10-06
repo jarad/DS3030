@@ -361,7 +361,7 @@ every class, drop out, and $\delta_k(x)$ reduces to the LDA discriminant.
 
 With $K = 2$ classes the log posterior odds of class $2$ are
 
-$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\left(\Sigma_2^{-1}\mu_2 - \Sigma_1^{-1}\mu_1\right) - \frac{1}{2}x^\top \left(\Sigma_2^{-1} - \Sigma_1^{-1}\right) x,$$
+$$\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\left(\Sigma_2^{-1}\mu_2 - \Sigma_1^{-1}\mu_1\right) - \frac{1}{2}x^\top \left(\Sigma_2^{-1} - \Sigma_1^{-1}\right) x,$$
 
 where
 
@@ -431,7 +431,7 @@ The decision boundary, where the log posterior odds are zero, is a conic
 section when $p = 2$ instead of a line. With one feature, writing
 $\sigma_k^2$ for the class-$k$ variance, the log posterior odds are
 
-$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \frac{1}{2}\left(\frac{1}{\sigma_1^2} - \frac{1}{\sigma_2^2}\right)x^2 + \left(\frac{\mu_2}{\sigma_2^2} - \frac{\mu_1}{\sigma_1^2}\right)x + \frac{\mu_1^2}{2\sigma_1^2} - \frac{\mu_2^2}{2\sigma_2^2} + \log\frac{\sigma_1}{\sigma_2} + \log\frac{\pi_2}{\pi_1}.$$
+$$\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \frac{1}{2}\left(\frac{1}{\sigma_1^2} - \frac{1}{\sigma_2^2}\right)x^2 + \left(\frac{\mu_2}{\sigma_2^2} - \frac{\mu_1}{\sigma_1^2}\right)x + \frac{\mu_1^2}{2\sigma_1^2} - \frac{\mu_2^2}{2\sigma_2^2} + \log\frac{\sigma_1}{\sigma_2} + \log\frac{\pi_2}{\pi_1}.$$
 
 A quadratic in $x$ has up to two roots, so the boundary is up to two points.
 If $\sigma_1 > \sigma_2$, the coefficient of $x^2$ is negative, the log
@@ -891,7 +891,7 @@ Gaussian $\hat\mu_{kj}$ and $\hat\sigma_{kj}$.
 With $K = 2$, the logarithm of the product is a sum, and the log posterior
 odds of class $2$ are
 
-$$\log\left(\frac{p_2(x)}{1 - p_2(x)}\right) = \log\frac{\pi_2}{\pi_1} + \sum_{j=1}^p \log\frac{f_{2j}(x_j)}{f_{1j}(x_j)} = \log\frac{\pi_2}{\pi_1} + \sum_{j=1}^p g_j(x_j),$$
+$$\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \log\frac{\pi_2}{\pi_1} + \sum_{j=1}^p \log\frac{f_{2j}(x_j)}{f_{1j}(x_j)} = \log\frac{\pi_2}{\pi_1} + \sum_{j=1}^p g_j(x_j),$$
 
 where
 
