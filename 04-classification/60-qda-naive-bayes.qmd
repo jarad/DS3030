@@ -1,5 +1,7 @@
 # Quadratic Discriminant Analysis and Naive Bayes
 
+[Slides for this lecture](60-qda-naive-bayes_slides.html)
+
 ```{r packages}
 #| include: false
 library("tidyverse")
