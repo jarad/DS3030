@@ -3,6 +3,8 @@ title: "Linear Discriminant Analysis"
 format:
   revealjs:
     slide-number: true
+    width: 1280
+    height: 720
     code-line-numbers: false
     footer: "DS 3030"
     include-in-header:
@@ -21,6 +23,7 @@ format:
         .reveal .columns pre { margin: 0; }
         .reveal .columns pre code { max-height: none; }
         .reveal h2 { white-space: nowrap; font-size: 1.35em; }
+        .reveal[data-navigation-mode="linear"] section.title-slide:not(#title-slide) h1 { white-space: nowrap; font-size: 1.45em; }
         </style>
 execute:
   enabled: false
