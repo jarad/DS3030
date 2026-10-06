@@ -167,6 +167,15 @@ deck should be rebuilt rather than trusted as still matching.
   limit) rather than letting it wrap or shrinking it further. Check the
   rendered deck, since a title that is too long overflows silently. This
   overrides the verbatim-heading rule below when the two conflict.
+- **Reveal stacked content one step at a time.** On a slide that carries
+  several equations or a model followed by its estimates, show the first
+  item on arrival and wrap each later item in a `::: {.fragment}` block so
+  one click reveals it. Fragments appear in source order; nest a styling div
+  (such as `style="font-size: 0.7em"`) inside the fragment, and keep a
+  caption or closing line in the same fragment as the equation it goes with.
+  Follow the outline's `reveal:` line for where each click falls; without
+  one, leave the slide static. Figures, tabsets and code slides do not get
+  fragments, and a fragment never holds the only copy of a slide's title.
 - **Compress prose to fragments.** A symbol's definition becomes a short
   label (`$\hat\beta_1$ — slope estimate`), not the notes' full defining
   sentence. A bulleted list of diagnostic signs in the notes can usually be

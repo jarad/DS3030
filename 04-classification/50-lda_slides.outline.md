@@ -22,9 +22,14 @@ goes back through `notes-author` and `proof-reader` first.
 tag: core | optional                    <- optional = first to drop if time is short
 show: <type> — <asset>                  <- what is on the slide (types below)
 words: "a short label, 0-1 lines"       <- the only prose on the slide
+reveal: <what appears on each click>    <- optional; omit when everything shows at once
 say: what you plan to say aloud         <- speaker notes, never on the slide
 needs: ...                              <- only if something is missing from the chapter
 ```
+
+`reveal:` lists the clicks in order, as "on arrival: ...; click 1: ...; click 2: ...".
+Each click is one `{.fragment}` block in the deck. Use it on slides that stack
+several equations, so the content appears as it is discussed.
 
 `show:` types: `equation` (copied from the chapter's source; `\widehat` for
 `\hat` in slides), `figure` (the named chunk's PNG from `_freeze/`), `table`
@@ -77,6 +82,7 @@ words: "Stacked counts: each class's share of a bar is its share of customers"
 tag: core
 show: equation — 13.1.2, the p_k(x) display ending in `\propto \pi_k f_k(x)`, then a three-item list (π_k — prior, f_k(x) — class density, p_k(x) — posterior), then equation — 13.1.3, `\hat y(x) = \arg\max_k p_k(x)`, on one slide
 words: none beyond the list
+reveal: on arrival: the posterior equation; click 1: the three-item list; click 2: the argmax equation
 note: this combines the Bayes' theorem and Bayes classifier slides; the error-probability display and the closing sentence were cut 2026-10-06
 
 ---
@@ -98,12 +104,14 @@ say: the start of 13.2; the histograms with the fitted N(μ̂_k, σ̂²) over th
 tag: core
 show: equation — 13.2.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N(\mu_k,\sigma^2)`, and equation — 13.2.2, `\hat\pi_k`, `\hat\mu_k`, `\hat\sigma^2` (pooled, divisor n − K), on one slide
 words: between the model and the estimates, "Same σ² in every class"; after the estimates, "Closed-form estimates: proportions, means, pooled variance"
+reveal: on arrival: the model and "Same σ² in every class"; click 1: the estimating equations and the closing line
 note: this puts the one-feature parameter estimation on the model slide, as slide 14 does for the multivariate case; the model display is larger than the estimates
 
 ## 9. Discriminant function
 tag: core
 show: equation — 13.2.3, δ_k(x) as intercept + slope · x; then, in order, "Linear in x", "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)", equation — the log posterior odds, and equation — 13.2.4, x*, on one slide
 words: "Linear in x" and "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)"
+reveal: on arrival: δ_k and "Linear in x"; click 1: the decision-boundary line and the log-odds equation; click 2: x*
 note: this combines the discriminant-function and decision-boundary slides; the title stays on one line
 
 ## 10. Prior-weighted densities
@@ -139,12 +147,14 @@ say: the start of 13.3; the same image is the first tab of slide 16
 tag: core
 show: equation — 13.3.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N_p(\mu_k, \Sigma)`, and equation — 13.3.2, `\hat\mu_k` and `\hat\Sigma`, on one slide
 words: between the model and the estimates, "Shared Σ"; after the estimates, "Pooled over classes with divisor n − K"
+reveal: on arrival: the model and "Shared Σ"; click 1: the estimating equations and the closing line
 note: this puts the statistical model and its parameter estimation on one slide
 
 ## 15. Matrix-form discriminant
 tag: core
 show: equation — 13.3.3, δ_k(x) intercept + slope form, and equation — 13.3.4, `\beta_0 + x^\top\beta`, on one slide
 words: "Still linear in x; a hyperplane, a line when p = 2"
+reveal: on arrival: δ_k; click 1: the log-odds equation and "Still linear in x; a hyperplane, a line when p = 2"
 note: this combines the matrix-form and linear-boundary slides
 
 ## 16. Fitted densities and priors
