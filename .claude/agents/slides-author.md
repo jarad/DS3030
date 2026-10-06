@@ -158,6 +158,13 @@ deck should be rebuilt rather than trusted as still matching.
   rather than shrinking font or cramming multiple figures onto one.
 - **Reuse the chapter's own section and subsection headings verbatim** as
   slide titles, so every slide traces back to exactly where it came from.
+- **Every slide title fits on one line.** Decks render at reveal.js's default
+  1050 × 700 (3:2), so a long title wraps. The deck's stylesheet sets
+  `.reveal h2 { white-space: nowrap; font-size: 1.35em; }`; keep it, and
+  shorten a title that still overflows (a title of about 40 characters is the
+  limit) rather than letting it wrap or shrinking it further. Check the
+  rendered deck, since a title that is too long overflows silently. This
+  overrides the verbatim-heading rule below when the two conflict.
 - **Compress prose to fragments.** A symbol's definition becomes a short
   label (`$\hat\beta_1$ — slope estimate`), not the notes' full defining
   sentence. A bulleted list of diagnostic signs in the notes can usually be

@@ -532,8 +532,9 @@ means, the LD coefficient $1/\hat\sigma$), a by-hand check, and the fitted
 Gaussians over the histograms (missing the non-defaulters' spike at zero and
 too wide for defaulters). The discriminant written as intercept plus slope,
 $\delta_k(x) = \left[\log\pi_k - \mu_k^2/(2\sigma^2)\right] +
-(\mu_k/\sigma^2)\,x$ (the dropped terms, including the $x^2$ term, are free
-of $k$ only because $\sigma^2$ is shared), with the fitted
+(\mu_k/\sigma^2)\,x$ (the terms added to $\log\left[\pi_k f_k(x)\right]$ to form
+it, including the $x^2$ term, are free of $k$ only because $\sigma^2$ is
+shared), with the fitted
 $\hat\delta_{\text{No}}$ and $\hat\delta_{\text{Yes}}$ for balance; recovery
 of $p_k(x) = e^{\delta_k(x)}/\sum_l e^{\delta_l(x)}$; the log posterior odds
 $\beta_0 + \beta_1 x$ (logistic regression's form, estimated differently);

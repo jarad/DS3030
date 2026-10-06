@@ -7,8 +7,8 @@ deck is built from it.** Edit it freely: reorder, cut, reword, change
 
 Shortened 2026-10-05 to the lecture's core line: the data, one-feature LDA,
 multiple-feature LDA, then three examples (the two logistic regression comparisons and the student strata). The
-evaluation slides (confusion matrix through AUC), the student strata and the
-printed R output are parked in the last section, not deleted.
+evaluation slides (confusion matrix through AUC) are parked in the last
+section, not deleted. Two R-code slides (11 and 17) and four transition slides (1, 6, 12, 18) were added 2026-10-06.
 
 Nothing here is new content. Every `show:` points at something that already
 exists in `50-lda.qmd`, so the deck distills the notes and never invents. If a
@@ -38,7 +38,7 @@ be a static image), `none` (a words-only slide). A slide may combine two
 Slides never draw from a `### For example,` or `### Beyond this course`
 callout.
 
-**Timing:** 17 slides, 15 tagged `core` and 2 `optional`, about 2 to 3
+**Timing:** 23 slides, 21 tagged `core` and 2 `optional`, about 2 to 3
 minutes each since several slides carry two equations or a whole tabset.
 
 ---
@@ -48,107 +48,145 @@ tag: core
 show: none
 words: agenda as noun phrases — Bayes' theorem · LDA, one feature and several · comparison with logistic regression
 
+## 1. Motivation
+tag: core
+show: none (transition slide, title only)
+words: none
+
 ---
 
 # 13.1 Generative classifiers
 
-## 1. Credit card default data
+## 2. Credit card default data
 tag: core
 show: table — class-summary-table
 words: "ISLR2::Default · analyzed in the logistic regression lectures"
 say: the data run through the whole lecture
 
-## 2. Balance within each class
+## 3. Balance within each class
 tag: core
 show: figure — default-hist-figure (the within-class histograms)
 words: "Defaulters carry larger balances"
 
-## 3. Balance, all customers
+## 4. Balance, all customers
 tag: optional
 show: figure — default-stack-figure
 words: "Stacked counts: each class's share of a bar is its share of customers"
 
-## 4. Bayes' theorem and Bayes classifier
+## 5. Bayes' theorem and Bayes classifier
 tag: core
-show: equation — 13.1.2, the p_k(x) display ending in `\propto \pi_k f_k(x)`, and equation — 13.1.3, `\hat y(x) = \arg\max_k p_k(x)` with the error probability display, on one slide
-words: "Model f_k(x) and π_k, reverse the conditioning, assign the class with the largest posterior"
-note: this combines the Bayes' theorem and Bayes classifier slides
+show: equation — 13.1.2, the p_k(x) display ending in `\propto \pi_k f_k(x)`, then a three-item list (π_k — prior, f_k(x) — class density, p_k(x) — posterior), then equation — 13.1.3, `\hat y(x) = \arg\max_k p_k(x)`, on one slide
+words: none beyond the list
+note: this combines the Bayes' theorem and Bayes classifier slides; the error-probability display and the closing sentence were cut 2026-10-06
 
 ---
 
 # 13.2 One-feature LDA (balance)
 
-## 5. Fitted Gaussian densities
+## 6. One Feature
+tag: core
+show: none (transition slide, title only)
+words: none
+
+## 7. Fitted Gaussian densities
 tag: core
 show: figure — balance-gauss-figure
 words: "One-feature LDA: Gaussian densities fitted to each class"
 say: the start of 13.2; the histograms with the fitted N(μ̂_k, σ̂²) over them
 
-## 6. Gaussian model and parameter estimation
+## 8. Gaussian model and parameter estimation
 tag: core
 show: equation — 13.2.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N(\mu_k,\sigma^2)`, and equation — 13.2.2, `\hat\pi_k`, `\hat\mu_k`, `\hat\sigma^2` (pooled, divisor n − K), on one slide
-words: "Same σ² in every class; closed-form estimates: proportions, means, pooled variance"
-note: this puts the one-feature parameter estimation on the model slide, as slide 10 does for the multivariate case
+words: between the model and the estimates, "Same σ² in every class"; after the estimates, "Closed-form estimates: proportions, means, pooled variance"
+note: this puts the one-feature parameter estimation on the model slide, as slide 14 does for the multivariate case; the model display is larger than the estimates
 
-## 7. Discriminant function and decision boundary
+## 9. Discriminant function
 tag: core
-show: equation — 13.2.3, δ_k(x) as intercept + slope · x, and equation — 13.2.4, the log posterior odds and x*, on one slide
-words: "Linear in x; the boundary is where the two discriminants are equal"
-note: this combines the discriminant-function and decision-boundary slides
+show: equation — 13.2.3, δ_k(x) as intercept + slope · x; then, in order, "Linear in x", "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)", equation — the log posterior odds, and equation — 13.2.4, x*, on one slide
+words: "Linear in x" and "Decision boundary: where the two discriminants are equal, δ_1(x) = δ_2(x)"
+note: this combines the discriminant-function and decision-boundary slides; the title stays on one line
 
-## 8. Prior-weighted densities
+## 10. Prior-weighted densities
 tag: core
 show: tabset — three tabs: "Equal priors" (balance-equal-figure), "Estimated priors" (balance-weighted-figure), "Discriminant functions" (balance-delta-figure)
 words: "Equal priors put the boundary at the midpoint; the small prior for Yes moves it toward the defaulters' mean"
+
+## 11. Fitting one-feature LDA
+tag: core
+show: none, code — `MASS::lda(default ~ balance, data = Default)`, `fit$prior`, `fit$means`, `fit$scaling`, `predict(fit, data.frame(balance = 1500))$posterior`, each with its printed output
+words: none beyond the code and a comment naming π̂_k, μ̂_k and the coefficients of linear discriminants
+say: the fit prints the same prior, means and scaling the chapter shows; `predict()$posterior` is how to get p_k(x) at a new customer
+note: added 2026-10-06 after class, when the deck had no R code. The fit and its three printed blocks are the chapter's `balance-lda` chunk; the `$` extractions and the `predict()` call at balance 1500 are not in the chapter, so their output came from running the code, not from the frozen markdown. They go back through `notes-author` if the chapter should show them too.
+
+---
+
+## 12. Multiple Features
+tag: core
+show: none (transition slide, title only)
+words: none
 
 ---
 
 # 13.3 Multiple-feature LDA (balance and income)
 
-## 9. Balance and income
+## 13. Balance and income
 tag: core
 show: figure — additive-densities-figure (the scatterplot of balance against income with the fitted class contours and the two class means)
 words: "Two continuous features; one contour set per class"
-say: the start of 13.3; the same image is the first tab of slide 12
+say: the start of 13.3; the same image is the first tab of slide 16
 
-## 10. Multivariate Gaussian model and parameter estimation
+## 14. Multivariate Gaussian model
 tag: core
 show: equation — 13.3.1, the model `P(Y=k)=\pi_k`, `X \mid Y=k \sim N_p(\mu_k, \Sigma)`, and equation — 13.3.2, `\hat\mu_k` and `\hat\Sigma`, on one slide
-words: "Shared Σ, pooled over classes with divisor n − K"
-note: this puts the statistical model on the parameter-estimation slide
+words: between the model and the estimates, "Shared Σ"; after the estimates, "Pooled over classes with divisor n − K"
+note: this puts the statistical model and its parameter estimation on one slide
 
-## 11. Matrix-form discriminant and linear decision boundary
+## 15. Matrix-form discriminant
 tag: core
 show: equation — 13.3.3, δ_k(x) intercept + slope form, and equation — 13.3.4, `\beta_0 + x^\top\beta`, on one slide
 words: "Still linear in x; a hyperplane, a line when p = 2"
 note: this combines the matrix-form and linear-boundary slides
 
-## 12. Fitted densities and priors
+## 16. Fitted densities and priors
 tag: core
 show: tabset — three tabs: "Fitted densities" (additive-densities-figure), "Equal priors" (additive-equal-figure), "Estimated priors" (additive-estimated-figure)
 words: "Boundary through the crossings of the prior-weighted contours"
-say: the first tab repeats slide 9's image, which is fine here because it keeps the tabs in one flow
+say: the first tab repeats slide 13's image, which is fine here because it keeps the tabs in one flow
+
+## 17. Fitting multiple-feature LDA
+tag: core
+show: none, code — `MASS::lda(default ~ balance + income, data = Default)`, `fit2$prior`, `fit2$means`, `fit2$scaling`, `predict(fit2, data.frame(balance = 1500, income = 40000))$posterior`, each with its printed output
+words: none beyond the code
+say: the formula interface is unchanged; `means` now has a column per feature, and `scaling` is proportional to Σ̂⁻¹(μ̂_Yes − μ̂_No)
+note: added 2026-10-06; the same provenance as slide 11 (the fit is the chapter's `additive-lda` chunk).
+
+---
+
+## 18. Comparison to Logistic Regression
+tag: core
+show: none (transition slide, title only)
+words: none
 
 ---
 
 # Examples
 
-## 13. Simple logistic regression comparison
+## 19. Simple logistic regression comparison
 tag: core
 show: figure — balance-posterior-figure
 words: "Balance alone: LDA is a logistic curve, slightly flatter than logistic regression"
 
-## 14. Multiple logistic regression comparison
+## 20. Multiple logistic regression comparison
 tag: core
 show: figure — additive-posterior-figure
 words: "Balance and income: posterior probability by income quartile"
 
-## 15. Student strata
+## 21. Student strata
 tag: core
 show: figure — strata-figure
 words: "Separate models for students and non-students; each panel over its own incomes"
 
-## 16. Conclusion
+## 22. Conclusion
 tag: optional
 show: none
 words: the bare concept names from the chapter's `## Conclusion`, no recap sentences — Bayes' theorem · generative classifier · LDA · discriminant function · linear boundary
@@ -161,8 +199,6 @@ note: the old deck ended with evaluation; this one ends on the examples, so this
 Slides cut from the earlier 49-slide outline. They are parked here with their
 assets so they can come back, or become the next lecture's deck.
 
-- **Printed R output:** `console — balance-lda`, `console — additive-lda`
-  (`MASS::lda(default ~ balance)` and `MASS::lda(default ~ balance + income)`).
 - **Coefficient comparison tables:** `table — coef-table-1`,
   `table — coef-table-2` (examples now show only the plots).
 - **Credit card data detail:** `figure — default-scatter-figure`,

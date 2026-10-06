@@ -22,6 +22,7 @@ takes more or fewer days than planned.
 | 2026-09-23 | Wed | 04-classification/10-logistic-regression.qmd, 04-classification/20-multiple-logistic-regression.qmd | Finished Prediction (9.2.6, held over from Monday), then covered all of Multiple Logistic Regression — ahead of the planned pace, which had budgeted the whole day for the multiple logistic regression chapter alone. |
 | 2026-09-25 | Fri | 04-classification/30-flexible-logistic-regression.qmd | All content except the Store-specific price effects worked example, held over to the next class. |
 | 2026-09-28 | Mon | 04-classification/40-problems-in-logistic-regression.qmd | All content except Separation diagnosis and response, which was skipped for time; Muscular dystrophy carrier screening was covered quickly. The Store-specific price effects worked example held over from 09-25 (`04-classification/30-flexible-logistic-regression.qmd`) was not covered and will not be taught this semester. |
+| 2026-10-05 | Mon | 04-classification/50-lda.qmd | Covered every slide in `50-lda_slides.qmd`: Bayes' theorem and the Bayes classifier; LDA for $p=1$ and $p>1$; the logistic regression comparisons; student strata. The classifier-evaluation sections (confusion matrix, ROC curve, AUC) are not in the deck and were not covered. Two gaps: the deck had no R code for fitting `MASS::lda()` and extracting its output (one slide each for $p=1$ and $p>1$ added afterward), and the balance-and-income example shows a higher `income` raising the probability of default at a fixed balance, which is explained by `income` standing in for student status (verified 2026-10-06). |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -43,7 +44,6 @@ shifted.
 | ---- | --- | -------------- | ----- |
 | 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |
 | 2026-10-02 | Fri | **Exam 1** | |
-| 2026-10-05 | Mon | `04-classification/50-lda.qmd` | Bayes'-theorem framing for generative classification; LDA for $p=1$ and $p>1$; confusion matrix, ROC curve, AUC |
 | 2026-10-07 | Wed | `04-classification/60-qda-naive-bayes.qmd` | QDA (bias-variance tradeoff vs. LDA); Naive Bayes (conditional independence); Comparison of classification methods (ISLR2 4.5) folded in here rather than its own file, since it directly compares LDA/QDA/NB against logistic regression and KNN once all three generative methods are on the table |
 | 2026-10-09 | Fri | `04-classification/70-generalized-linear-models.qmd` | GLMs as a unifying framework (linear and logistic regression as special cases); Poisson regression for count data, using `ISLR2::Bikeshare` |
 | 2026-11-04 | Wed | **Exam 2 review** | |
