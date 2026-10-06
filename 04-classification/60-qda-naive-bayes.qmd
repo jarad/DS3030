@@ -14,10 +14,14 @@ set.seed(20261001)
 class_colors <- c("#0072B2", "#D55E00")
 model_colors <- c("Logistic regression" = "#CC79A7", "LDA" = "#009E73",
                   "QDA" = "#E69F00", "Naive Bayes" = "#56B4E9",
-                  "KNN" = "black")
+                  "KNN" = "black",
+                  "Logistic regression, squares" = "#CC79A7",
+                  "Logistic regression, squares and product" = "#CC79A7")
 model_linetypes <- c("Logistic regression" = "dashed", "LDA" = "solid",
                      "QDA" = "dotted", "Naive Bayes" = "dotdash",
-                     "KNN" = "twodash")
+                     "KNN" = "twodash",
+                     "Logistic regression, squares" = "longdash",
+                     "Logistic regression, squares and product" = "longdash")
 
 # Density of N_2(mu, Sigma) at the rows (x1, x2), and the two-class Gaussian
 # log posterior odds of class 2 with equal priors.
@@ -84,16 +88,18 @@ $x$, with up to two boundary points when $p = 1$,
 - **count** the mean and covariance parameters that LDA, QDA, and Gaussian
 naive Bayes estimate, and **use** the counts to **explain** through the
 bias-variance tradeoff when each should have the lowest test error rate,
-- **state** the naive Bayes assumption that the features are conditionally
-independent given the class, **write** $f_k(x)$ as a product of one-feature
+- **write** the naive Bayes model, with the features conditionally
+independent given the class, in $\stackrel{ind}{\sim}$ notation over
+observations and features, **write** $f_k(x)$ as a product of one-feature
 densities of possibly different types, and **show** that the log posterior
 odds are a sum of one-feature terms,
 - **identify** Gaussian naive Bayes as LDA or QDA with a diagonal covariance
 matrix,
-- **compare** logistic regression, LDA, QDA, naive Bayes, and KNN by the shape
-of their decision boundaries, their assumptions, and how they are affected by
-$n$ and $p$, and **evaluate** which should perform best in a described
-setting, and
+- **compare** logistic regression, LDA, QDA, naive Bayes, and KNN by the
+functional form of their log posterior odds, including logistic regression
+with squared and cross-product features, their assumptions, how they estimate
+their parameters, and how they are affected by $n$ and $p$, and **evaluate**
+which should perform best in a described setting, and
 - **fit** QDA with `MASS::qda()` and naive Bayes with `e1071::naiveBayes()`,
 **interpret** their estimates, and **compare** classifiers by test error
 rate, sensitivity, specificity, and AUC on a held-out test set.
@@ -230,8 +236,11 @@ the class proportion $n_k/n$, where $n_k$ is the number of training
 observations in class $k$ and $n$ the number of training observations. They
 differ only in the model assumed for $f_k(x)$.
 
-LDA assumed $X \mid Y = k \sim N_p\left(\mu_k, \Sigma\right)$, with one
-covariance matrix $\Sigma$ shared by every class. That is what made the
+LDA assumed, for observations $i = 1, \ldots, n$,
+$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right)$
+and $X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right)$, with
+$X_i$ the random $p$-vector of features of observation $i$ and one covariance
+matrix $\Sigma$ shared by every class. That is what made the
 quadratic term in $x$ cancel and the boundary linear. It would give the two
 ellipses of the scatterplot the same shape, but the defaulters' is the
 narrower in balance.
@@ -264,15 +273,21 @@ own.
 
 Quadratic discriminant analysis (QDA) assumes the statistical model
 
-$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N_p\left(\mu_k, \Sigma_k\right), \qquad k = 1, \ldots, K,$$
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma_k\right), \qquad i = 1, \ldots, n,$$
 
 where
 
-- $\mu_k = E[X \mid Y = k]$ is the $p$-vector of feature means in class $k$,
-as in LDA, and
-- $\Sigma_k = Cov[X \mid Y = k]$ is the $p \times p$ covariance matrix of the
-features **in class $k$**, symmetric and positive definite, and free to differ
-from class to class.
+- $Y_i$ is the class of observation $i$ and
+$X_i = (X_{i1}, \ldots, X_{ip})^\top$ its random $p$-vector of features, with
+observed values $y_i$ and $x_i$,
+- $\text{Categorical}\left(\pi_1, \ldots, \pi_K\right)$ is the distribution on
+the classes $\{1, \ldots, K\}$ with $P(Y_i = k) = \pi_k$,
+- $\stackrel{ind}{\sim}$ means independent over observations $i$, as in LDA,
+- $\mu_k = E[X_i \mid Y_i = k]$ is the $p$-vector of feature means in class
+$k$, as in LDA, and
+- $\Sigma_k = Cov[X_i \mid Y_i = k]$ is the $p \times p$ covariance matrix of
+the features **in class $k$**, symmetric and positive definite, and free to
+differ from class to class.
 
 The class-conditional density is therefore
 
@@ -293,8 +308,8 @@ $$\hat\Sigma_k = \frac{1}{n_k - 1}\sum_{i:\, y_i = k}\left(x_i - \hat\mu_k\right
 
 where
 
-- $x_i$ is the $p$-vector of feature values of observation $i$, as in the
-previous lecture, and
+- $x_i$ is the observed $p$-vector of feature values of observation $i$, as
+in the previous lecture, and
 - $\hat\Sigma_k$ is the **class-$k$ sample covariance matrix**, whose divisor
 $n_k - 1$ accounts for the one estimated mean.
 
@@ -463,19 +478,30 @@ posterior_of <- function(model, d) {
          LDA = predict(default_lda, newdata = d)$posterior[, "Yes"],
          QDA = predict(default_qda, newdata = d)$posterior[, "Yes"],
          "Naive Bayes" = predict(default_nb, newdata = d, type = "raw")[, "Yes"],
-         KNN = knn_yes(d, k_default))
+         KNN = knn_yes(d, k_default),
+         "Logistic regression, squares" = unname(predict(
+           squares_glm, newdata = d, type = "response")),
+         "Logistic regression, squares and product" = unname(predict(
+           quadratic_glm, newdata = d, type = "response")))
+}
+# Legend labels; the KNN label carries its number of neighbors, looked up only
+# when KNN is drawn.
+model_labels <- function(models) {
+  map_chr(models, \(m) if (m == "KNN") paste0("KNN, K = ", k_default) else m)
 }
 
-# Balances at which a model's posterior crosses 0.5 at the training income
-# quartiles.
+# Balances up to `upper` at which a model's posterior crosses 0.5 at the
+# training income quartiles.
 income_levels <- quantile(train$income, c(0.25, 0.5, 0.75))
-crossings <- function(model) {
+search_max <- 10000
+crossings <- function(model, upper = search_max) {
   gap <- function(b, inc) posterior_of(model, tibble(balance = b, income = inc)) - 0.5
   map(income_levels, \(inc) {
-    # Searching past about $10,000 would fail: e1071's naive Bayes posteriors
-    # underflow between about $15,000 and $18,000 of balance, which would trip
-    # the exactly-two-crossings check below.
-    b <- seq(0, 10000, by = 10)
+    # Searching the generative classifiers past about $10,000 would fail:
+    # e1071's naive Bayes posteriors underflow between about $15,000 and
+    # $18,000 of balance, which would trip the exactly-two-crossings check
+    # below.
+    b <- seq(0, upper, by = 10)
     j <- which(diff(sign(gap(b, inc))) != 0)
     map_dbl(j, \(i) uniroot(gap, b[c(i, i + 1)], inc = inc)$root)
   })
@@ -511,8 +537,8 @@ boundary_figure <- function(models, title, second = cross_at(qda_cross, 2)) {
                  breaks = 0.5, linewidth = 0.9) +
     scale_shape_manual(values = c(21, 24)) +
     scale_fill_manual(values = c("grey70", "black")) +
-    scale_color_manual(values = model_colors) +
-    scale_linetype_manual(values = model_linetypes) +
+    scale_color_manual(values = model_colors, labels = model_labels) +
+    scale_linetype_manual(values = model_linetypes, labels = model_labels) +
     scale_x_continuous(labels = dollar_labels) +
     scale_y_continuous(labels = dollar_labels) +
     guides(shape = guide_legend(order = 1), fill = guide_legend(order = 1),
@@ -837,16 +863,26 @@ each class ignores only that tilt.
 Naive Bayes keeps the generative framework but replaces the multivariate model
 for $f_k$ with an assumption about how the features relate to one another:
 
-$$P(Y = k) = \pi_k, \qquad X_1, \ldots, X_p \text{ are independent given } Y = k, \qquad X_j \mid Y = k \sim f_{kj},$$
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}, \qquad i = 1, \ldots, n, \quad j = 1, \ldots, p,$$
 
 where
 
-- $X_j$ is the $j$th feature, the $j$th entry of the random vector $X$, and
-- $f_{kj}$ is the one-feature density (or probability mass function) of $X_j$
-among observations in class $k$.
+- $Y_i$ and $\text{Categorical}\left(\pi_1, \ldots, \pi_K\right)$ are as in
+QDA,
+- $X_{ij}$ is feature $j$ of observation $i$, the $j$th entry of $X_i$,
+- $f_{kj}$ is the one-feature density (or probability mass function) of
+feature $j$ among observations in class $k$, and
+- $\stackrel{ind}{\sim}$ runs over both indices: given $Y_1, \ldots, Y_n$, the
+$X_{ij}$ are independent over observations $i$ and over features $j$.
 
-Independence turns the joint density into a product of its marginals, so the
-class-conditional density is
+Independence over observations is the assumption LDA and QDA also make.
+Independence over features within an observation, given its class, is the
+**naive** assumption that gives the method its name; LDA and QDA instead let
+the features of one observation be correlated through $\Sigma$ or $\Sigma_k$.
+
+Independence over $j$ turns the joint density of $X_i$ given $Y_i = k$ into
+the product of its marginals, so the class-conditional density at a value
+$x = (x_1, \ldots, x_p)^\top$ is
 
 $$f_k(x) = f_{k1}(x_1) \times f_{k2}(x_2) \times \cdots \times f_{kp}(x_p) = \prod_{j=1}^p f_{kj}(x_j).$$
 
@@ -860,15 +896,20 @@ modeled and estimated separately, and features of different types can use
 densities of different types.
 
 - A quantitative feature is usually modeled as Gaussian,
-$X_j \mid Y = k \sim N\left(\mu_{kj}, \sigma_{kj}^2\right)$, with $\mu_{kj}$
-and $\sigma_{kj}^2$ estimated by the sample mean and variance of feature $j$
-among the class-$k$ training observations.
+$X_{ij} \mid Y_i = k \stackrel{ind}{\sim} N\left(\mu_{kj}, \sigma_{kj}^2\right)$,
+with $\mu_{kj}$ and $\sigma_{kj}^2$ estimated by the sample mean and variance
+of feature $j$ among the class-$k$ training observations.
 - A binary feature is Bernoulli,
-$f_{kj}(x_j) = \theta_{kj}^{x_j}\left(1 - \theta_{kj}\right)^{1 - x_j}$ for
-$x_j \in \{0, 1\}$, where $\theta_{kj} = P(X_j = 1 \mid Y = k)$ is estimated
-by the proportion of class-$k$ training observations with $x_j = 1$.
-- A categorical feature with more than two levels gets one probability per
-level in each class, estimated by the class-$k$ proportions at each level.
+$X_{ij} \mid Y_i = k \stackrel{ind}{\sim} \text{Bernoulli}\left(\theta_{kj}\right)$,
+with $f_{kj}(x_j) = \theta_{kj}^{x_j}\left(1 - \theta_{kj}\right)^{1 - x_j}$ for
+$x_j \in \{0, 1\}$, where $\theta_{kj} = P(X_{ij} = 1 \mid Y_i = k)$ is
+estimated by the proportion of class-$k$ training observations with
+$x_{ij} = 1$.
+- A categorical feature with $M_j > 2$ levels, coded $1, \ldots, M_j$, gets
+one probability per level in each class,
+$X_{ij} \mid Y_i = k \stackrel{ind}{\sim} \text{Categorical}\left(\theta_{kj1}, \ldots, \theta_{kjM_j}\right)$,
+where $\theta_{kjm} = P(X_{ij} = m \mid Y_i = k)$ is estimated by the
+proportion of class-$k$ training observations at level $m$.
 
 ### Naive Bayes fit
 
@@ -897,7 +938,7 @@ $$\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \log\frac{\pi_2}{\pi_1} + \sum_{j
 
 where
 
-- $g_j(x_j) = \log\left(f_{2j}(x_j)/f_{1j}(x_j)\right)$ is the contribution of
+- $g_j(x_j) = \log\left[f_{2j}(x_j)/f_{1j}(x_j)\right]$ is the contribution of
 feature $j$, a function of $x_j$ alone.
 
 Each feature shifts the log posterior odds by an amount that does not depend
@@ -947,22 +988,35 @@ much lower incomes than non-students.
 
 ### Diagonal covariance
 
-When every $f_{kj}$ is Gaussian, the product of $p$ independent normal
-densities is a multivariate normal density with a diagonal covariance matrix:
+When every $f_{kj}$ is Gaussian, the naive Bayes model is
+$X_{ij} \mid Y_i = k \stackrel{ind}{\sim} N\left(\mu_{kj}, \sigma_{kj}^2\right)$
+over $i$ and $j$. Given $Y_i = k$, the joint density of $X_i$ is the product
+of its $p$ independent normal densities, which is a multivariate normal
+density with a diagonal covariance matrix:
 
 $$\prod_{j=1}^p \frac{1}{\sqrt{2\pi}\,\sigma_{kj}}\exp\left[-\frac{\left(x_j - \mu_{kj}\right)^2}{2\sigma_{kj}^2}\right] = \frac{1}{(2\pi)^{p/2}\left|\Lambda_k\right|^{1/2}}\exp\left[-\frac{1}{2}\left(x - \mu_k\right)^\top \Lambda_k^{-1}\left(x - \mu_k\right)\right],$$
 
 where
 
+- $\mu_k = (\mu_{k1}, \ldots, \mu_{kp})^\top$ is the $p$-vector of class-$k$
+feature means, and
 - $\Lambda_k = \text{diag}\left(\sigma_{k1}^2, \ldots, \sigma_{kp}^2\right)$ is the
 diagonal matrix of class-$k$ feature variances, whose determinant is
 $\prod_j \sigma_{kj}^2$ and whose inverse is diagonal with entries
 $1/\sigma_{kj}^2$.
 
-Gaussian naive Bayes with class-specific variances is therefore QDA with
-every $\Sigma_k$ restricted to be diagonal, and Gaussian naive Bayes with one
-variance per feature shared across classes is LDA with $\Sigma$ restricted to
-be diagonal.
+Read from right to left, the identity says that a multivariate normal density
+with a diagonal covariance matrix factors into one-feature normal densities,
+so its entries are independent. The two model statements therefore describe
+the same distribution, and Gaussian naive Bayes is exactly
+
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Lambda_k\right), \qquad i = 1, \ldots, n.$$
+
+The independence over features $j$ in the naive Bayes model appears in this
+statement as the zero off-diagonal entries of $\Lambda_k$. Gaussian naive Bayes with class-specific
+variances is therefore QDA with every $\Sigma_k$ restricted to be diagonal,
+and Gaussian naive Bayes with one variance per feature shared across classes,
+$\Lambda_k = \Lambda$, is LDA with $\Sigma$ restricted to be diagonal.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1103,31 +1157,47 @@ two classes, and the number of classes is written as $2$.
 
 ### KNN classification
 
-The flexibility lecture introduced KNN for a quantitative response. For a
-qualitative response the neighbors vote:
+The flexibility lecture introduced KNN for a quantitative response, averaging
+the responses of the $K$ nearest training observations. For a qualitative
+response the $K$ neighbors vote. The estimated probability of class $k$ at a
+point $x_0$ is the proportion of the $K$ neighbors in class $k$,
 
-$$\hat p_{\text{Yes}}(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\mathrm{I}(y_i = \text{Yes}),$$
+$$\hat p_k(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\mathrm{I}(y_i = k),$$
 
 where
 
-- $x_0$ is the feature vector, here (`balance`, `income`), of the customer
-being classified,
-- $K$ is the **number of neighbors**,
+- $x_0$ is the feature vector of the observation being classified,
+- $k$ indexes the classes, as in the generative classifiers,
+- $K$ is the **number of neighbors**, not the number of classes,
 - $\mathcal{N}_0$ is the set of the $K$ training observations closest to $x_0$
 in Euclidean distance after every feature, in the training data and in $x_0$
 alike, is standardized by its training mean and standard deviation, since
 that distance depends on each feature's scale (as in the flexibility
 lecture), and
-- $\hat p_{\text{Yes}}(x_0)$ is the proportion of those neighbors who
-defaulted; the classifier assigns `Yes` when it exceeds $0.5$, a majority
-vote.
+- $\mathrm{I}(y_i = k)$ is $1$ when neighbor $i$ is in class $k$ and $0$
+otherwise.
 
-This lecture fixes $K$ in advance at the smallest odd integer above
-$\sqrt{n}$: odd, so that a two-class vote cannot tie, and near $\sqrt{n}$ as
-a rule of thumb rather than an optimal choice, since choosing $K$ from the
-data requires the resampling methods of the next unit. For the credit card
-training half, $n = `r format(nrow(train), big.mark = "{,}")`$ gives
-$K = `r odd_above_sqrt(nrow(train))`$.
+The classifier assigns $x_0$ to the class with the largest $\hat p_k(x_0)$,
+the class most common among its $K$ neighbors, in the same way that the Bayes
+classifier assigns the class with the largest $p_k(x_0)$. When two or more
+classes tie for the largest $\hat p_k(x_0)$, a rule is needed to break the
+tie; `class::knn()` chooses among the tied classes at random.
+
+For the credit card customers the classes are `No` and `Yes`, the feature
+vector is $x_0 = (\texttt{balance}, \texttt{income})^\top$, and
+$\hat p_{\text{Yes}}(x_0)$ is the proportion of the $K$ neighbors who
+defaulted. With two classes,
+$\hat p_{\text{No}}(x_0) = 1 - \hat p_{\text{Yes}}(x_0)$, so the classifier
+assigns `Yes` when $\hat p_{\text{Yes}}(x_0) > 0.5$, a majority of the $K$
+neighbors.
+
+This lecture fixes the number of neighbors $K$ in advance at the smallest odd
+integer above $\sqrt{n}$: odd, so that a vote between two classes cannot tie,
+and near $\sqrt{n}$ as a rule of thumb rather than an optimal choice, since
+choosing $K$ from the data requires the resampling methods of the next unit.
+For the credit card training half,
+$n = `r format(nrow(train), big.mark = "{,}")`$ gives
+$K = `r odd_above_sqrt(nrow(train))`$ neighbors.
 
 ### Fitted boundaries
 
@@ -1197,12 +1267,12 @@ defaulters_text <- if (n_def_unflagged == 0) {
 ```
 :::
 
-With $K = `r k_default`$ neighbors for KNN, the figure below shows the
-training data with every classifier's fitted 0.5 boundary: non-defaulters as
-grey circles and defaulters as black triangles, with balances beyond the
-largest training balance shaded, and logistic regression pink dashed, LDA
-green solid, QDA orange dotted, naive Bayes blue dot-dash, and KNN black
-long-and-short dashes.
+The figure below shows the training data with every classifier's fitted 0.5 boundary:
+non-defaulters as grey circles and defaulters as black triangles, with
+balances beyond the largest training balance shaded, and logistic regression
+(with `balance` and `income` as its features) pink dashed, LDA green solid,
+QDA orange dotted, naive Bayes blue dot-dash, and KNN with
+$K = `r k_default`$ neighbors black long-and-short dashes.
 
 ```{r comparison-boundaries-figure}
 #| echo: false
@@ -1222,11 +1292,11 @@ customers. On this split, `r if (nrow(no_flag_runs) == 0) "at no income in the t
 
 ### Boundary shapes
 
-With two classes, the four model-based classifiers differ in the form of the
-log posterior odds they can represent:
+With two classes, the log posterior odds derived for the three generative
+classifiers have the forms
 
 $$\begin{aligned}
-\text{Logistic regression, LDA: } & \beta_0 + \sum_{j=1}^p \beta_j x_j, \\
+\text{LDA: } & \beta_0 + \sum_{j=1}^p \beta_j x_j, \\
 \text{QDA: } & \beta_0 + \sum_{j=1}^p \beta_j x_j + \sum_{j \le l} \gamma_{jl} x_j x_l, \\
 \text{Gaussian naive Bayes: } & \beta_0 + \sum_{j=1}^p \left(\beta_j x_j + \gamma_{jj} x_j^2\right),
 \end{aligned}$$
@@ -1236,12 +1306,186 @@ where
 - $\beta_0$ is an intercept and $\beta_j$ the coefficient of $x_j$, with
 values that differ from method to method, and
 - $\gamma_{jl}$ is the coefficient of the product $x_j x_l$, a square when
-$l = j$.
+$l = j$; for naive Bayes,
+$\gamma_{jj} = \frac{1}{2}\left(1/\sigma_{1j}^2 - 1/\sigma_{2j}^2\right)$,
+which is zero when the two classes share feature $j$'s variance.
 
-A naive Bayes classifier with Bernoulli or categorical features adds terms
+LDA's log odds are linear in $x$, and QDA's are quadratic, with squares and
+cross-products. Gaussian naive Bayes's are additive in the features:
+quadratic in each feature, with squares but no cross-products, when the class
+variances differ, and linear, LDA's form, when every variance is shared. A
+naive Bayes classifier with Bernoulli or categorical features adds terms
 linear in those features' indicators. KNN has no formula for its log
-posterior odds, and its boundary can take any shape. The table summarizes all
-five:
+posterior odds, and its boundary can take any shape.
+
+Logistic regression's log odds are linear in whatever features it is given.
+Given $x_1, \ldots, x_p$ it has LDA's form; given the squares $x_j^2$ as well,
+Gaussian naive Bayes's form; and given the cross-products $x_j x_l$ too, as in
+the flexible logistic regression lecture, QDA's form. Each generative
+classifier and the logistic regression of the same form can produce exactly
+the same set of boundaries. The table pairs them, with each method's count of
+free parameters for two classes (for the generative classifiers, the means,
+variances, covariances, and one free prior) and, in parentheses, the count for
+the $p = 2$ features of the credit card data.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r pair-table}
+#| output: false
+# Free parameters for two classes, priors included, and logistic regression
+# coefficients, intercept included.
+count_with_p2 <- function(formula_tex, f) sprintf("%s (%d)", formula_tex, f(2))
+pair_table <- tibble(
+  form = c("Linear", "Additive, quadratic in each feature", "Quadratic"),
+  generative = c("LDA", "Gaussian naive Bayes", "QDA"),
+  gen_count = c(count_with_p2("$1 + 2p + p(p+1)/2$", \(p) 1 + count_lda(2, p)),
+                count_with_p2("$1 + 4p$", \(p) 1 + 4 * p),
+                count_with_p2("$1 + 2p + p(p+1)$", \(p) 1 + count_qda(2, p))),
+  features = c("$x_j$", "$x_j$, $x_j^2$", "$x_j$, $x_j^2$, $x_j x_l$"),
+  glm_count = c(count_with_p2("$1 + p$", \(p) 1 + p),
+                count_with_p2("$1 + 2p$", \(p) 1 + 2 * p),
+                count_with_p2("$1 + p + p(p+1)/2$", \(p) 1 + p + p * (p + 1) / 2))
+) |>
+  knitr::kable(col.names = c("Log-odds form", "Generative classifier",
+                             "Its parameters", "Logistic regression features",
+                             "Its coefficients"),
+               align = "llccc")
+```
+:::
+
+```{r pair-table-display}
+#| echo: false
+pair_table
+```
+
+For the credit card training half, the tabs below draw each pair's fitted
+0.5 boundary over the training customers, as in the five-classifier figure:
+LDA beside the logistic regression on `balance` and `income`, naive Bayes
+beside the logistic regression that adds $\texttt{balance}^2$ and
+$\texttt{income}^2$, and QDA beside the logistic regression that also adds
+$\texttt{balance} \times \texttt{income}$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r pair-boundaries}
+#| output: false
+squares_glm <- glm(default ~ balance + income + I(balance^2) + I(income^2),
+                   data = train, family = "binomial")
+quadratic_glm <- glm(default ~ balance + income + I(balance^2) + I(income^2) +
+                       balance:income, data = train, family = "binomial")
+
+pairs <- list(
+  Linear    = c("LDA", "Logistic regression"),
+  Squares   = c("Naive Bayes", "Logistic regression, squares"),
+  Quadratic = c("QDA", "Logistic regression, squares and product"))
+pair_titles <- c(
+  Linear    = "Linear log odds: LDA and logistic regression",
+  Squares   = "Squares: naive Bayes and logistic regression",
+  Quadratic = "Squares and product: QDA and logistic regression")
+# One balance range for all three tabs, the range of boundary_figure()'s grid,
+# and the legend below the panel so the panel has the same width in every tab.
+pair_xmax <- max(4500, 1.15 * max(second_all))
+pair_plots <- imap(pairs, \(m, nm) {
+  boundary_figure(m, pair_titles[[nm]], second_all) +
+    expand_limits(x = c(0, pair_xmax)) +
+    theme(legend.position = "bottom")
+})
+
+# Crossings of 0.5 at the three training income quartiles, balances up to
+# search_max, and the largest gap between each pair's first crossings.
+# predict() for a MASS fit breaks near-ties between classes at random, and
+# uniroot() evaluates it at near-ties; restoring the generator's state keeps
+# these extra predictions from changing the simulation below.
+rng_state <- .Random.seed
+pair_cross <- map(pairs, \(m) map(m, crossings))
+assign(".Random.seed", rng_state, envir = globalenv())
+pair_gap <- map_dbl(pair_cross, \(cr) {
+  max(abs(cross_at(cr[[1]], 1) - cross_at(cr[[2]], 1)))
+})
+
+# The logistic regressions searched further, to glm_search_max, for a second
+# crossing.
+glm_search_max <- 30000
+glm_cross <- map(c(Squares = "Logistic regression, squares",
+                   Quadratic = "Logistic regression, squares and product"),
+                 \(m) crossings(m, glm_search_max))
+# Coefficient of balance^2 in each model's log posterior odds: for naive
+# Bayes, (1/sigma_No^2 - 1/sigma_Yes^2) / 2 from its balance standard
+# deviations.
+nb_balance <- default_nb$tables$balance
+balance_sq <- c(
+  QDA = balance_sq_coef,
+  `Naive Bayes` = unname(0.5 * (1 / nb_balance["No", 2]^2 -
+                                  1 / nb_balance["Yes", 2]^2)),
+  Squares = unname(coef(squares_glm)["I(balance^2)"]),
+  Quadratic = unname(coef(quadratic_glm)["I(balance^2)"]))
+# The prose says: negative balance^2 coefficients for QDA, naive Bayes, and the
+# logistic regression with squares, which crosses 0.5 twice at every income
+# quartile; a positive one for the logistic regression with squares and
+# product, which crosses once and, its log odds rising past that crossing,
+# never crosses back.
+stopifnot(balance_sq[c("QDA", "Naive Bayes", "Squares")] < 0,
+          balance_sq["Quadratic"] > 0,
+          all(lengths(glm_cross$Squares) == 2),
+          all(lengths(glm_cross$Quadratic) == 1))
+```
+:::
+
+::: {.panel-tabset}
+#### Linear
+```{r pair-linear-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.5
+pair_plots$Linear
+```
+
+#### Squares
+```{r pair-squares-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.5
+pair_plots$Squares
+```
+
+#### Squares and product
+```{r pair-quadratic-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.5
+pair_plots$Quadratic
+```
+:::
+
+At the lower quartile, median, and upper quartile of training income, the two
+boundaries of a pair cross $0.5$ at balances within
+`r dollar_text(pair_gap["Linear"])` of each other in the linear tab,
+`r dollar_text(pair_gap["Squares"])` in the squares tab, and
+`r dollar_text(pair_gap["Quadratic"])` in the squares-and-product tab.
+
+Beyond the training balances, where no training customer constrains either
+fit, the pairs part. Naive Bayes and the logistic regression with squares both
+have a negative coefficient of $\texttt{balance}^2$, so both posteriors
+eventually fall back below $0.5$, but at the median training income naive
+Bayes crosses $0.5$ again at `r dollar_text(cross_at(nb_cross, 2)[2])` and the
+logistic regression only at
+`r dollar_text(cross_at(glm_cross$Squares, 2)[2])`. QDA's coefficient of
+$\texttt{balance}^2$ is negative and that of the logistic regression with
+squares and product positive, so only QDA crosses back.
+
+The difference within each pair is not in the boundaries the two can
+represent but in how their parameters are estimated. A generative classifier estimates the class means, variances,
+covariances, and priors from the joint likelihood of features and responses,
+in closed form, and computes the log-odds coefficients from them; it has more
+free parameters than its log odds have coefficients, because it also
+describes the features' distribution within each class. Logistic regression
+estimates the coefficients directly from the conditional likelihood of the
+responses given the features. When the Gaussian assumptions hold, the
+generative estimates use that information about the features, which logistic
+regression ignores; when they fail, the generative coefficients are biased,
+while logistic regression's still estimate the log odds, provided its form is
+correct. The table summarizes the assumptions and estimation of all five
+classifiers.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1250,12 +1494,15 @@ five:
 comparison_table <- tibble(
   Method = c("Logistic regression", "LDA", "QDA", "Gaussian naive Bayes",
              "KNN"),
-  Assumption = c("Linear log-odds",
+  Assumption = c("Log odds linear in its features",
                  "Gaussian, shared covariance",
                  "Gaussian, class covariances",
-                 "Features independent within each class",
+                 "Gaussian features independent within each class",
                  "Smooth class probabilities"),
-  Estimation = c("Iterative", "Closed form", "Closed form", "Closed form",
+  Estimation = c("Conditional likelihood, iterative",
+                 "Joint likelihood, closed form",
+                 "Joint likelihood, closed form",
+                 "Joint likelihood, closed form",
                  "None (stores data)")
 ) |>
   knitr::kable(align = "lll")
@@ -1267,16 +1514,10 @@ comparison_table <- tibble(
 comparison_table
 ```
 
-Logistic regression and LDA share a linear form and differ in estimation:
-when LDA's Gaussian, shared-covariance assumption fails, logistic regression,
-which never models the features' distribution, is unaffected provided the
-log-odds remain linear. A logistic regression given QDA's squares and
-cross-products, as in the flexible logistic regression lecture, has QDA's
-quadratic form, fit by the conditional likelihood instead. Naive Bayes is the
-most restricted quadratic form and has fewer parameters than QDA. KNN is
-nonparametric, with flexibility set by $1/K$: it can follow any boundary
-given enough data, but it needs $n$ large relative to $p$, suffers most from
-the curse of dimensionality, and has no coefficients to interpret.
+KNN is nonparametric, with flexibility set by $1/K$ for $K$ neighbors: it can
+follow any boundary given enough data, but it needs $n$ large relative to
+$p$, suffers most from the curse of dimensionality, and has no coefficients
+to interpret.
 
 Increasing $n$ favors the more flexible methods, QDA and KNN, whose lower
 bias becomes affordable as their variance shrinks. Increasing $p$ favors the
@@ -1795,7 +2036,7 @@ strata_table <- strata_rates |>
 max_error_change <- max(abs(diff(strata_rates$test_error)[c(1, 3)]))
 max_auc_change   <- max(abs(diff(strata_rates$auc)[c(1, 3)]))
 # Mean and covariance parameters of a two-class QDA, priors not counted, as in
-# the parameter-count table.
+# the LDA and QDA parameter table of the bias-variance section.
 n_par_qda <- count_qda(2, 2)
 ```
 :::
@@ -1814,7 +2055,8 @@ by more than `r sprintf("%.4f", max_auc_change)`. (The interacted logistic
 regression reproduces separate per-stratum logistic regressions, to within
 $`r sci(max_diff_int)`$ on the training set.) Each stratified model estimates
 twice as many parameters, `r 2 * n_par_qda` means and covariance entries against
-`r n_par_qda` for QDA (priors not counted, as in the parameter-count table)
+`r n_par_qda` for QDA (priors not counted, as in the LDA and QDA parameter
+table of the [bias-variance section](#bias-variance-tradeoff))
 and `r length(coef(interacted_glm))` coefficients against
 `r length(coef(default_glm))` for logistic regression, which tends to make its
 training error rate more optimistic; the test rates are the fair
@@ -1836,8 +2078,10 @@ QDA estimates $K p(p+1)/2$ covariance parameters against LDA's $p(p+1)/2$, so it
 LDA's bias when the class covariances differ at the cost of variance that
 grows with $p$ and shrinks with $n$.
 
-Naive Bayes assumes the features are independent within each class, so
-$f_k(x) = \prod_j f_{kj}(x_j)$, each one-feature density estimated on its own
+Naive Bayes assumes the features of an observation are independent given its
+class, $X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}$ over observations $i$
+and features $j$, so $f_k(x) = \prod_j f_{kj}(x_j)$, each one-feature density
+estimated on its own
 and of whatever type suits the feature. The log posterior odds are a sum of
 one-feature terms, with no interactions. Gaussian naive Bayes is LDA or QDA
 with a diagonal covariance matrix. With class-specific variances it estimates
@@ -1846,8 +2090,17 @@ density faces. Its bias, which comes from ignoring within-class dependence,
 need not change its classifications, since only the side of the threshold
 matters.
 
-Logistic regression and LDA produce linear boundaries, QDA and Gaussian naive
-Bayes quadratic ones, and KNN boundaries of any shape. Which classifier has the
+With two classes, LDA's log posterior odds are linear in the features, QDA's
+are quadratic with squares and cross-products, and Gaussian naive Bayes's are
+additive, quadratic in each feature without cross-products, or linear when
+the class variances are equal. KNN's boundary can take any shape. Logistic
+regression's log odds are linear in whatever features it is given, so with
+squares, or squares and cross-products, among its features it has naive
+Bayes's or QDA's form. A generative classifier and the logistic regression of
+the same form differ not in the boundaries they can produce but in
+estimation: the generative classifier estimates more free parameters from the
+joint likelihood of features and responses, and logistic regression estimates
+the log-odds coefficients from the conditional likelihood. Which classifier has the
 lowest test error rate depends on how closely its assumptions match the
 data-generating process and on the sizes of $n$ and $p$; no method is best
 in every setting. Comparing classifiers requires test data the models were

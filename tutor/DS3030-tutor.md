@@ -521,7 +521,11 @@ feature information it would assign every customer `No`.
 One-feature LDA (balance): the section opens with the balance histograms
 within each default class (one roughly bell-shaped pile per class, centered
 at different balances, spreads of the same order), which motivate Gaussian
-$f_k$ with class means $\mu_k$ and a **shared** variance $\sigma^2$. Estimates
+$f_k$ with class means $\mu_k$ and a **shared** variance $\sigma^2$, written
+with observation index and independence in the notation:
+$Y_i \stackrel{ind}{\sim} \text{Categorical}(\pi_1, \ldots, \pi_K)$,
+$X_i \mid Y_i = k \stackrel{ind}{\sim} N(\mu_k, \sigma^2)$, $i = 1, \ldots, n$
+(a new observation $(X, Y)$ follows the same model). Estimates
 $\hat\pi_k = n_k/n$ and class sample means (maximum likelihood) and pooled
 variance with divisor $n - K$ (the maximum likelihood estimate rescaled to be
 unbiased), from the **joint** likelihood $\prod_i \pi_{y_i} f_{y_i}(x_i)$
@@ -556,8 +560,11 @@ scatterplot of income against balance by default class and income
 histograms by class (overlapping clouds, weak negative within-class
 correlation of about $-0.16$, bimodal income whose lower mode is mostly
 students — a data fact, not a model feature), which motivate a multivariate
-Gaussian with a shared covariance matrix. $x$ is a column $p$-vector (no
-leading 1); pooled covariance estimate $\hat\Sigma$ and the
+Gaussian with a shared covariance matrix,
+$X_i \mid Y_i = k \stackrel{ind}{\sim} N_p(\mu_k, \Sigma)$, independent over
+observations while the features within one observation may be correlated.
+$X_i = (X_{i1}, \ldots, X_{ip})^\top$ is random with observed value $x_i$; a
+value $x$ is a column $p$-vector (no leading 1); pooled covariance estimate $\hat\Sigma$ and the
 `MASS::lda(default ~ balance + income)` output with a by-hand check;
 $\delta_k(x) = \left(\log\pi_k - \tfrac12\mu_k^\top\Sigma^{-1}\mu_k\right) +
 x^\top\Sigma^{-1}\mu_k$ with a table of the fitted discriminants; a
@@ -650,8 +657,9 @@ incomes; a short recap of Bayes' theorem and LDA's shared covariance follows.
 The QDA and naive Bayes sections each reopen with the same scatterplot and
 what it shows for that model.
 
-**QDA**: $X \mid Y = k \sim N_p(\mu_k, \Sigma_k)$ with a class-specific
-covariance matrix, estimated by each class's sample covariance (divisor
+**QDA**: $Y_i \stackrel{ind}{\sim} \text{Categorical}(\pi_1, \ldots, \pi_K)$,
+$X_i \mid Y_i = k \stackrel{ind}{\sim} N_p(\mu_k, \Sigma_k)$ with a
+class-specific covariance matrix, estimated by each class's sample covariance (divisor
 $n_k - 1$, invertible only if $n_k > p$); `MASS::qda()` fit to the training
 half, with the two $\hat\Sigma_k$ written out. Derivation of
 $\delta_k(x) = -\tfrac12 x^\top\Sigma_k^{-1}x + x^\top\Sigma_k^{-1}\mu_k -
@@ -674,12 +682,19 @@ fits from repeated training sets against a known Bayes decision boundary,
 which the credit card data cannot supply) shows LDA's bias and QDA's
 variance.
 
-**Naive Bayes**: features conditionally independent given the class,
+**Naive Bayes**: $X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}$ over
+observations $i$ and features $j$; independence over $i$ is shared with LDA
+and QDA, independence over $j$ given the class is the naive assumption. Hence
 $f_k(x) = \prod_j f_{kj}(x_j)$, each one-feature density of its own type
-(Gaussian for a quantitative feature, Bernoulli/categorical probabilities for
-a binary/categorical one); `e1071::naiveBayes()` fit to the training half;
+(Gaussian $N(\mu_{kj}, \sigma_{kj}^2)$ for a quantitative feature,
+$\text{Bernoulli}(\theta_{kj})$ or categorical probabilities for a
+binary/categorical one); `e1071::naiveBayes()` fit to the training half;
 two-class log posterior odds additive, $\log(\pi_2/\pi_1) + \sum_j g_j(x_j)$,
-with no interactions; Gaussian naive Bayes is QDA (class-specific variances)
+with no interactions; Gaussian naive Bayes is exactly
+$X_i \mid Y_i = k \stackrel{ind}{\sim} N_p(\mu_k, \Lambda_k)$ with
+$\Lambda_k = \text{diag}(\sigma_{k1}^2, \ldots, \sigma_{kp}^2)$ (the product
+of independent normal densities is the multivariate normal density with
+diagonal covariance, and conversely), i.e. QDA (class-specific variances)
 or LDA (shared variances) with a diagonal covariance matrix, and on the data
 its standard deviations equal the square roots of QDA's diagonals; $2Kp$
 parameters, sidestepping the curse of dimensionality (e.g. $2^p$ cells,
@@ -696,15 +711,30 @@ unlike LDA's correlation-adjusted income slope.
 
 **Comparison**: opens with one figure of all five classifiers' 0.5
 boundaries over the training data (logistic regression and LDA straight, QDA
-and naive Bayes curved with second branches, KNN jagged). KNN classification
-as a neighbor vote
-$\hat p_{\text{Yes}}(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = \text{Yes})$ on
-standardized features (in that section $K$ counts neighbors and the class
+and naive Bayes curved with second branches, KNN jagged; the legend names
+KNN's $K$). KNN classification stated generally as a neighbor vote,
+$\hat p_k(x_0) = \frac1K\sum_{i\in\mathcal N_0}\mathrm I(y_i = k)$ for class
+$k$ with $K$ the number of neighbors, assigning the class with the largest
+$\hat p_k(x_0)$ (ties broken by a rule, at random in `class::knn()`), then
+applied to the credit card data ($k = $ `Yes`, threshold 0.5 for two classes)
+on standardized features (in that section $K$ counts neighbors and the class
 count is written as 2), with $K = 1$ and $K$ the smallest odd integer above
-$\sqrt n$, fixed in advance; boundary shapes (linear for logistic regression
-and LDA, quadratic for QDA, quadratic without cross-products for Gaussian
-naive Bayes, any shape for KNN), parametric vs. nonparametric, and how $n$
-and $p$ favor flexible vs. restricted methods. A simulation study of four
+$\sqrt n$ (71 for the training half), fixed in advance. **Boundary shapes**:
+two-class log odds linear for LDA, quadratic with squares and cross-products
+for QDA, additive for Gaussian naive Bayes (quadratic in each feature without
+cross-products when class variances differ, linear when shared), any shape
+for KNN. Logistic regression is linear in whatever features it is given, so
+with squares it has naive Bayes's form and with squares and cross-products
+QDA's: each pair can produce the same boundaries and differs in estimation
+(joint vs. conditional likelihood) and number of free parameters (a table of
+counts, generative vs. logistic, for general $p$ and $p = 2$, priors
+included), shown in a three-tab figure pairing each generative classifier's
+boundary with its logistic regression counterpart's on the credit card data
+(close within the data, differing in extrapolation: naive Bayes and the
+logistic regression with squares both bend back, at very different balances,
+while of QDA and the logistic regression with squares and product only QDA
+crosses back). Then parametric vs. nonparametric, and
+how $n$ and $p$ favor flexible vs. restricted methods. A simulation study of four
 scenarios (linear, quadratic, independent features with $p = 10$, non-linear
 sine boundary) shows each scenario won by the method whose assumptions are
 the most restrictive ones that still hold (QDA, naive Bayes, and KNN in the
@@ -730,7 +760,8 @@ posteriors are on one scale) and compares it with the single QDA, the
 additive logistic regression, and the logistic regression with every
 coefficient interacted with student status (shown numerically to equal
 separate per-stratum logistic fits); stratifying doubles the parameters
-(priors not counted, as in the chapter's parameter-count table) without
+(priors not counted, as in the bias-variance section's LDA and QDA
+parameter table) without
 meaningfully changing test error rates or AUCs.
 
 ### 15. Generalized Linear Models

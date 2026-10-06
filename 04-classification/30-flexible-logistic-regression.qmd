@@ -1740,10 +1740,10 @@ population of stores, and estimates the *distribution* of intercepts and
 slopes across that population rather than a separate fixed value for each one.
 
 A **random intercept** model lets each store's own intercept vary around a
-shared mean, $b_{0,\text{store}} \sim N(0, \sigma_0^2)$, while every store
+shared mean, $b_{0,\text{store}} \stackrel{ind}{\sim} N(0, \sigma_0^2)$, while every store
 keeps the same price slope — the mixed-effects analogue of the additive model
 above. A **random slope** model goes further and lets the price slope itself
-vary by store, $b_{1,\text{store}} \sim N(0, \sigma_1^2)$, typically allowed to
+vary by store, $b_{1,\text{store}} \stackrel{ind}{\sim} N(0, \sigma_1^2)$, typically allowed to
 correlate with $b_{0,\text{store}}$ — the analogue of the interaction model,
 but estimated with two variances and a correlation instead of one fixed
 coefficient per store, which matters far more once there are dozens of stores

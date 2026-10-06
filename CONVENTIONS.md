@@ -26,6 +26,8 @@ convention.
   convention, which documented capital $X_i$/$X_{ij}$ for the row; that
   version was never applied consistently, and lowercase is the better
   choice for the reason above, not merely the more common one in practice.)
+  The generative-classifier chapters are the one exception, where the
+  features are random; see the independence bullet below.
 - **Nested delimiters cycle `()`, then `[]`, then `{}`, then back to `()`**
   for a fourth level, innermost first. A single, non-nested delimiter
   defaults to `()`. Two levels are `[(\cdot)]`; three are `{[(\cdot)]}`.
@@ -41,6 +43,29 @@ convention.
   (so $E[(Y - \hat f(X))^2]$), and a grouping that contains one, which must
   sit outside the $[\cdot]$ it holds, takes $\{\cdot\}$:
   $\left\{E[Y_i \mid x_i]\right\}^2$.
+- **Every model statement writes its independence assumptions in the
+  notation**, not only in words. Observations are indexed $i = 1, \ldots, n$
+  and independence over them is shown with $\stackrel{ind}{\sim}$, e.g.
+  $Y_i \mid x_i \stackrel{ind}{\sim} \text{Bernoulli}\left[p(x_i)\right]$, or
+  for a generative classifier
+  $Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right)$,
+  $X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right)$. Where
+  features are also assumed independent, the index runs over them too: naive
+  Bayes writes $X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}$ over $i$ and
+  $j$, and the prose after the display says which index carries which
+  assumption. The book uses $\stackrel{ind}{\sim}$ only, never
+  $\stackrel{iid}{\sim}$; identical distribution is visible from parameters
+  that do not depend on $i$. A bare $\sim$ is for a distribution that is not
+  a model for the observations, such as a derived one
+  ($S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$). In the
+  generative-classifier chapters (`04-classification/50-lda.qmd` and
+  `60-qda-naive-bayes.qmd`) the features of observation $i$ are random and
+  written capital, $X_i$ or $X_{ij}$, with observed values $x_i$ and
+  $x_{ij}$: the lowercase-for-fixed-values reasoning of the model-matrix
+  convention above, applied to a model that does not condition on the
+  features. There $x_i = (x_{i1}, \ldots, x_{ip})^\top$ is the observed
+  $p$-vector of features, a column without the leading $1$ (it is the
+  argument of a multivariate density), not a row of $\mathbf{X}$.
 - **The indicator function is $\mathrm{I}(\cdot)$**, upright, never plain
   italic $I(\cdot)$ — it names a function, not a variable.
 - **"Reference," not "baseline,"** for the category or bin a set of dummy

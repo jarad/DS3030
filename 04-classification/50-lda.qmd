@@ -324,17 +324,28 @@ common width of the piles.
 
 ### Gaussian class-conditional densities
 
-With a single feature ($p = 1$), LDA assumes the statistical model
+With a single feature ($p = 1$) and observations indexed $i = 1, \ldots, n$,
+LDA assumes the statistical model
 
-$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N\left(\mu_k, \sigma^2\right), \qquad k = 1, \ldots, K,$$
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N\left(\mu_k, \sigma^2\right), \qquad i = 1, \ldots, n,$$
 
 where
 
-- $\mu_k = E[X \mid Y = k]$ is the mean of the feature in class $k$, and
-- $\sigma^2 = Var[X \mid Y = k]$ is the variance of the feature, **the same in
-every class**.
+- $Y_i$ is the class of observation $i$ and $X_i$ its feature value, both
+random, with observed values $y_i$ and $x_i$,
+- $\text{Categorical}\left(\pi_1, \ldots, \pi_K\right)$ is the distribution on
+the classes $\{1, \ldots, K\}$ with $P(Y_i = k) = \pi_k$,
+- $\stackrel{ind}{\sim}$ means independent over $i$: the $Y_i$ are independent,
+and given $Y_1, \ldots, Y_n$ the $X_i$ are independent, each depending only on
+its own class $Y_i$,
+- $\mu_k = E[X_i \mid Y_i = k]$ is the mean of the feature in class $k$, and
+- $\sigma^2 = Var[X_i \mid Y_i = k]$ is the variance of the feature, **the same
+in every class**.
 
-The class-conditional density is therefore the normal density
+A new observation $(X, Y)$, the one to be classified, follows the same model,
+so $\pi_k = P(Y = k)$ and $f_k$ is the density of $X$ given $Y = k$, as in
+Bayes' theorem above. The class-conditional density is therefore the normal
+density
 
 $$f_k(x) = \frac{1}{\sqrt{2\pi}\,\sigma} \exp\left[-\frac{(x - \mu_k)^2}{2\sigma^2}\right],$$
 
@@ -347,9 +358,9 @@ histograms above, and $\sigma$ is the width the two piles share.
 
 ### Parameter estimation
 
-The parameters $\pi_k$, $\mu_k$, and $\sigma^2$ are estimated from training
-observations $(x_1, y_1), \ldots, (x_n, y_n)$, here with $x_i$ the scalar
-feature value of observation $i$:
+The parameters $\pi_k$, $\mu_k$, and $\sigma^2$ are estimated from the
+observed training data $(x_1, y_1), \ldots, (x_n, y_n)$, here with $x_i$ the
+scalar feature value of observation $i$:
 
 $$\hat\pi_k = \frac{n_k}{n}, \qquad \hat\mu_k = \frac{1}{n_k}\sum_{i:\, y_i = k} x_i, \qquad \hat\sigma^2 = \frac{1}{n - K}\sum_{k=1}^K \sum_{i:\, y_i = k}\left(x_i - \hat\mu_k\right)^2,$$
 
@@ -364,8 +375,9 @@ observation's own class mean, summed over all classes and divided by $n - K$.
 $\hat\pi_k$ and $\hat\mu_k$ are maximum likelihood estimates; $\hat\sigma^2$
 is the maximum likelihood estimate rescaled by $n/(n - K)$ to make it
 unbiased. Under the generative model the joint
-density of observation $i$ is $P(Y = y_i)\, f_{y_i}(x_i) = \pi_{y_i} f_{y_i}(x_i)$,
-so for independent observations the log-likelihood is
+density of observation $i$ is $P(Y_i = y_i)\, f_{y_i}(x_i) = \pi_{y_i} f_{y_i}(x_i)$,
+and the independence over $i$ in the model makes the likelihood the product of
+these densities, so the log-likelihood is
 
 $$\ell(\pi_1, \ldots, \pi_K, \mu_1, \ldots, \mu_K, \sigma^2) = \sum_{k=1}^K n_k \log \pi_k \;+\; \sum_{k=1}^K \sum_{i:\, y_i = k}\left[-\frac{1}{2}\log\left(2\pi\sigma^2\right) - \frac{(x_i - \mu_k)^2}{2\sigma^2}\right].$$
 
@@ -878,23 +890,27 @@ classes, which gives the clouds one common spread and tilt.
 
 ### Multivariate Gaussian densities
 
-With $p > 1$ features, $X = (X_1, \ldots, X_p)^\top$ is a random column vector
-whose entries are the features, and $x$ is a $p$-vector value it takes. A
-value $x$ holds the same kind of entries as a row of the model matrix
-$\mathbf{X}$ but without the leading $1$, and it is a column because it is the
-argument of a multivariate density. LDA assumes the statistical model
+With $p > 1$ features, the features of observation $i$ form a random column
+vector $X_i = (X_{i1}, \ldots, X_{ip})^\top$, and $x$ is a $p$-vector value
+it takes. A value $x$ holds the same kind of entries as a row of the model
+matrix $\mathbf{X}$ but without the leading $1$, and it is a column because it
+is the argument of a multivariate density. LDA assumes the statistical model
 
-$$P(Y = k) = \pi_k, \qquad X \mid Y = k \sim N_p\left(\mu_k, \Sigma\right), \qquad k = 1, \ldots, K,$$
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right), \qquad i = 1, \ldots, n,$$
 
 where
 
+- $Y_i$, $\text{Categorical}\left(\pi_1, \ldots, \pi_K\right)$, and
+$\stackrel{ind}{\sim}$ are as in the one-feature model, so the observations
+are independent while the $p$ features within one observation may be
+correlated,
 - $N_p$ is the $p$-dimensional multivariate normal distribution,
-- $\mu_k = E[X \mid Y = k] = (\mu_{k1}, \ldots, \mu_{kp})^\top$ is the
+- $\mu_k = E[X_i \mid Y_i = k] = (\mu_{k1}, \ldots, \mu_{kp})^\top$ is the
 $p$-vector of feature means in class $k$, and
-- $\Sigma = Cov[X \mid Y = k]$ is the $p \times p$ covariance matrix of the
-features, **the same in every class**, with feature variances on its diagonal
-and covariances between pairs of features off it; it is symmetric and
-positive definite.
+- $\Sigma = Cov[X_i \mid Y_i = k]$ is the $p \times p$ covariance matrix of
+the features, **the same in every class**, with feature variances on its
+diagonal and covariances between pairs of features off it; it is symmetric
+and positive definite.
 
 The class-conditional density is therefore the multivariate normal density
 
@@ -912,8 +928,9 @@ two clouds one common spread and tilt.
 ### Pooled covariance estimate
 
 The estimates generalize directly. The priors are still $\hat\pi_k = n_k/n$,
-and with $x_i = (x_{i1}, \ldots, x_{ip})^\top$ now the $p$-vector of feature
-values for observation $i$ (again without the leading $1$),
+and with $x_i = (x_{i1}, \ldots, x_{ip})^\top$ now the observed value of
+$X_i$, the $p$-vector of feature values for observation $i$ (again without
+the leading $1$),
 
 $$\hat\mu_k = \frac{1}{n_k}\sum_{i:\, y_i = k} x_i, \qquad \hat\Sigma = \frac{1}{n - K}\sum_{k=1}^K \sum_{i:\, y_i = k}\left(x_i - \hat\mu_k\right)\left(x_i - \hat\mu_k\right)^\top,$$
 
