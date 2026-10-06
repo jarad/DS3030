@@ -10,8 +10,10 @@ set.seed(20261001)
 working_colors  <- c("No" = "#009E73", "Yes" = "#CC79A7")
 working_labels  <- c("No" = "Non-working day", "Yes" = "Working day")
 model_colors    <- c("Linear regression" = "#D55E00",
+                     "Log-count linear regression" = "#009E73",
                      "Poisson regression" = "#0072B2")
 model_linetypes <- c("Linear regression" = "dashed",
+                     "Log-count linear regression" = "dotdash",
                      "Poisson regression" = "solid")
 
 # Renders a number in LaTeX scientific notation for use inside $...$.
@@ -37,7 +39,9 @@ $\eta_i = x_i\beta$, and a link function $g$ with $g(\mu_i) = \eta_i$ — and
 **identify** linear, logistic, and Poisson regression as special cases by their
 distribution, link, and variance,
 - **explain**, using fitted values and residuals, why linear regression is a
-poor model for a count response,
+poor model for a count response, and **contrast** a linear regression of
+$\log Y_i$, which models $E[\log Y_i \mid x_i]$, with a Poisson regression,
+which models $\log E[Y_i \mid x_i]$,
 - **write** the Poisson regression log-likelihood, **derive** its score
 equations, and **explain** why, in general, its maximizer has no closed form,
 - **interpret** $e^{\beta_0}$ as a mean count and $e^{\beta_j}$ as a rate
@@ -359,6 +363,103 @@ median temperature of all `r fmt(n_negative)` is
 `r sprintf("%.1f", median(bike$temp_c[bike$fit_lm < 0]))` degrees Celsius,
 against `r sprintf("%.1f", median(bike$temp_c))` for all hours.
 
+### Log-count linear regression
+
+The regression lectures' remedy for a positive response whose spread grows
+with its mean is least squares on $\log Y_i$ with the same features. Its model
+is
+
+$$\log Y_i \mid x_i \stackrel{ind}{\sim} N\left(x_i\gamma, \sigma^2\right),$$
+
+where
+
+- $x_i = (1, x_{i1}, \ldots, x_{ip})$ is the $i$th row of the model matrix
+$\mathbf{X}$: a leading $1$ and the `r length(coef(bike_lm)) - 1` features of
+the linear regression above, and
+- $\gamma = (\gamma_0, \ldots, \gamma_p)^\top$ and $\sigma^2$ are this model's
+coefficients and error variance, estimated by least squares and the residual
+mean square.
+
+A fitted value $x_i\hat\gamma$ is on the log scale. Exponentiated,
+
+$$e^{x_i\hat\gamma} = e^{\hat\gamma_0} \times e^{\hat\gamma_1 x_{i1}} \times \cdots \times e^{\hat\gamma_p x_{ip}}$$
+
+is positive for every $\hat\gamma$, and each feature multiplies it by a
+factor rather than adding a number of riders, which addresses the first and
+third failures. Counting the hours with zero bikers, then fitting with the
+features of `bike_formula`:
+
+```{r bike-log-lm}
+sum(bike$bikers == 0)
+bike_log_lm <- lm(update(bike_formula, log(.) ~ .), data = bike)
+```
+
+No hour has zero bikers (the count is `r sum(bike$bikers == 0)`), so
+$\log y_i$ is defined for all `r fmt(nrow(bike))` hours.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r log-fit-check}
+#| output: false
+bike <- bike |>
+  mutate(fit_log   = exp(fitted(bike_log_lm)),
+         resid_log = residuals(bike_log_lm))
+
+sd_low_log  <- sd(bike$resid_log[bike$fit_log < fit_low])
+sd_high_log <- sd(bike$resid_log[bike$fit_log > fit_high])
+
+combination_log <- bike |>
+  group_by(working, hour) |>
+  summarize(ratio = mean(fit_log) / mean(bikers), .groups = "drop")
+
+log_residual_plot <- ggplot(bike, aes(x = fitted(bike_log_lm),
+                                      y = resid_log)) +
+  geom_point(alpha = 0.1, size = 0.6) +
+  geom_hline(yintercept = 0, color = "grey40") +
+  labs(x = "Fitted log count from least squares",
+       y = "Residual (log scale)",
+       title = "Log-count linear regression residuals")
+```
+:::
+
+The figure plots each hour's residual against its fitted log count; the
+solid line marks a residual of zero.
+
+```{r log-residual-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.6
+log_residual_plot
+```
+
+The smallest back-transformed fitted value is
+`r fmt(min(bike$fit_log), 2)` bikers, so no fitted value is negative. The
+residuals no longer fan out to the right; they narrow instead. Their standard
+deviation is `r sprintf("%.2f", sd_low_log)` among hours with back-transformed
+fitted values below $`r fit_low`$ and `r sprintf("%.2f", sd_high_log)` among
+hours with back-transformed fitted values above $`r fit_high`$: on the log
+scale the spread shrinks as the mean grows, so the one common variance
+$\sigma^2$ still does not describe the data.
+
+The model also changes what is estimated. Exponentiating a fitted value gives
+$e^{x_i\hat\gamma}$, a positive number on the scale of the counts, but it
+estimates $e^{E[\log Y_i \mid x_i]}$, not the mean count. Jensen's inequality
+states that $E[g(Y)] \le g(E[Y])$ for a concave function $g$; with $g = \log$
+it gives $E[\log Y_i \mid x_i] \le \log E[Y_i \mid x_i]$, and therefore
+
+$$e^{E[\log Y_i \mid x_i]} \le E[Y_i \mid x_i],$$
+
+with equality only when $Y_i$ given $x_i$ is constant. Under the normal model
+$\log Y_i$ has median $x_i\gamma$, and the exponential is increasing, so
+$e^{x_i\gamma}$ is the median of $Y_i$ given $x_i$: the median reading of a
+logged response in the [Multiple (Linear) Regression](../03-regression/20-mlr.qmd)
+lecture.
+
+Averaged within each of the `r nrow(combination_log)` combinations of hour
+and working-day status, the back-transformed fitted values fall below the
+observed mean in `r sum(combination_log$ratio < 1)`, with a median ratio to
+the observed mean of `r sprintf("%.2f", median(combination_log$ratio))`.
+
 ## Generalized linear models
 
 The figure repeats the mean–variance plot of the hourly counts: each of the
@@ -482,11 +583,15 @@ assumption the fanning residuals of the bike-count linear regression
 contradicted. The two other models require the variance to change with the
 mean, as the bike counts' variance did in the mean–variance plot.
 
-A GLM transforms the **mean**, not the response. The regression lectures'
-remedy for a variance that grows with the mean was to model $\log Y_i$, which
-describes $E[\log Y_i \mid x_i]$ and fails for a count of zero (`bikers` has
-none, but counts in general can). A log link models $\log E[Y_i \mid x_i]$
-and never takes the logarithm of $y_i$.
+A GLM transforms the **mean**, not the response. Both the log-count linear
+regression above and the Poisson regression below put the linear predictor on
+a log scale, but of different quantities:
+
+$$\text{log-count linear regression: } E[\log Y_i \mid x_i] = x_i\gamma, \qquad \text{Poisson regression: } \log E[Y_i \mid x_i] = x_i\beta.$$
+
+The log-count model takes the logarithm of $y_i$, so it fails for a count of
+zero (`bikers` has none, but counts in general can); a log link never takes
+the logarithm of $y_i$.
 
 ::: {.callout-note collapse="true"}
 ### Beyond this course
@@ -520,17 +625,22 @@ cell_means <- bike |>
   group_by(weather, working, hour) |>
   summarize(n = n(), observed = mean(bikers), .groups = "drop")
 
-observed_base <- ggplot(cell_means, aes(x = hour, y = observed)) +
+observed_points <- geom_point(aes(shape = "Observed mean"), size = 1.3)
+
+# Axes, facets, and scales without the points, so later figures can draw
+# fitted lines underneath the points.
+observed_frame <- ggplot(cell_means, aes(x = hour, y = observed)) +
   geom_hline(yintercept = 0, color = "grey50", linetype = "dotted") +
-  geom_point(size = 1.3, shape = 1) +
   facet_grid(weather ~ working, scales = "free_y",
              labeller = labeller(working = working_labels)) +
   scale_x_continuous(breaks = seq(0, 24, by = 4)) +
+  scale_shape_manual(values = c("Observed mean" = 1)) +
   labs(x = "Hour of the day", y = "Mean bikes rented in the hour",
-       color = NULL, linetype = NULL) +
+       color = NULL, linetype = NULL, shape = NULL) +
   theme(legend.position = "none")
 
-observed_plot <- observed_base + labs(title = "Observed hourly means")
+observed_plot <- observed_frame + observed_points +
+  labs(title = "Observed hourly means")
 
 # Rain/snow vs. clear on working days: ratio and difference of hourly means.
 rain_vs_clear <- cell_means |>
@@ -649,65 +759,68 @@ gap $`r if (max_gap > 0) sci(max_gap) else "0"`$ bikers).
 cell_fits <- bike |>
   group_by(weather, working, hour) |>
   summarize(`Linear regression` = mean(fit_lm),
+            `Log-count linear regression` = mean(fit_log),
             `Poisson regression` = mean(fit_glm), .groups = "drop") |>
   right_join(cell_means, by = c("weather", "working", "hour"))
 
 cell_long <- cell_fits |>
-  pivot_longer(c(`Linear regression`, `Poisson regression`),
-               names_to = "model", values_to = "fitted")
+  pivot_longer(all_of(names(model_colors)),
+               names_to = "model", values_to = "fitted") |>
+  mutate(model = factor(model, levels = names(model_colors)))
 
 rain_night <- filter(cell_fits, weather == "rain/snow", hour <= 6)
+n_below <- sapply(names(model_colors),
+                  function(m) sum(cell_fits[[m]] < cell_fits$observed))
 
-# Every tab draws the fitted means invisibly so both tabs share y axes.
-shared_axes <- geom_blank(data = cell_long, aes(y = fitted))
-
-model_layer <- function(m) {
-  list(geom_line(data = filter(cell_long, model == m),
-                 aes(y = fitted, color = model, linetype = model),
-                 linewidth = 0.8),
-       scale_color_manual(values = model_colors),
-       scale_linetype_manual(values = model_linetypes))
-}
-fitted_lm_plot <- observed_base + shared_axes +
-  model_layer("Linear regression") +
-  labs(title = "Linear regression fitted means")
-fitted_glm_plot <- observed_base + shared_axes +
-  model_layer("Poisson regression") +
-  labs(title = "Poisson regression fitted means")
+fitted_plot <- observed_frame +
+  geom_line(data = cell_long,
+            aes(y = fitted, color = model, linetype = model),
+            linewidth = 0.8) +
+  observed_points +
+  scale_color_manual(values = model_colors) +
+  scale_linetype_manual(values = model_linetypes) +
+  guides(shape = guide_legend(order = 1),
+         color = guide_legend(order = 2),
+         linetype = guide_legend(order = 2)) +
+  labs(title = "Observed and fitted hourly means") +
+  theme(legend.position = "bottom",
+        legend.key.width = unit(2.5, "lines"))
 ```
 :::
 
-Each tab redraws the observed hourly means of the figure above and adds a
-line through one model's fitted means, averaged within each point's group;
-the two tabs share their vertical axes, and each tab's title names the model.
+The figure redraws the observed hourly means of the figure above and adds one
+line per model through its fitted means, averaged within each point's group;
+for the log-count linear regression the fitted values are the
+back-transformed $e^{x_i\hat\gamma}$.
 
-::: {.panel-tabset}
-#### Linear regression
-```{r fitted-lm-figure}
+```{r fitted-means-figure}
 #| echo: false
 #| fig-width: 8
-#| fig-height: 6.5
-fitted_lm_plot
+#| fig-height: 7
+fitted_plot
 ```
 
-#### Poisson regression
-```{r fitted-glm-figure}
-#| echo: false
-#| fig-width: 8
-#| fig-height: 6.5
-fitted_glm_plot
-```
-:::
+Pooled over weather, linear and Poisson regression agree, since both
+reproduce each hour-by-working-day mean; they differ only in how they split
+each combination across the weather rows. In the `rain/snow` row, linear
+regression subtracts its constant weather coefficient from every hour, and its
+lines fall below zero overnight and in the early morning, as low as
+`r fmt(min(rain_night$"Linear regression"), 1)` bikers, where the observed
+means never fall below `r fmt(min(rain_night$observed), 1)`. The Poisson lines
+scale the hourly profile down instead and follow the points much more
+closely, overnight included.
 
-Pooled over weather, the two models agree, since both reproduce each
-hour-by-working-day mean; they differ only in how they split each combination
-across the weather rows. In the `rain/snow` row, linear regression subtracts
-its constant weather coefficient from every hour, and its lines fall below
-zero overnight and in the early morning, as low as `r fmt(min(rain_night$"Linear regression"), 1)`
-bikers, where the observed means never fall below
-`r fmt(min(rain_night$observed), 1)`. The Poisson lines scale the hourly
-profile down instead and follow the points much more closely, overnight
-included.
+The log-count lines also scale the profile and stay positive; their smallest
+overnight value in the `rain/snow` row is
+`r fmt(min(rain_night$"Log-count linear regression"), 1)` bikers. Across all
+panels they lie below the observed mean at
+`r n_below["Log-count linear regression"]` of the `r nrow(cell_fits)` points,
+against `r n_below["Poisson regression"]` for the Poisson lines. Summed over
+all hours, the back-transformed fitted values total
+`r fmt(sum(bike$fit_log))` bikers, against the `r fmt(sum(bike$bikers))`
+observed, a total the Poisson fitted means reproduce. Both comparisons are
+consistent with a fit that estimates $e^{E[\log Y_i \mid x_i]}$ rather than
+the mean count.
 
 ### Coefficient interpretation
 
@@ -993,7 +1106,12 @@ and variance functions $1$, $\mu(1-\mu)$, and $\mu$.
 Poisson regression models a count. Its mean $e^{x_i\beta}$ is positive for
 every $\beta$; $e^{\beta_0}$ is the mean count when every feature is zero,
 and $e^{\beta_j}$ a rate ratio, the factor multiplying the mean count
-per unit of feature $j$ with the other features held fixed. Its coefficients
+per unit of feature $j$ with the other features held fixed. A linear
+regression of $\log Y_i$ also gives back-transformed fits that are positive and
+on which features act multiplicatively, but it requires every $y_i > 0$ and models
+$E[\log Y_i \mid x_i]$; its back-transformed fits estimate
+$e^{E[\log Y_i \mid x_i]}$, which by Jensen's inequality is at most the mean
+count $E[Y_i \mid x_i]$. Poisson regression's coefficients
 are maximum likelihood estimates; the score equations
 $\sum_i x_{ij}(y_i - \mu_i) = 0$ have the logistic regression form, have no
 closed-form solution, and are solved by iteratively reweighted least squares.
