@@ -2232,8 +2232,7 @@ data-generating process and on the sizes of $n$ and $p$; no method is best
 in every setting. Comparing classifiers requires test data the models were
 not fit to, since training error rates reward flexibility.
 
-The next lecture steps back from classification to a framework that contains
-linear and logistic regression as special cases. Generalized linear models
-pair a distribution for the response with a link function for its mean, and
-Poisson regression, the generalized linear model for counts, is the first new
-member of the family.
+The next lecture begins the resampling unit. Resampling methods refit a model
+to repeated subsets of the training data to estimate its test error without a
+separate held-out test set, which lets choices such as the number of neighbors
+$K$ be made from the data.
