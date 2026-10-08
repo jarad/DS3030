@@ -334,6 +334,14 @@ Drag the slider from t = 0.9 to t = 0.1. The cutoff slides left, the shaded shar
 Lowering t from 0.5 to 0.2 moves each model's marked point up and slightly right along its curve; logistic regression's point sits further along its nearly shared curve than LDA's. The crossover discussion (the balances where the two posterior curves cross at the income quartiles, and the order reversing at a low threshold) is in the notes.
 :::
 
+## Area under the ROC curve
+
+![AUC = 0.94907 for balance and income](../_freeze/04-classification/55-classifier-evaluation/figure-html/auc-figure-display-1.png)
+
+::: notes
+The left panel of the chapter's two-panel figure. The area is the AUC (trapezoid rule) in the table on the next slide.
+:::
+
 ## AUC of the fitted classifiers
 
 |Model                                 | AUC (trapezoid rule) | AUC (pairwise comparison) |
@@ -349,36 +357,12 @@ Two computations of the AUC agree in every row
 With balance alone LDA and logistic regression have identical AUCs, since both posterior probabilities are increasing functions of balance, so they order the customers identically and trace the same ROC curve. With balance and income the orderings differ slightly, and the AUCs 0.94907 and 0.94905 differ by 2.1 times 10 to the minus 5. An AUC of 0.949 means that for a random defaulter and non-defaulter, LDA gives the defaulter the higher posterior probability about 95% of the time.
 :::
 
-## Area under the ROC curve
-
-![AUC = 0.94907 for balance and income](../_freeze/04-classification/55-classifier-evaluation/figure-html/auc-figure-display-1.png)
-
-::: notes
-The left panel of the chapter's two-panel figure. The area is the AUC (trapezoid rule) in the table on the previous slide.
-:::
-
 ## ROC curves, same customers
 
 ![AUC ranks classifiers without a threshold](../_freeze/04-classification/55-classifier-evaluation/figure-html/auc-figure-display-2.png)
 
 ::: notes
 The right panel of the chapter's two-panel figure. Income alone barely separates the classes (AUC 0.533), its curve staying near the diagonal. The balance-only and two-feature curves nearly coincide and cross: the two-feature curve is the higher one over 27% of the range of false positive rates and the balance-only curve over 11%. The AUC averages over all of them, so the classifier with the larger AUC can still be the worse one over the false positive rates that matter for a given application.
-:::
-
-## Credit card findings
-
-LDA and logistic regression order the customers almost identically
-
-::: {.fragment}
-Income adds little beyond balance: AUC +0.0011
-:::
-
-::: {.fragment}
-At $t = 0.5$ either catches a minority of defaulters: use a lower threshold
-:::
-
-::: notes
-LDA's Gaussian assumptions fit these customers imperfectly, yet it orders them almost exactly as logistic regression does and differs mainly in flagging fewer customers at high thresholds. Income's logistic regression coefficient is clearly nonzero (z = 4.17) although it adds only 0.0011 to LDA's AUC. A lender who cares about missed defaults would use a lower threshold.
 :::
 
 # Student Strata
@@ -431,7 +415,9 @@ Training rates: stratified models estimate twice as many parameters
 The extra flexibility barely changes the classifications: stratifying LDA moves the training error rate from 2.76% to 2.73% and its AUC from 0.9491 to 0.9495, and interacting the logistic regression moves its error rate from 2.63% to 2.68%. The stratified models estimate 16 parameters against 8 for LDA and 6 against 3 for logistic regression, so their training error rates tend to understate test error, and their training AUCs overstate test AUC, by more. Whether stratifying helps on new customers is a question for test data.
 :::
 
-## Multiple classes
+# Multiple classes
+
+## Confusion matrix
 
 |Truth    | Predicted 1 | Predicted 2 | $\cdots$ | Predicted $K$ |
 |:--------|:-----------:|:-----------:|:--------:|:-------------:|

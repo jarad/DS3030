@@ -44,7 +44,7 @@ shifted.
 | ---- | --- | -------------- | ----- |
 | 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |
 | 2026-10-02 | Fri | **Exam 1** | |
-| 2026-10-07 | Wed | `04-classification/55-classifier-evaluation.qmd` | Confusion matrix, sensitivity and specificity, classification thresholds, ROC curve and AUC, credit card findings, student strata (shown 10-05 from the LDA deck; full treatment here) |
+| 2026-10-07 | Wed | `04-classification/55-classifier-evaluation.qmd` | Covered every slide in `55-classifier-evaluation_slides.qmd` (confusion matrix, sensitivity and specificity, classification thresholds, ROC curve and AUC, student strata, multiple classes), though some slides were skipped on the fly as less important. Afterwards the deck was revised: the Area under the ROC curve slide moved to follow ROC curves, balance + income; the Credit card findings slide was removed; and the Multiple classes slides got a transition slide, with the first retitled Confusion matrix. |
 | 2026-10-09 | Fri | `04-classification/60-qda-naive-bayes.qmd` | QDA (bias-variance tradeoff vs. LDA); naive Bayes (conditional independence); KNN classification; comparison of classification methods (ISLR2 4.5) on a held-out test set |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |
