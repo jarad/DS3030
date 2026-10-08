@@ -98,7 +98,7 @@ Each $\Sigma_k$ from its own class alone, divisor $n_k - 1$; $\widehat\pi_k$ and
 :::
 
 ::: notes
-The ellipses of the first scatterplot now each get their own size, shape and orientation. The estimate is invertible only if n_k > p, which is why the defaulters' small class matters later.
+The ellipses of the first scatterplot now each get their own size, shape and orientation. The estimate is invertible only if n_k > p.
 :::
 
 ## Fitting QDA
@@ -360,7 +360,7 @@ $$\widehat p_k(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\mathrm{I}(y_i = k)$$
 - $K$ — number of neighbors (not the number of classes)
 
 ::: {.fragment}
-Neighbors voting: each of the $K$ neighbors votes for its own class, and $\widehat p_k(x_0)$ is the share of votes for class $k$
+Neighbors vote!
 :::
 
 ::: {.fragment}

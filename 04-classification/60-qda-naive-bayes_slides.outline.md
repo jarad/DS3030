@@ -15,7 +15,7 @@ gains a KNN-only boundary figure). Revised again 2026-10-06 on request: the KNN
 transition is titled "K-Nearest Neighbors", a code slide for fitting KNN
 (21) follows KNN classification, and four Comparing methods slides (Parameter
 count, Five classifiers, Bias-variance tradeoff, Boundary variability) are
-parked below, so the deck is now 32 slides (0 to 31). The chapter is the
+parked below, so the deck is now 32 slides (0 to 31). Revised again 2026-10-08: the Generative classifiers table (3), the Boundary list (9), One feature before Two features (10, 11) and the shortened KNN vote line (20). The chapter is the
 largest of the unit, so the core line is: the data and the three-way setup, QDA
 (model, fit, class contours, discriminant, boundary), naive Bayes (conditional
 independence, fit, additive log odds, diagonal covariance, boundary), KNN (vote,
@@ -89,8 +89,7 @@ writes the terms that do not involve k: they are dropped in words.
 (slide 0 and 21 more) and 5 `optional`. At about 2 to 3 minutes each, 21
 content slides fits 50 minutes only because the quick ones (7, 10, 18, 24, 28)
 take a minute or less. If time runs short, drop in this order: 27 (paired
-boundaries), 14 (mixed feature types), 22 (KNN boundary), 11 (one-feature
-second branch), 25 (boundary shapes equations; keep the pairing table on 26).
+boundaries), 14 (mixed feature types), 22 (KNN boundary), 10 (one feature), 25 (boundary shapes equations; keep the pairing table on 26).
 
 ---
 
@@ -117,11 +116,11 @@ note: `qda-data-figure` (start of QDA, reused on slide 7) and `nb-data-figure` (
 
 ## 3. Generative classifiers
 tag: core
-show: equation — the LDA recap display, `p_k(x) \propto \pi_k f_k(x)` (the denominator and the equality chain are dropped), then the three models, each the chapter's own display with `\stackrel{ind}{\sim}`: LDA `Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right), \qquad i = 1, \ldots, n`, QDA the same with `\Sigma_k`, naive Bayes the same with `X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}` over `i` and `j`
-words: "Generative classifiers differ only in the model for f_k(x)", then the bare labels "LDA", "QDA", "Naive Bayes", one above each model
-reveal: on arrival: `p_k(x) \propto \pi_k f_k(x)`; click 1: the "differ only in" line, the label "LDA" and its model; click 2: "QDA" and its model; click 3: "Naive Bayes" and its model
-say: the recap of the LDA lecture; the prior is estimated by n_k/n for every generative classifier; the next two sections change f_k(x) in the two directions the second and third models name; the ∝ form is the LDA lecture's last display, since the chapter's own display keeps the full ratio
-note: the model displays are the chapter's three, copied in full (so each shows the Categorical prior and the index range) and set small to fit the slide width; the comments that used to follow each label (one Σ shared, class-specific Σ_k, independent features) are said aloud, not shown.
+show: equation and table — the LDA recap display, `p_k(x) \propto \pi_k f_k(x)` (the denominator and the equality chain are dropped), then the chapter's prior display `Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad i = 1, \ldots, n`, then a two-column table (Classifier, Distribution) of four models, each with `\stackrel{ind}{\sim}`: LDA `X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right)`, QDA the same with `\Sigma_k`, naive Bayes `X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}, \quad j = 1, \ldots, p`, and Gaussian naive Bayes the same as LDA with `\Lambda_k`
+words: "Generative classifiers differ only in the model for f_k(x)" above the table, and below it "Λ_k: diagonal covariance matrix"
+reveal: on arrival: `p_k(x) \propto \pi_k f_k(x)` and the `Y_i` display; click 1: the "differ only in" line and the table; click 2: the Λ_k line
+say: the recap of the LDA lecture; the prior is estimated by n_k/n for every generative classifier; the next two sections change f_k(x) in the two directions the QDA and naive Bayes rows name (a covariance matrix for each class, and independent features); the Gaussian naive Bayes row returns on the Diagonal covariance slide
+note: the `Y_i` display is shown once, above the table, so each row states only its `X_i` distribution; the Gaussian naive Bayes row is the chapter's equivalence (naive Bayes with Gaussian f_kj is N_p(μ_k, Λ_k) with diagonal Λ_k), stated here before the Diagonal covariance slide derives it. The table is set at 0.8 of the slide font; if the naive Bayes row's `j = 1, \ldots, p` does not fit, drop it and say the index range aloud.
 
 ---
 
@@ -165,23 +164,24 @@ note: follows the chapter and the LDA deck's convention (drop the k-free terms i
 ## 9. Quadratic decision boundary
 tag: core
 show: equation — the K = 2 log posterior odds, `\log\left[\frac{p_2(x)}{1 - p_2(x)}\right] = \delta_2(x) - \delta_1(x) = \beta_0 + x^\top\left(\Sigma_2^{-1}\mu_2 - \Sigma_1^{-1}\mu_1\right) - \frac{1}{2}x^\top \left(\Sigma_2^{-1} - \Sigma_1^{-1}\right) x`
-words: after the equation, "Boundary: log posterior odds = 0, a conic section with two features; up to two points with one feature"
-reveal: on arrival: the log-odds equation; click 1: the boundary line
-say: an intercept, p linear terms and p(p+1)/2 squares and cross-products; the boundary is a curve, not a line
-note: the one-feature case (up to two boundary points) is also in the chapter's one-feature log-odds display, parked below; slide 11 shows it.
+words: after the equation, "Boundary: log posterior odds = 0", then an itemized list: "Two features: a conic section", "One feature: up to two points"
+reveal: on arrival: the log-odds equation; click 1: the boundary line and the list
+say: an intercept, p linear terms and p(p+1)/2 squares and cross-products; with two features the boundary is a curve, not a line
+note: the one-feature case (up to two boundary points) is also in the chapter's one-feature log-odds display, parked below; slide 10 shows it.
 
-## 10. QDA and LDA boundaries
+## 10. One feature
+tag: core
+show: tabset — two tabs: "Prior-weighted densities" (qda-one-qda-figure), "Discriminant functions" (qda-one-delta-figure)
+words: below the tabset, "The class with the larger variance is assigned in both tails"
+say: with balance alone the discriminant functions are two downward parabolas that cross twice, where the LDA lecture's straight lines crossed once; the second crossing is past every customer in either half
+note: the chapter's heading for this material is the sentence "The second branch is easiest to see with one feature", not a subsection title, so this title is new; it is the same discussion as "Quadratic decision boundary" and comes before the two-feature figure, the reverse of the chapter's order. Move to optional if time is short.
+
+## 11. Two features
 tag: core
 show: figure — qda-boundary-figure
 words: "Within the training balances, QDA's boundary runs close to LDA's line; beyond them it has a second branch"
 say: the shaded region is beyond the largest training balance, so the second branch is an extrapolation of Gaussian tails
-
-## 11. Second boundary branch
-tag: core
-show: tabset — two tabs: "Prior-weighted densities" (qda-one-qda-figure), "Discriminant functions" (qda-one-delta-figure)
-words: "One feature: the class with the larger variance is assigned in both tails"
-say: with balance alone the discriminant functions are two downward parabolas that cross twice, where the LDA lecture's straight lines crossed once; the second crossing is past every customer in either half
-note: the chapter's heading for this material is the sentence "The second branch is easiest to see with one feature", not a subsection title, so this title is new; it is the same discussion as "Quadratic decision boundary". Move to optional if time is short.
+note: the title was "QDA and LDA boundaries".
 
 ---
 
@@ -246,11 +246,11 @@ words: none
 
 ## 20. KNN classification
 tag: core
-show: equation — `\widehat p_k(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\mathrm{I}(y_i = k)`, with three labels, then the assignment rule and the two-class case
-words: "x_0 — feature vector to classify", "N_0 — the K training points closest to x_0", "K — number of neighbors, not the number of classes"; then "Assign x_0 to the class with the largest p̂_k(x_0)"; then "Two classes: p̂_No(x_0) = 1 − p̂_Yes(x_0), so assign Yes when p̂_Yes(x_0) > 0.5"
-reveal: on arrival: the equation and the three labels; click 1: the assignment line; click 2: the two-class line
+show: equation — `\widehat p_k(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\mathrm{I}(y_i = k)`, with three labels, then the vote line and the assignment rule
+words: "x_0 — feature vector to classify", "N_0 — the K training points closest to x_0", "K — number of neighbors (not the number of classes)"; then "Neighbors vote!"; then "Assign x_0 to the class with the largest p̂_k(x_0)"
+reveal: on arrival: the equation and the three labels; click 1: "Neighbors vote!"; click 2: the assignment line
 say: the flexibility lecture's KNN, now with a vote; features are standardized first; K is fixed at the smallest odd integer above √n here (71 for these 5,000 training customers, a rule of thumb, since choosing K from the data is the next unit); from here to the end of the comparison K is the number of neighbors, not the number of classes
-note: general first, as in the chapter; the two-class case is the chapter's last sentences of the subsection (the Yes/0.5 specialization is stated in words and inline math there, not as a displayed sum, so it is a one-line fragment, not an equation). The standardization sentence, the tie-breaking rule and the rule for K are parked (slide 21 shows `standardize()` as code); the K = 71 is inline R in the chapter.
+note: general first, as in the chapter. The two-class case (p̂_No = 1 − p̂_Yes, so assign Yes when p̂_Yes > 0.5) was dropped from the slide; say it aloud if needed. The standardization sentence, the tie-breaking rule and the rule for K are parked (slide 21 shows `standardize()` as code); the K = 71 is inline R in the chapter.
 
 ## 21. Fitting KNN
 tag: core
