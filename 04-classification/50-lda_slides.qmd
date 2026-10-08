@@ -31,7 +31,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/50-lda.qmd @ 63ba15d -->
+<!-- derived-from: 04-classification/50-lda.qmd @ bab6273 -->
 
 - Bayes' theorem
 - LDA, one feature and several

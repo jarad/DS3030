@@ -33,7 +33,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/60-qda-naive-bayes.qmd @ 9ae5029 -->
+<!-- derived-from: 04-classification/60-qda-naive-bayes.qmd @ 45bb1b2 -->
 
 - QDA
 - Naive Bayes
