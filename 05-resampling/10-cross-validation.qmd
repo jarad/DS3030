@@ -1,0 +1,1461 @@
+# Cross-Validation
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("ISLR2")
+theme_set(theme_bw())
+set.seed(20261008)
+
+# class::knn() is called with :: rather than attached.
+class_colors <- c(No = "#0072B2", Yes = "#D55E00")
+
+# Fixed decimals with thousands separators, and percentages, for prose.
+fmt <- function(x, digits = 2) {
+  formatC(x, format = "f", digits = digits, big.mark = ",")
+}
+pct <- function(x, digits = 1) paste0(fmt(100 * x, digits), "%")
+# A number in LaTeX scientific notation for use inside $...$.
+sci <- function(x, digits = 1) {
+  e <- floor(log10(abs(x)))
+  sprintf("%s \\times 10^{%d}", formatC(x / 10^e, format = "f", digits = digits), e)
+}
+# "a", "a and b", "a, b, and c".
+and_list <- function(x) {
+  if (length(x) == 1) x else if (length(x) == 2) paste(x, collapse = " and ") else
+    paste0(paste(x[-length(x)], collapse = ", "), ", and ", x[length(x)])
+}
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **explain** why training error cannot choose a model's flexibility, and
+**identify** the two weaknesses of the validation set approach: its estimate
+varies from one random split to the next, and it overestimates the test error
+of a model fit to all $n$ observations,
+- **define** the leave-one-out and $k$-fold cross-validation estimates of test
+MSE and test error rate, and **implement** each as a loop that fits on all but
+one fold and predicts the held-out fold,
+- **derive** the least squares shortcut
+$\text{CV}_{(n)} = \frac{1}{n}\sum_{i=1}^n\left[\left(y_i - \hat y_i\right)/\left(1 - h_i\right)\right]^2$
+and **interpret** the role of the leverage $h_i$ in it,
+- **compare** the validation set approach, leave-one-out, and $k$-fold
+cross-validation by the bias and variance of their test-error estimates and by
+computation, and **justify** the usual choice $k = 5$ or $10$,
+- **use** cross-validation to choose a flexibility setting, such as a
+polynomial degree or the number of neighbors $K$ in KNN, and
+- **identify** the data-dependent steps of a fit (feature screening,
+standardization, tuning) that must be repeated inside every fold, and
+**explain** why performing them once on all the data makes the
+cross-validation estimate optimistic.
+:::
+
+## Test error estimation
+
+### Horsepower and fuel efficiency
+
+**Question.** How flexible should a regression of a car's fuel efficiency on
+its engine horsepower be?
+
+**Data.** `ISLR2::Auto` records `r nrow(Auto)` cars. The response is `mpg`,
+miles per gallon, and the explanatory variable is `horsepower`. The figure
+plots one against the other.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r auto-base}
+#| output: false
+auto_base <- ggplot(Auto, aes(x = horsepower, y = mpg)) +
+  geom_point(alpha = 0.4, size = 1) +
+  coord_cartesian(ylim = range(Auto$mpg)) +
+  labs(x = "Horsepower", y = "Miles per gallon", title = "ISLR2::Auto")
+```
+:::
+
+```{r auto-data-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+auto_base
+```
+
+Fuel efficiency falls as horsepower rises, steeply at first and then more
+slowly.
+
+**Model.** To follow that curvature, the candidate models are polynomial
+regressions of degree $d$,
+
+$$\texttt{mpg}_i = \beta_0 + \beta_1\,\texttt{horsepower}_i + \beta_2\,\texttt{horsepower}_i^2 + \cdots + \beta_d\,\texttt{horsepower}_i^d + \epsilon_i, \qquad \epsilon_i \stackrel{ind}{\sim} N\left(0, \sigma^2\right),$$
+
+where
+
+- $\texttt{mpg}_i$ and $\texttt{horsepower}_i$ are the fuel efficiency and
+horsepower of car $i = 1, \ldots, n$,
+- $d$ is the **degree** of the polynomial, the flexibility setting to be
+chosen,
+- $\beta_0, \ldots, \beta_d$ are the coefficients and $\epsilon_i$ the error,
+with variance $\sigma^2$, and
+- the features are the $d$ powers of horsepower, so row $i$ of the model
+matrix $\mathbf{X}$ is
+$x_i = \left(1, \texttt{horsepower}_i, \ldots, \texttt{horsepower}_i^d\right)$.
+
+As in the feature engineering lecture, `poly(horsepower, d)` fits the same
+model with an orthogonal basis of the same column space, so its fitted values
+are identical.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r auto-curves}
+#| output: false
+degrees <- 1:10
+show_degrees <- c(1, 2, 10)
+degree_labels <- paste("Degree", show_degrees)
+degree_colors <- setNames(c("#0072B2", "#D55E00", "#009E73"), degree_labels)
+degree_linetypes <- setNames(c("solid", "dashed", "dotdash"), degree_labels)
+
+hp_grid <- tibble(horsepower = seq(min(Auto$horsepower), max(Auto$horsepower),
+                                   length.out = 400))
+degree_curves <- map(show_degrees, \(d) {
+  fit <- lm(mpg ~ poly(horsepower, d), data = Auto)
+  mutate(hp_grid, degree = paste("Degree", d), mpg = predict(fit, hp_grid))
+}) |>
+  list_rbind() |>
+  mutate(degree = factor(degree, levels = degree_labels))
+
+add_curves <- function(through) {
+  auto_base +
+    geom_line(data = filter(degree_curves, as.integer(degree) <= through),
+              aes(color = degree, linetype = degree), linewidth = 1) +
+    scale_color_manual(values = degree_colors) +
+    scale_linetype_manual(values = degree_linetypes) +
+    labs(color = "Polynomial", linetype = "Polynomial")
+}
+auto_curve_plots <- map(seq_along(show_degrees), add_curves)
+```
+:::
+
+The tabs add least squares fits of degree `r and_list(show_degrees)` to the
+plot above.
+
+::: {.panel-tabset}
+#### Degree 1
+```{r auto-degree1-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+auto_curve_plots[[1]]
+```
+
+#### + Degree 2
+```{r auto-degree2-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+auto_curve_plots[[2]]
+```
+
+#### + Degree 10
+```{r auto-degree10-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+auto_curve_plots[[3]]
+```
+:::
+
+The straight line misses the curvature: it underpredicts at both ends
+and overpredicts in the middle. The quadratic follows the curve. The degree-10
+polynomial follows it too, with extra wiggles at both ends of the range of
+horsepower, where cars are few.
+
+### Training MSE
+
+The function below fits a degree-$d$ polynomial to a data set; applied to all
+`r nrow(Auto)` cars it gives the training MSE of each degree.
+
+```{r fit-degree}
+fit_degree <- function(d, data) lm(mpg ~ poly(horsepower, d), data = data)
+train_mse <- map_dbl(degrees, \(d) mean(residuals(fit_degree(d, Auto))^2))
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r train-mse-plot}
+#| output: false
+train_mse_plot <- ggplot(tibble(degree = degrees, mse = train_mse),
+                         aes(x = degree, y = mse)) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = degrees) +
+  labs(x = "Polynomial degree d", y = "Training MSE", title = "ISLR2::Auto")
+```
+:::
+
+```{r train-mse-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 3.5
+train_mse_plot
+```
+
+The training MSE falls from `r fmt(train_mse[1])` at degree 1 to
+`r fmt(train_mse[2])` at degree 2 and keeps falling, to
+`r fmt(train_mse[10])` at degree 10. It cannot do otherwise: the degree-$d$
+model is the degree-$(d+1)$ model with $\beta_{d+1} = 0$, so least squares
+over the larger model can only match or lower the residual sum of squares.
+Training error rewards flexibility whether or not the flexibility captures
+anything that will appear in new data, so it cannot choose $d$.
+
+### Held-out data
+
+The regression lecture defined the test MSE as the average squared error on
+observations that were not used to estimate $\hat f$. With a large, separate
+test set, choosing $d$ would be easy: fit each degree to the training data and
+keep the degree with the smallest test MSE. A separate test set is rarely
+available. Collecting one costs as much as collecting the training data, and
+setting aside part of the data already in hand leaves less to fit with.
+
+**Resampling methods** estimate test error from the training data alone, by
+fitting the model to part of the data and measuring its error on the part
+left out. This lecture develops three, in increasing order of reuse: the
+validation set approach, leave-one-out cross-validation, and $k$-fold
+cross-validation.
+
+## Validation set approach
+
+The figure below shows the cars split at random into two halves of
+`r nrow(Auto) / 2`, a training set (blue circles) and a validation set (orange
+triangles).
+
+::: {.callout-note collapse="true"}
+### Code
+```{r validation-splits}
+#| output: false
+n_auto <- nrow(Auto)
+n_splits <- 100
+splits <- map(seq_len(n_splits), \(r) sample(n_auto, n_auto / 2))
+one_split <- splits[[1]]
+
+set_colors <- c(Training = "#0072B2", Validation = "#E69F00")
+split_plot <- Auto |>
+  mutate(set = if_else(row_number() %in% one_split, "Training", "Validation")) |>
+  ggplot(aes(x = horsepower, y = mpg, color = set, shape = set)) +
+  geom_point(alpha = 0.7, size = 1.3) +
+  scale_color_manual(values = set_colors) +
+  scale_shape_manual(values = c(Training = 16, Validation = 17)) +
+  labs(x = "Horsepower", y = "Miles per gallon", color = NULL, shape = NULL,
+       title = "ISLR2::Auto, one random split")
+```
+:::
+
+```{r validation-split-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+split_plot
+```
+
+Both halves cover the range of horsepower, and either half shows the same
+curved decline as the full data.
+
+### Algorithm
+
+The **validation set approach** estimates test MSE in three steps:
+
+1. Split the $n$ observations at random into a training set and a validation
+(hold-out) set $\mathcal{V}$.
+2. Fit the model to the training set.
+3. Predict every observation in the validation set and average the squared
+errors,
+
+$$\text{MSE}_{\mathcal{V}} = \frac{1}{n_{\mathcal{V}}}\sum_{i \in \mathcal{V}}\left[y_i - \hat f(x_i)\right]^2,$$
+
+where
+
+- $\mathcal{V}$ is the set of indices of the validation observations and
+$n_{\mathcal{V}}$ their number, and
+- $\hat f$ is the model fit to the training set only.
+
+Every validation observation is new to $\hat f$, so $\text{MSE}_{\mathcal{V}}$
+is a test MSE in the sense of the regression lecture. In R, with `train_id`
+the row numbers of the training set:
+
+```{r validation-mse}
+validation_mse <- function(d, train_id, data = Auto) {
+  fit <- fit_degree(d, data[train_id, ])
+  valid <- data[-train_id, ]
+  mean((valid$mpg - predict(fit, valid))^2)
+}
+one_split_mse <- map_dbl(degrees, validation_mse, train_id = one_split)
+```
+
+### Split variability
+
+The split above is one of `r n_splits` random splits into halves. The first
+tab plots its validation MSE against degree, the second adds the curves of all
+`r n_splits` splits (grey, with the first in black), and the third counts the
+degree with the smallest validation MSE in each split.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r validation-curves}
+#| output: false
+val_curves <- expand_grid(split = seq_len(n_splits), degree = degrees) |>
+  mutate(mse = map2_dbl(degree, split, \(d, r) validation_mse(d, splits[[r]])))
+val_best <- val_curves |>
+  group_by(split) |>
+  slice_min(mse, n = 1, with_ties = FALSE) |>
+  ungroup()
+val_choice_counts <- count(val_best, degree)
+val_mse_d2 <- filter(val_curves, degree == 2)$mse
+# Within each split, the spread of the estimates over degrees 2 through 10.
+within_split_range <- val_curves |>
+  filter(degree >= 2) |>
+  group_by(split) |>
+  summarize(range = max(mse) - min(mse), .groups = "drop")
+
+mse_limits <- c(14, 30)
+n_off_plot <- n_distinct(filter(val_curves, mse > mse_limits[2])$split)
+degree_axis <- list(scale_x_continuous(breaks = degrees),
+                    coord_cartesian(ylim = mse_limits))
+one_split_plot <- ggplot(tibble(degree = degrees, mse = one_split_mse),
+                         aes(x = degree, y = mse)) +
+  geom_line() +
+  geom_point() +
+  degree_axis +
+  labs(x = "Polynomial degree d", y = "Validation MSE",
+       title = "One random split into halves")
+all_splits_plot <- ggplot(val_curves, aes(x = degree, y = mse, group = split)) +
+  geom_line(color = "grey70", linewidth = 0.3) +
+  geom_line(data = filter(val_curves, split == 1), color = "black") +
+  geom_point(data = filter(val_curves, split == 1), color = "black") +
+  degree_axis +
+  labs(x = "Polynomial degree d", y = "Validation MSE",
+       title = paste(n_splits, "random splits into halves"))
+choice_plot <- ggplot(val_best, aes(x = factor(degree, levels = degrees))) +
+  geom_bar() +
+  scale_x_discrete(drop = FALSE) +
+  labs(x = "Degree with the smallest validation MSE", y = "Number of splits",
+       title = paste(n_splits, "random splits into halves"))
+```
+:::
+
+::: {.panel-tabset}
+#### One split
+```{r one-split-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 3.5
+one_split_plot
+```
+
+#### `r n_splits` splits
+```{r all-splits-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 3.5
+all_splits_plot
+```
+
+#### Chosen degree
+```{r val-choice-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 3.5
+choice_plot
+```
+:::
+
+Every curve drops sharply from degree 1 to degree 2, so every split agrees
+that a quadratic beats a line. Beyond that the splits disagree. The validation
+MSE of the quadratic ranges from `r fmt(min(val_mse_d2))` to
+`r fmt(max(val_mse_d2))` across splits, while within a split the estimates
+for degrees 2 through 10 span a median of
+`r fmt(median(within_split_range$range))`. Of the `r n_splits` curves,
+`r n_off_plot` leave the top of the plot at high degree, where a polynomial
+fit to half the cars extrapolates badly to a validation car outside their
+range of horsepower. The degree with the smallest validation MSE is
+`r and_list(as.character(sort(val_choice_counts$degree)))` in different splits;
+the most common choice, degree
+`r val_choice_counts$degree[which.max(val_choice_counts$n)]`, wins only
+`r max(val_choice_counts$n)` of the `r n_splits` splits.
+
+This is the first weakness of the validation set approach: the estimate, and
+the model it selects, depend on which observations happen to land in which
+half.
+
+### Smaller training sets
+
+The second weakness is that each model is fit to only part of the data.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r learning-curve}
+#| output: false
+train_sizes <- c(60, 80, 120, 160, n_auto / 2, 240, 280, 320, 360)
+learning_degrees <- c(2, 7)
+n_learning_reps <- 400
+learning <- expand_grid(m = train_sizes, degree = learning_degrees,
+                        rep = seq_len(n_learning_reps)) |>
+  mutate(mse = map2_dbl(m, degree, \(m, d) validation_mse(d, sample(n_auto, m))))
+learning_summary <- learning |>
+  group_by(m, degree) |>
+  summarize(median_mse = median(mse), mean_mse = mean(mse), .groups = "drop") |>
+  mutate(degree = factor(paste("Degree", degree),
+                         levels = paste("Degree", learning_degrees)))
+learning_of <- function(m_value, d, col = "median_mse") {
+  learning_summary[[col]][learning_summary$m == m_value &
+                            learning_summary$degree == paste("Degree", d)]
+}
+
+learning_plot <- ggplot(learning_summary,
+                        aes(x = m, y = median_mse, color = degree,
+                            linetype = degree, shape = degree)) +
+  geom_vline(xintercept = n_auto / 2, color = "grey60") +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#0072B2", "#D55E00")) +
+  labs(x = "Training set size m (vertical line: half of the cars)",
+       y = "Median validation MSE", color = NULL, linetype = NULL,
+       shape = NULL, title = paste(n_learning_reps, "random splits at each m"))
+```
+:::
+
+To see what that costs, the cars were split at random into a training set of
+$m$ cars and a validation set of the remaining $n - m$, for $m$ from
+`r min(train_sizes)` to `r max(train_sizes)`, `r n_learning_reps` times at
+each $m$. Because the validation cars are new to each fit, the typical
+validation MSE at a given $m$ estimates the test MSE of a model fit to $m$
+cars. The figure plots the median over splits for degrees
+`r and_list(learning_degrees)`.
+
+```{r learning-curve-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 3.8
+learning_plot
+```
+
+Test MSE generally falls as the training set grows, and it falls more steeply
+for the more flexible model. The degree-7 polynomial has a median validation MSE of
+`r fmt(learning_of(min(train_sizes), 7))` when fit to `r min(train_sizes)`
+cars, against `r fmt(learning_of(n_auto / 2, 7))` when fit to
+`r n_auto / 2`; the quadratic goes from
+`r fmt(learning_of(min(train_sizes), 2))` to
+`r fmt(learning_of(n_auto / 2, 2))`. (The median is plotted because the mean
+is dominated by a few catastrophic extrapolations: at
+$m = `r min(train_sizes)`$ the mean validation MSE of degree 7 is
+`r fmt(learning_of(min(train_sizes), 7, "mean_mse"), 0)`.) The model that will be used is
+fit to all `r n_auto` cars, so a validation set estimate computed from fits to
+half of them estimates the error of a worse model. The validation set
+approach tends to **overestimate** the test error of the final fit, and more
+so for flexible models and small $n$.
+
+## Leave-one-out cross-validation
+
+The validation set approach leaves out half the data. Leave-one-out
+cross-validation leaves out one observation at a time. The figure below holds
+out the car with the largest horsepower, a
+`r str_to_title(as.character(Auto$name[which.max(Auto$horsepower)]))` with
+`r max(Auto$horsepower)` horsepower (black triangle), and draws the fit to
+all `r n_auto` cars (dashed) and the fit to the other `r n_auto - 1`
+(solid), for degree 2 in the first tab and degree 10 in the second.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r held-out-car}
+#| output: false
+i_out <- which.max(Auto$horsepower)
+held_out_summary <- map(c(2, 10), \(d) {
+  fit_all <- fit_degree(d, Auto)
+  fit_without <- fit_degree(d, Auto[-i_out, ])
+  tibble(degree = d,
+         residual = Auto$mpg[i_out] - fitted(fit_all)[[i_out]],
+         loo_error = Auto$mpg[i_out] - predict(fit_without, Auto[i_out, ]),
+         leverage = hatvalues(fit_all)[[i_out]])
+}) |>
+  list_rbind()
+held_of <- function(d, col) held_out_summary[[col]][held_out_summary$degree == d]
+
+fit_labels <- c("All cars", "Car held out")
+held_out_plot <- function(d) {
+  curves <- bind_rows(
+    mutate(hp_grid, fit = fit_labels[1],
+           mpg = predict(fit_degree(d, Auto), hp_grid)),
+    mutate(hp_grid, fit = fit_labels[2],
+           mpg = predict(fit_degree(d, Auto[-i_out, ]), hp_grid))) |>
+    mutate(fit = factor(fit, levels = fit_labels))
+  ggplot(Auto, aes(x = horsepower, y = mpg)) +
+    geom_point(data = Auto[-i_out, ], color = "grey60", alpha = 0.5, size = 1) +
+    geom_line(data = curves, aes(color = fit, linetype = fit), linewidth = 0.9) +
+    geom_point(data = Auto[i_out, ], shape = 17, size = 3.5) +
+    scale_color_manual(values = c("#0072B2", "#D55E00")) +
+    scale_linetype_manual(values = c("dashed", "solid")) +
+    coord_cartesian(ylim = range(Auto$mpg)) +
+    labs(x = "Horsepower", y = "Miles per gallon", color = "Fit to",
+         linetype = "Fit to", title = paste("Degree", d))
+}
+held_out_plots <- map(c(2, 10), held_out_plot)
+```
+:::
+
+::: {.panel-tabset}
+#### Degree 2
+```{r held-out-d2-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+held_out_plots[[1]]
+```
+
+#### Degree 10
+```{r held-out-d10-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+held_out_plots[[2]]
+```
+:::
+
+For the quadratic the two fits nearly coincide, and the held-out car is
+predicted about as well without it as with it. For degree 10 the fit to all
+cars bends to pass near the held-out car, and without it the curve swings far
+below. The squared error of the held-out prediction measures how well the
+model predicts a car it has not seen, which the residual from the fit to all
+cars does not.
+
+### LOOCV estimate
+
+**Leave-one-out cross-validation** (LOOCV) repeats that for every
+observation:
+
+$$\text{CV}_{(n)} = \frac{1}{n}\sum_{i=1}^n\left[y_i - \hat f^{(-i)}(x_i)\right]^2,$$
+
+where
+
+- $\hat f^{(-i)}$ is the model fit to the $n - 1$ observations other than
+observation $i$, and
+- $\hat f^{(-i)}(x_i)$ is its prediction for the held-out observation.
+
+Each fit uses $n - 1$ observations, nearly all of the data, and there is no
+random split: every observation is held out exactly once. Written as a loop,
+LOOCV costs $n$ fits per model.
+
+```{r loocv-loop}
+loocv_mse <- function(d, data = Auto) {
+  sq_error <- numeric(nrow(data))
+  for (i in seq_len(nrow(data))) {
+    fit <- fit_degree(d, data[-i, ])
+    sq_error[i] <- (data$mpg[i] - predict(fit, data[i, ]))^2
+  }
+  mean(sq_error)
+}
+loocv_loop <- map_dbl(degrees, loocv_mse)
+```
+
+### Least squares shortcut
+
+For a model fit by least squares, the $n$ fits are unnecessary. Write the
+least squares fit to all $n$ observations as $\hat y = \mathbf{H}y$, with
+
+$$\mathbf{H} = \mathbf{X}\left(\mathbf{X}^\top\mathbf{X}\right)^{-1}\mathbf{X}^\top, \qquad \hat y_i = \sum_{j=1}^n h_{ij}\,y_j, \qquad h_i = h_{ii} = x_i\left(\mathbf{X}^\top\mathbf{X}\right)^{-1}x_i^\top,$$
+
+where
+
+- $\mathbf{H}$ is the hat matrix and $h_{ij}$ its $(i, j)$ entry,
+- $\hat y_i = x_i\hat\beta$ is the fitted value of observation $i$ from the fit
+to all $n$ observations, and
+- $h_i$ is the **leverage** of observation $i$, as in the flexibility lecture,
+with $0 \le h_i \le 1$.
+
+Let $\hat\beta^{(-i)}$ be the least squares estimate without observation $i$,
+so $\hat f^{(-i)}(x_i) = x_i\hat\beta^{(-i)}$, and assume $\mathbf{X}$ without
+row $i$ still has full column rank so that $\hat\beta^{(-i)}$ is unique.
+
+**Step 1: a full-data fit that reproduces $\hat\beta^{(-i)}$.** Define a
+response vector $z$ equal to $y$ except in entry $i$, which is replaced by the
+held-out prediction: $z_j = y_j$ for $j \ne i$ and
+$z_i = x_i\hat\beta^{(-i)}$. For any $\beta$,
+
+$$\sum_{j=1}^n\left(z_j - x_j\beta\right)^2 = \sum_{j \ne i}\left(y_j - x_j\beta\right)^2 + \left(x_i\hat\beta^{(-i)} - x_i\beta\right)^2.$$
+
+The first sum is minimized at $\beta = \hat\beta^{(-i)}$, by definition, and
+the second term is zero there, its smallest possible value. So
+$\hat\beta^{(-i)}$ minimizes the left side: it is the least squares estimate
+for response $z$ with all $n$ rows,
+$\hat\beta^{(-i)} = \left(\mathbf{X}^\top\mathbf{X}\right)^{-1}\mathbf{X}^\top z$.
+
+**Step 2: apply the hat matrix.** Multiplying by $x_i$,
+$x_i\hat\beta^{(-i)}$ is entry $i$ of $\mathbf{H}z$:
+
+$$\hat f^{(-i)}(x_i) = \sum_{j=1}^n h_{ij}\,z_j = \sum_{j=1}^n h_{ij}\,y_j - h_i\,y_i + h_i\,\hat f^{(-i)}(x_i) = \hat y_i - h_i\,y_i + h_i\,\hat f^{(-i)}(x_i).$$
+
+**Step 3: solve.** Collecting the $\hat f^{(-i)}(x_i)$ terms,
+$\left(1 - h_i\right)\hat f^{(-i)}(x_i) = \hat y_i - h_i y_i$. The
+full-rank assumption on $\mathbf{X}$ without row $i$ makes $h_i < 1$, so
+dividing by $1 - h_i$,
+
+$$y_i - \hat f^{(-i)}(x_i) = \frac{\left(1 - h_i\right)y_i - \hat y_i + h_i y_i}{1 - h_i} = \frac{y_i - \hat y_i}{1 - h_i}.$$
+
+Squaring and averaging over $i$,
+
+$$\text{CV}_{(n)} = \frac{1}{n}\sum_{i=1}^n\left(\frac{y_i - \hat y_i}{1 - h_i}\right)^2.$$
+
+The held-out error is the ordinary residual inflated by $1/(1 - h_i)$. With
+$h_i = 0$ for every $i$ this would be the training MSE. The inflation is
+small for a typical observation and large for a high-leverage one, whose
+fitted value the full-data fit pulls toward its own response. The formula
+needs one fit, its residuals, and `hatvalues()`. It holds for any model fit
+by least squares on fixed features: polynomials, interactions, step functions
+with fixed cut points. It does not hold for logistic regression or KNN, where
+LOOCV takes $n$ fits.
+
+For the held-out car in the figure, the quadratic gives leverage
+$h_i = `r fmt(held_of(2, "leverage"), 4)`$, residual
+$y_i - \hat y_i = `r fmt(held_of(2, "residual"), 3)`$, and signed held-out
+error $y_i - \hat f^{(-i)}(x_i) = `r fmt(held_of(2, "loo_error"))`$; the
+degree-10 polynomial gives leverage
+$h_i = `r fmt(held_of(10, "leverage"), 4)`$, residual
+`r fmt(held_of(10, "residual"), 3)`, and signed held-out error
+`r fmt(held_of(10, "loo_error"))`, which equals
+$`r fmt(held_of(10, "residual"), 3)`/(1 - `r fmt(held_of(10, "leverage"), 4)`)$
+up to rounding.
+
+The shortcut for every degree:
+
+```{r loocv-shortcut}
+loocv_shortcut <- function(d, data = Auto) {
+  fit <- fit_degree(d, data)
+  mean(((data$mpg - fitted(fit)) / (1 - hatvalues(fit)))^2)
+}
+loocv_fast <- map_dbl(degrees, loocv_shortcut)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r loocv-table}
+#| output: false
+loocv_table <- tibble(degree = degrees,
+                      loop = fmt(loocv_loop, 4),
+                      shortcut = fmt(loocv_fast, 4)) |>
+  knitr::kable(col.names = c("Degree $d$",
+                             paste0("Loop (", n_auto, " fits)"),
+                             "Shortcut (1 fit)"),
+               align = "ccc")
+max_loocv_diff <- max(abs(loocv_loop - loocv_fast))
+```
+:::
+
+```{r loocv-table-display}
+#| echo: false
+loocv_table
+```
+
+The two columns agree to the digits shown; the largest absolute difference
+is $`r sci(max_loocv_diff)`$, rounding error. The loop needed
+`r format(n_auto * length(degrees), big.mark = ",")` least squares fits and
+the shortcut `r length(degrees)`.
+
+### Degree selection
+
+The figure below plots the LOOCV estimate and the training MSE against
+degree.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r loocv-curve}
+#| output: false
+loocv_best <- degrees[which.min(loocv_fast)]
+error_labels <- c("Training MSE", "LOOCV")
+loocv_curve_data <- bind_rows(
+  tibble(degree = degrees, mse = train_mse, estimate = error_labels[1]),
+  tibble(degree = degrees, mse = loocv_fast, estimate = error_labels[2])) |>
+  mutate(estimate = factor(estimate, levels = error_labels))
+loocv_curve_plot <- ggplot(loocv_curve_data,
+                           aes(x = degree, y = mse, color = estimate,
+                               linetype = estimate, shape = estimate)) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = degrees) +
+  scale_color_manual(values = c("grey40", "#D55E00")) +
+  labs(x = "Polynomial degree d", y = "MSE", color = NULL, linetype = NULL,
+       shape = NULL, title = "ISLR2::Auto")
+```
+:::
+
+```{r loocv-curve-figure}
+#| echo: false
+#| fig-width: 6.5
+#| fig-height: 3.5
+loocv_curve_plot
+```
+
+The LOOCV estimate drops from `r fmt(loocv_fast[1])` at degree 1 to
+`r fmt(loocv_fast[2])` at degree 2 and then barely moves. Its minimum,
+`r fmt(min(loocv_fast))`, is at degree `r loocv_best`, only
+`r fmt(loocv_fast[2] - min(loocv_fast))` below the quadratic. Unlike the
+training MSE, it does not keep falling: at degree 10 it is
+`r fmt(loocv_fast[10])`, above its minimum, while the training MSE is at its
+lowest.
+
+## k-fold cross-validation
+
+::: {.callout-note collapse="true"}
+### Code
+```{r auto-folds}
+#| output: false
+n_folds <- 10
+fold_auto <- sample(rep(seq_len(n_folds), length.out = n_auto))
+fold_sizes <- table(fold_auto)
+
+fold_roles <- c("Training", "Validation")
+fold_plot <- map(seq_len(n_folds), \(l) {
+  mutate(Auto, panel = paste("Fold", l, "held out"),
+         role = if_else(fold_auto == l, fold_roles[2], fold_roles[1]))
+}) |>
+  list_rbind() |>
+  mutate(panel = factor(panel, levels = paste("Fold", seq_len(n_folds), "held out")),
+         role = factor(role, levels = fold_roles)) |>
+  arrange(role) |>
+  ggplot(aes(x = horsepower, y = mpg, color = role, shape = role, size = role)) +
+  geom_point(alpha = 0.8) +
+  facet_wrap(~ panel, nrow = 2) +
+  scale_color_manual(values = c("grey70", "black")) +
+  scale_shape_manual(values = c(16, 17)) +
+  scale_size_manual(values = c(0.5, 1.3)) +
+  labs(x = "Horsepower", y = "Miles per gallon", color = NULL, shape = NULL,
+       size = NULL, title = "ISLR2::Auto in 10 folds") +
+  theme(legend.position = "bottom")
+```
+:::
+
+The figure below splits the `r n_auto` cars at random into `r n_folds` groups
+of about equal size. Each panel marks one group as black triangles and the
+rest as grey circles.
+
+```{r auto-folds-figure}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.8
+fold_plot
+```
+
+The groups hold `r and_list(as.character(sort(unique(as.vector(fold_sizes)))))`
+cars, and every car appears as a triangle in exactly one panel. Each group is
+scattered across the whole range of horsepower.
+
+### k-fold estimate
+
+**$k$-fold cross-validation** divides the observations at random into $k$
+groups, or **folds**, $\mathcal{F}_1, \ldots, \mathcal{F}_k$, of about equal
+size. For each fold $\ell = 1, \ldots, k$ it fits the model to the other $k - 1$
+folds and computes the MSE on fold $\ell$,
+
+$$\text{MSE}_\ell = \frac{1}{n_\ell}\sum_{i \in \mathcal{F}_\ell}\left[y_i - \hat f^{(-\ell)}(x_i)\right]^2, \qquad \text{CV}_{(k)} = \sum_{\ell=1}^k \frac{n_\ell}{n}\,\text{MSE}_\ell,$$
+
+where
+
+- $k$ is the **number of folds**, written lowercase as in the name $k$-fold
+cross-validation; it is unrelated to $K$, the number of neighbors in KNN (or
+of classes in the generative classifier lectures),
+- $\mathcal{F}_\ell$ is the set of indices of the observations in fold $\ell$
+and $n_\ell$ their number,
+- $\hat f^{(-\ell)}$ is the model fit to the observations outside fold
+$\ell$, and
+- $\text{CV}_{(k)}$ is the average of the fold MSEs weighted by fold size,
+which is $\frac{1}{k}\sum_\ell \text{MSE}_\ell$ when every fold has $n/k$
+observations, and is the average squared held-out error over all $n$
+observations.
+
+Every observation is held out exactly once and used for fitting $k - 1$
+times. LOOCV is the special case $k = n$, with one observation per fold.
+
+```{r kfold-function}
+kfold_mse <- function(d, fold, data = Auto) {
+  sq_error <- numeric(nrow(data))
+  for (l in unique(fold)) {
+    held_out <- fold == l
+    fit <- fit_degree(d, data[!held_out, ])
+    sq_error[held_out] <- (data$mpg[held_out] - predict(fit, data[held_out, ]))^2
+  }
+  mean(sq_error)
+}
+kfold_10 <- map_dbl(degrees, kfold_mse, fold = fold_auto)
+```
+
+With the folds in the figure, the 10-fold estimate is
+`r fmt(kfold_10[1])` at degree 1 and `r fmt(kfold_10[2])` at degree 2, and is
+smallest, `r fmt(min(kfold_10))`, at degree `r degrees[which.min(kfold_10)]`.
+
+### Partition variability
+
+::: {.callout-note collapse="true"}
+### Code
+```{r kfold-partitions}
+#| output: false
+n_partitions <- n_splits
+partition_k <- c(5, 10)
+kfold_curves <- expand_grid(k = partition_k, partition = seq_len(n_partitions)) |>
+  mutate(fold = map(k, \(k) sample(rep(seq_len(k), length.out = n_auto))),
+         mse = map(fold, \(f) map_dbl(degrees, kfold_mse, fold = f)),
+         degree = list(degrees)) |>
+  select(-fold) |>
+  unnest(c(degree, mse))
+
+method_labels <- c("Validation set", "5-fold", "10-fold")
+resample_curves <- bind_rows(
+  transmute(val_curves, method = method_labels[1], rep = split, degree, mse),
+  transmute(kfold_curves, method = paste0(k, "-fold"), rep = partition, degree, mse)) |>
+  mutate(method = factor(method, levels = method_labels))
+resample_summary <- resample_curves |>
+  group_by(method) |>
+  summarize(sd_d2 = sd(mse[degree == 2]), .groups = "drop")
+summary_of <- function(m, col) resample_summary[[col]][resample_summary$method == m]
+chosen_by <- resample_curves |>
+  group_by(method, rep) |>
+  slice_min(mse, n = 1, with_ties = FALSE) |>
+  ungroup()
+chosen_degrees <- function(m) sort(unique(chosen_by$degree[chosen_by$method == m]))
+
+loocv_line <- tibble(degree = degrees, mse = loocv_fast)
+resample_plot <- function(m) {
+  ggplot(filter(resample_curves, method == m), aes(x = degree, y = mse)) +
+    geom_line(aes(group = rep), color = "grey65", linewidth = 0.3) +
+    geom_line(data = loocv_line, color = "black", linetype = "dashed",
+              linewidth = 1) +
+    degree_axis +
+    labs(x = "Polynomial degree d", y = "Estimated test MSE",
+         title = paste0(m, ", ", n_partitions,
+                        " random partitions; LOOCV dashed"))
+}
+resample_plots <- map(method_labels, resample_plot)
+```
+:::
+
+The `r n_folds`-fold estimate above comes from one random partition of the
+cars. To
+see whether it changes from one partition to another, and by how much, the
+tabs below repeat
+the validation set curves of `r n_splits` random splits and add the curves of
+`r n_partitions` random partitions into `r partition_k[1]` folds and into
+`r partition_k[2]` folds, each over the LOOCV curve (black, dashed), on the
+same axes.
+
+::: {.panel-tabset}
+#### Validation set
+```{r resample-val-figure}
+#| echo: false
+#| fig-width: 6.5
+#| fig-height: 3.6
+resample_plots[[1]]
+```
+
+#### 5-fold
+```{r resample-5fold-figure}
+#| echo: false
+#| fig-width: 6.5
+#| fig-height: 3.6
+resample_plots[[2]]
+```
+
+#### 10-fold
+```{r resample-10fold-figure}
+#| echo: false
+#| fig-width: 6.5
+#| fig-height: 3.6
+resample_plots[[3]]
+```
+:::
+
+The band of curves narrows from tab to tab. At degree 2 the standard
+deviation of the estimate across random partitions is
+`r fmt(summary_of("Validation set", "sd_d2"))` for the validation set,
+`r fmt(summary_of("5-fold", "sd_d2"), 3)` for 5-fold, and
+`r fmt(summary_of("10-fold", "sd_d2"), 3)` for 10-fold cross-validation. The
+5-fold and 10-fold curves hug the LOOCV curve, while the validation set
+curves scatter widely on both sides of it: every observation is held out once
+and the held-out errors are averaged over all $n$ of them, so the estimate
+depends far less on which observations share a fold. The degree with the smallest estimate
+is still not fixed: across partitions 10-fold cross-validation chooses degree
+`r and_list(as.character(chosen_degrees("10-fold")))`, because the curves are
+nearly flat from degree 2 on.
+
+### Fold count
+
+Any $k$ from 2 to $n$ gives a cross-validation estimate, and the choice
+affects its bias, its variance, and its computation.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r k-simulation}
+#| output: false
+n_sample <- 50
+n_sims <- 2000
+k_values <- c(2, 5, 10, n_sample)
+k_labels <- c("2-fold", "5-fold", "10-fold", paste0("LOOCV (k = ", n_sample, ")"))
+k_sims <- map(seq_len(n_sims), \(r) {
+  id <- sample(n_auto, n_sample)
+  cars <- Auto[id, ]
+  others <- Auto[-id, ]
+  test_mse <- mean((others$mpg - predict(fit_degree(2, cars), others))^2)
+  cv <- map_dbl(k_values, \(k) {
+    if (k == n_sample) return(loocv_shortcut(2, cars))
+    kfold_mse(2, sample(rep(seq_len(k), length.out = n_sample)), cars)
+  })
+  tibble(sim = r, method = k_labels, estimate = cv, test_mse = test_mse)
+}) |>
+  list_rbind() |>
+  mutate(method = factor(method, levels = k_labels))
+k_summary <- k_sims |>
+  group_by(method) |>
+  summarize(mean_estimate = mean(estimate), sd_estimate = sd(estimate),
+            bias = mean(estimate - test_mse),
+            se_bias = sd(estimate - test_mse) / sqrt(n()), .groups = "drop")
+mean_test_mse <- mean(k_sims$test_mse[k_sims$method == k_labels[1]])
+k_of <- function(m, col) k_summary[[col]][k_summary$method == m]
+
+# A few 2-fold estimates are extreme: a quadratic fit to half of a small
+# sample can extrapolate badly to a held-out car.
+two_fold <- k_sims$estimate[k_sims$method == k_labels[1]]
+extreme <- two_fold > 5 * mean_test_mse
+n_extreme <- sum(extreme)
+max_extreme <- max(two_fold)
+sd_two_fold_trimmed <- sd(two_fold[!extreme])
+
+k_plot <- ggplot(k_sims, aes(x = method, y = estimate)) +
+  geom_boxplot(outlier.size = 0.6, outlier.alpha = 0.5) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3,
+               fill = "#E69F00") +
+  geom_hline(yintercept = mean_test_mse, linetype = "dashed") +
+  coord_cartesian(ylim = quantile(k_sims$estimate, c(0.005, 0.995))) +
+  labs(x = NULL, y = "Cross-validation estimate of test MSE",
+       title = paste0(format(n_sims, big.mark = ","), " samples of ", n_sample,
+                      " cars; quadratic; diamond = mean; dashed = mean test MSE"),
+       caption = "Vertical axis clipped to the middle 99% of the estimates")
+```
+:::
+
+To see how $k$ affects the bias and variance of the estimate, the
+`r n_auto` cars were treated as a population. Each of `r format(n_sims, big.mark = ",")` times, a
+sample of `r n_sample` cars was drawn without replacement and a quadratic was
+fit to it; the actual test MSE of that fit is its average squared error on the
+`r n_auto - n_sample` cars not drawn. The figure compares the cross-validation
+estimates from the same `r n_sample` cars, with $k$ equal to
+`r and_list(k_values)` (LOOCV), against it.
+
+```{r k-simulation-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 4
+k_plot
+```
+
+The average actual test MSE of the fits is `r fmt(mean_test_mse)`. The
+estimates average `r fmt(k_of("2-fold", "mean_estimate"))` for 2-fold,
+`r fmt(k_of("5-fold", "mean_estimate"))` for 5-fold,
+`r fmt(k_of("10-fold", "mean_estimate"))` for 10-fold, and
+`r fmt(k_of(k_labels[4], "mean_estimate"))` for LOOCV. 2-fold
+cross-validation, fitting to `r n_sample / 2` cars, overestimates by
+`r fmt(k_of(k_labels[1], "bias"))`, with a simulation standard error of
+`r fmt(k_of(k_labels[1], "se_bias"))`; by $k = `r k_values[2]`$ the
+overestimate is small, `r fmt(k_of(k_labels[2], "bias"))`, with a simulation
+standard error of `r fmt(k_of(k_labels[2], "se_bias"))`. The standard
+deviations of the estimates are `r fmt(k_of("2-fold", "sd_estimate"))`,
+`r fmt(k_of("5-fold", "sd_estimate"))`,
+`r fmt(k_of("10-fold", "sd_estimate"))`, and
+`r fmt(k_of(k_labels[4], "sd_estimate"))`, so 10-fold and LOOCV vary about
+equally. The 2-fold standard deviation is dominated by `r n_extreme` of the
+`r format(n_sims, big.mark = ",")` samples, whose estimates exceed five times
+the mean test MSE (the largest is `r fmt(max_extreme)`), where a quadratic fit
+to `r n_sample / 2` cars extrapolates badly to a held-out car; without them it
+is `r fmt(sd_two_fold_trimmed)`. The figure's vertical axis is clipped, so
+those estimates are not shown.
+
+Three considerations explain these results and trade off in choosing $k$.
+
+- **Computation.** $k$-fold cross-validation needs $k$ fits per model, LOOCV
+$n$. For least squares the shortcut makes LOOCV cost one fit; for most other
+methods it is $n$ fits, and $k = 5$ or $10$ is a large saving.
+- **Bias.** Each fit uses $n(k-1)/k$ observations: for all `r n_auto` cars,
+`r n_auto / 2` with $k = 2$, about `r round(n_auto * 4 / 5)` with $k = 5$,
+about `r round(n_auto * 9 / 10)` with $k = 10$, and `r n_auto - 1` with
+LOOCV. By the learning curve above, a model fit to fewer observations has
+larger test error, so $\text{CV}_{(k)}$ overestimates the test error of the
+model fit to all $n$, by more as $k$ shrinks. LOOCV is nearly unbiased.
+- **Variance.** $\text{CV}_{(k)}$ is an average of $k$ fold MSEs. If each has
+variance $\tau^2$ and each pair has correlation $\rho$,
+
+$$Var\left[\frac{1}{k}\sum_{\ell=1}^k\text{MSE}_\ell\right] = \frac{1}{k^2}\sum_{\ell=1}^k\sum_{\ell'=1}^k Cov\left[\text{MSE}_\ell, \text{MSE}_{\ell'}\right] = \tau^2\left(\rho + \frac{1-\rho}{k}\right),$$
+
+where $\ell'$ is a second fold index. Averaging more folds shrinks the
+$(1-\rho)/k$ term but not $\rho\tau^2$. In LOOCV any two fits share $n - 2$
+of their $n - 1$ observations, so their held-out errors are strongly
+correlated and averaging $n$ of them reduces the variance less than the
+number $n$ suggests; with larger $k$ each fold MSE is also computed from fewer
+observations, raising $\tau^2$. Which effect dominates depends on the
+method and the data.
+
+The standard deviations in the simulation combine two sources: which
+`r n_sample` cars were drawn, shared by all four estimates, and, for $k$-fold,
+the random partition. The partition alone is the cleaner comparison. With all
+`r n_auto` cars held fixed, the degree-2 estimate varied across random
+partitions with standard deviation `r fmt(summary_of("5-fold", "sd_d2"), 3)`
+for 5-fold and `r fmt(summary_of("10-fold", "sd_d2"), 3)` for 10-fold
+cross-validation, and LOOCV, with no partition, does not vary at all.
+
+For a quadratic fit to `r n_sample` cars, 5-fold and 10-fold
+cross-validation had small bias and variance close to LOOCV's, and for a
+method without the least squares shortcut they need 5 or 10 fits rather than
+$n$. That combination is why $k = 5$ or $10$ is the usual choice.
+
+## Classification
+
+### Credit card default data
+
+::: {.callout-note collapse="true"}
+### Code
+```{r default-split}
+#| output: false
+# The QDA lecture's split, recreated with its seed; the generator's state is
+# restored afterward so this lecture's later draws are unaffected.
+rng_state <- .Random.seed
+set.seed(20261001)
+train_id <- sample(nrow(Default), nrow(Default) / 2)
+assign(".Random.seed", rng_state, envir = globalenv())
+train <- Default[train_id, ]
+test  <- Default[-train_id, ]
+
+# The QDA lecture's rule of thumb: the smallest odd integer above sqrt(n).
+odd_above_sqrt <- function(n) {
+  k <- floor(sqrt(n))
+  if (k %% 2 == 0) k + 1 else k + 2
+}
+K_rule <- odd_above_sqrt(nrow(train))
+
+dollar_labels <- function(v) {
+  ifelse(is.na(v), NA,
+         paste0("$", format(v, big.mark = ",", scientific = FALSE, trim = TRUE)))
+}
+default_plot <- ggplot(arrange(train, default),
+                       aes(x = balance, y = income, color = default,
+                           shape = default)) +
+  geom_point(alpha = 0.4, size = 0.9) +
+  scale_color_manual(values = class_colors) +
+  scale_shape_manual(values = c(No = 16, Yes = 17)) +
+  scale_x_continuous(labels = dollar_labels) +
+  scale_y_continuous(labels = dollar_labels) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 2))) +
+  labs(x = "Credit card balance ($)", y = "Income ($)", color = "Default",
+       shape = "Default", title = "ISLR2::Default, training half")
+```
+:::
+
+The QDA and naive Bayes lecture classified `ISLR2::Default` credit card
+customers as defaulters or not from `balance` and `income`, fitting every
+classifier to a random half of the
+`r format(nrow(Default), big.mark = ",")` customers and evaluating it on the
+other half. Its KNN classifier used $K = `r K_rule`$ neighbors, the smallest
+odd integer above $\sqrt{n}$ for the training half, a rule of thumb. The
+figure below plots the same training half, recreated with the same seed.
+
+```{r default-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+default_plot
+```
+
+The training half holds `r format(nrow(train), big.mark = ",")` customers, of
+whom `r sum(train$default == "Yes")` (`r pct(mean(train$default == "Yes"), 2)`)
+defaulted. Defaulters sit at high balances at every income, mixed among
+non-defaulters with similar balances.
+
+### Cross-validation error rate
+
+Cross-validation for a classifier replaces the squared error with a
+classification loss. With the misclassification indicator,
+
+$$\text{Err}_\ell = \frac{1}{n_\ell}\sum_{i \in \mathcal{F}_\ell}\mathrm{I}\left(y_i \ne \hat y_i^{(-\ell)}\right), \qquad \text{CV}_{(k)} = \sum_{\ell=1}^k\frac{n_\ell}{n}\,\text{Err}_\ell,$$
+
+where
+
+- $\hat y_i^{(-\ell)}$ is the class predicted for observation $i$ by the
+classifier fit to the observations outside fold $\ell$, and
+- $\text{Err}_\ell$ is the test error rate of that classifier on fold $\ell$.
+
+Any loss can take the place of the indicator. Log loss, from the
+classification lecture, scores the predicted probabilities rather than the
+classes: with $y_i$ coded $1$ for the positive class and $0$ otherwise, it
+replaces $\mathrm{I}\left(y_i \ne \hat y_i^{(-\ell)}\right)$ with
+$-\left\{y_i\log\hat p^{(-\ell)}(x_i) + (1 - y_i)\log\left[1 - \hat p^{(-\ell)}(x_i)\right]\right\}$,
+where $\hat p^{(-\ell)}(x_i)$ is the predicted probability of the positive
+class. A KNN vote share of exactly $0$ or $1$ on a misclassified observation
+makes it infinite, so log loss suits classifiers whose probabilities stay
+away from $0$ and $1$, such as logistic regression.
+
+For KNN, the classifier fit to the training folds includes the
+standardization of the features: their means and standard deviations are
+computed from the training folds, as they were computed from the training half
+in the QDA lecture.
+
+```{r knn-cv-function}
+features <- c("balance", "income")
+knn_classify <- function(fit_data, new_data, K) {
+  center <- colMeans(fit_data[features])
+  spread <- map_dbl(fit_data[features], sd)
+  class::knn(scale(fit_data[features], center, spread),
+             scale(new_data[features], center, spread),
+             fit_data$default, k = K)
+}
+knn_cv_error <- function(K, fold, data = train) {
+  wrong <- logical(nrow(data))
+  for (l in unique(fold)) {
+    held_out <- fold == l
+    predicted <- knn_classify(data[!held_out, ], data[held_out, ], K)
+    wrong[held_out] <- predicted != data$default[held_out]
+  }
+  mean(wrong)
+}
+```
+
+### Neighbor count
+
+::: {.callout-note collapse="true"}
+### Code
+```{r knn-cv}
+#| output: false
+fold_default <- sample(rep(seq_len(n_folds), length.out = nrow(train)))
+K_grid <- seq(1, 201, by = 2)
+knn_errors <- tibble(K = K_grid) |>
+  mutate(Training = map_dbl(K, \(K) mean(knn_classify(train, train, K) != train$default)),
+         `10-fold CV` = map_dbl(K, knn_cv_error, fold = fold_default),
+         `Test half` = map_dbl(K, \(K) mean(knn_classify(train, test, K) != test$default)))
+K_cv <- knn_errors$K[which.min(knn_errors$`10-fold CV`)]
+K_test <- knn_errors$K[which.min(knn_errors$`Test half`)]
+share_test_below <- mean(knn_errors$`Test half` < knn_errors$`10-fold CV`)
+knn_of <- function(K_value, col) knn_errors[[col]][knn_errors$K == K_value]
+test_below_cv_min <- knn_of(K_cv, "Test half") < min(knn_errors$`10-fold CV`)
+
+knn_long <- knn_errors |>
+  pivot_longer(-K, names_to = "error", values_to = "rate") |>
+  mutate(error = factor(error, levels = c("Training", "10-fold CV", "Test half")))
+knn_plot <- ggplot(knn_long, aes(x = 1 / K, y = rate, color = error,
+                                 linetype = error, shape = error)) +
+  geom_vline(xintercept = 1 / c(K_cv, K_rule), color = "grey70") +
+  geom_line() +
+  geom_point(data = filter(knn_long, K %in% c(1, 3, 5, 11, 21, 51, 101, 201)),
+             size = 2) +
+  annotate("text", x = 1 / c(K_cv, K_rule), y = max(knn_long$rate), hjust = -0.1,
+           label = c(paste("K =", K_cv, "(CV)"), paste("K =", K_rule, "(rule)")),
+           size = 3) +
+  scale_x_log10(breaks = 1 / c(1, 3, 10, 30, 100, 200),
+                labels = c("1", "1/3", "1/10", "1/30", "1/100", "1/200")) +
+  scale_y_continuous(labels = \(v) paste0(100 * v, "%")) +
+  scale_color_manual(values = c("grey40", "#D55E00", "#0072B2")) +
+  labs(x = "Flexibility 1/K (log scale)", y = "Error rate", color = NULL,
+       linetype = NULL, shape = NULL, title = "KNN on ISLR2::Default")
+```
+:::
+
+The training half was divided into `r n_folds` folds, and the
+`r n_folds`-fold cross-validation error rate was computed for every odd $K$
+from `r min(K_grid)` to `r max(K_grid)`. The figure plots it against $1/K$,
+the flexibility, with the training error rate and the error rate on the test
+half for comparison.
+
+```{r knn-cv-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 4
+knn_plot
+```
+
+The training error rate falls to `r pct(knn_of(1, "Training"), 2)` at $K = 1$,
+where every training customer is its own nearest neighbor. The
+cross-validation error rate is U-shaped instead: `r pct(knn_of(1, "10-fold CV"), 2)`
+at $K = 1$, a minimum of `r pct(min(knn_errors$"10-fold CV"), 2)` at
+$K = `r K_cv`$, and `r pct(knn_of(max(K_grid), "10-fold CV"), 2)` at
+$K = `r max(K_grid)`$, where
+KNN classifies every customer as a non-defaulter and its error rate equals the
+proportion of defaulters. The rule of thumb's $K = `r K_rule`$ has a
+cross-validation error rate of `r pct(knn_of(K_rule, "10-fold CV"), 2)`.
+
+The test half, which the cross-validation never touched, gives the same
+shape: its error rate is `r pct(knn_of(K_cv, "Test half"), 2)` at
+$K = `r K_cv`$ and `r pct(knn_of(K_rule, "Test half"), 2)` at $K = `r K_rule`$,
+and is smallest, `r pct(min(knn_errors$"Test half"), 2)`, at $K = `r K_test`$.
+The test curve lies below the cross-validation curve
+`r if (share_test_below == 1) "at every value" else paste("at", pct(share_test_below, 0), "of the values")`
+of $K$, in part because defaulters
+are rarer in the test half, `r pct(mean(test$default == "Yes"), 2)` against
+`r pct(mean(train$default == "Yes"), 2)`, which also sets the level of each
+curve at large $K$.
+
+## Data-dependent steps
+
+The data sets in this section have thousands of features and only dozens of
+observations, and none of the features carries any information about the
+response. They are simulated rather than real because the point concerns the
+data-generating process: with no information in the features, the true test
+error rate of any classifier is known, so a cross-validation estimate can be
+checked against it.
+
+### Noise feature screening
+
+::: {.callout-note collapse="true"}
+### Code
+```{r noise-data}
+#| output: false
+n_noise <- 50
+p_noise <- 5000
+q_keep <- 20
+K_noise <- 5
+# Two classes of equal size and no information in the features.
+true_error <- 1 / 2
+simulate_noise <- function() {
+  list(X = matrix(rnorm(n_noise * p_noise), n_noise, p_noise),
+       y = factor(rep(c("A", "B"), each = n_noise / 2)))
+}
+screen <- function(X, y, q) {
+  order(abs(cor(X, as.numeric(y))), decreasing = TRUE)[seq_len(q)]
+}
+
+noise_example <- simulate_noise()
+top_two <- screen(noise_example$X, noise_example$y, 2)
+top_cor <- abs(cor(noise_example$X[, top_two], as.numeric(noise_example$y)))
+# Which class sits higher (second feature) and further right (first feature).
+class_means <- sapply(top_two, \(j) tapply(noise_example$X[, j], noise_example$y, mean))
+upper_class <- rownames(class_means)[which.max(class_means[, 2])]
+right_class <- rownames(class_means)[which.max(class_means[, 1])]
+other_class <- function(cl) setdiff(levels(noise_example$y), cl)
+noise_plot <- tibble(first = noise_example$X[, top_two[1]],
+                     second = noise_example$X[, top_two[2]],
+                     class = noise_example$y) |>
+  ggplot(aes(x = first, y = second, color = class, shape = class)) +
+  geom_point(size = 2.2) +
+  scale_color_manual(values = c(A = "#0072B2", B = "#D55E00")) +
+  labs(x = paste("Feature", top_two[1]), y = paste("Feature", top_two[2]),
+       color = "Class", shape = "Class",
+       title = paste("The two of", format(p_noise, big.mark = ","),
+                     "noise features most correlated with the class"))
+```
+:::
+
+Each simulated data set has $n = `r n_noise`$ observations in two classes of
+`r n_noise / 2` and $p = `r format(p_noise, big.mark = "{,}")`$ features, all
+independent standard normal draws unrelated to the class, so the true test
+error rate of any classifier is `r pct(true_error, 0)`. A common first step
+with so many features is **screening**: keep the `r q_keep` features most
+correlated with the response, then fit a classifier to those. The figure plots
+the two features of one data set with the largest absolute correlation with
+the class.
+
+```{r noise-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 4.2
+noise_plot
+```
+
+The classes look partly separated: class `r upper_class` tends to sit higher
+than class `r other_class(upper_class)`, and class `r right_class` further
+right than class `r other_class(right_class)`. The absolute correlations of
+these two features with the class are `r fmt(top_cor[1])` and
+`r fmt(top_cor[2])`. Among
+`r format(p_noise, big.mark = ",")` features unrelated to the class, some are
+correlated with it in a sample of `r n_noise` by chance, and screening finds
+exactly those.
+
+### Within-fold screening
+
+The function below estimates the error rate of "screen the `r q_keep` most
+correlated features, then classify by KNN with $K = `r K_noise`$" by
+`r n_folds`-fold cross-validation, in one of two ways. With `inside = FALSE`
+it screens once, on all $n$ observations, and cross-validates only the KNN step. With
+`inside = TRUE` it screens again within each fold, using only the training
+folds.
+
+```{r screen-cv}
+screen_cv_error <- function(X, y, inside,
+                            fold = sample(rep(seq_len(n_folds), length.out = nrow(X)))) {
+  keep_all <- screen(X, y, q_keep)
+  wrong <- logical(nrow(X))
+  for (l in seq_len(n_folds)) {
+    held_out <- fold == l
+    keep <- if (inside) screen(X[!held_out, ], y[!held_out], q_keep) else keep_all
+    predicted <- class::knn(X[!held_out, keep], X[held_out, keep, drop = FALSE],
+                            y[!held_out], k = K_noise)
+    wrong[held_out] <- predicted != y[held_out]
+  }
+  mean(wrong)
+}
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r screen-simulation}
+#| output: false
+n_noise_sims <- 200
+screen_labels <- c("Screen once, then cross-validate",
+                   "Screen inside each fold")
+screen_sims <- map(seq_len(n_noise_sims), \(r) {
+  d <- simulate_noise()
+  tibble(approach = screen_labels,
+         error = c(screen_cv_error(d$X, d$y, inside = FALSE),
+                   screen_cv_error(d$X, d$y, inside = TRUE)))
+}) |>
+  list_rbind() |>
+  mutate(approach = factor(approach, levels = screen_labels))
+screen_mean <- function(a) mean(screen_sims$error[screen_sims$approach == a])
+
+# Screening inside each fold on further data sets, three ways: folds drawn as
+# above; stratified folds, each holding equally many of each class; and class
+# labels drawn independently rather than fixed at n / 2 per class.
+n_check_sims <- 1000
+stratified_fold <- function(y) {
+  fold <- integer(length(y))
+  for (cl in levels(y)) {
+    fold[y == cl] <- sample(rep(seq_len(n_folds), length.out = sum(y == cl)))
+  }
+  fold
+}
+check_labels <- c("random", "stratified", "independent")
+inside_checks <- map(seq_len(n_check_sims), \(r) {
+  d <- simulate_noise()
+  y_independent <- factor(sample(levels(d$y), n_noise, replace = TRUE),
+                          levels = levels(d$y))
+  tibble(folds = check_labels,
+         error = c(screen_cv_error(d$X, d$y, inside = TRUE),
+                   screen_cv_error(d$X, d$y, inside = TRUE,
+                                   fold = stratified_fold(d$y)),
+                   screen_cv_error(d$X, y_independent, inside = TRUE)))
+}) |>
+  list_rbind() |>
+  group_by(folds) |>
+  summarize(mean = mean(error), se = sd(error) / sqrt(n()), .groups = "drop")
+check_of <- function(f, col = "mean") inside_checks[[col]][inside_checks$folds == f]
+
+screen_plot <- ggplot(screen_sims, aes(x = error)) +
+  geom_histogram(binwidth = 0.04, boundary = 0, fill = "grey60", color = "white") +
+  geom_vline(xintercept = true_error, linetype = "dashed") +
+  facet_wrap(~ approach, ncol = 1) +
+  scale_x_continuous(labels = \(v) paste0(100 * v, "%"), limits = c(0, 1)) +
+  labs(x = "10-fold cross-validation error rate", y = "Simulated data sets",
+       title = paste0(n_noise_sims, " simulated data sets; true error rate ",
+                      pct(true_error, 0), " (dashed)"))
+```
+:::
+
+```{r screen-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+screen_plot
+```
+
+Across `r n_noise_sims` simulated data sets, screening once and then
+cross-validating gives an average estimated error rate of
+`r pct(screen_mean(screen_labels[1]))`, against a true error rate of
+`r pct(true_error, 0)`. Screening inside each fold gives
+`r pct(screen_mean(screen_labels[2]))`. The first approach selected the
+features using the responses of the very observations it later held out, so
+those observations were not new to the classifier.
+
+Screening is part of the fit. So is every other step that uses the data to
+build a classifier or a regression, and a cross-validation estimate is honest
+only if all of those steps are repeated, inside every fold, using only the
+training folds.
+
+The second estimate sits slightly above `r pct(true_error, 0)`. To see why,
+screening inside each fold was cross-validated on
+`r format(n_check_sims, big.mark = ",")` further simulated data sets in three
+ways. With folds drawn at random as
+above, the average estimated error rate is `r pct(check_of("random"))`. With
+stratified folds, each holding equally many observations of each class, it is
+`r pct(check_of("stratified"))`. With each class label drawn independently,
+`r and_list(levels(noise_example$y))` equally likely, so that the class counts
+vary from one data set to the next, it is `r pct(check_of("independent"))`.
+Each of these averages has a simulation standard error of at most
+`r fmt(100 * max(inside_checks$se))` percentage points.
+
+Only the first combines fixed class counts with folds that ignore the class.
+Each data set has exactly `r n_noise / 2` observations per class, so a
+held-out fold with more of one class leaves the training folds with fewer of
+it. A classifier with no information leans toward the class that is more
+common in its training folds, which is the less common class in the held-out
+fold. Stratified folds remove the imbalance between held-out and training
+folds, and independent labels remove the fixed counts that tie them together,
+and both estimates are within simulation error of `r pct(true_error, 0)`.
+
+### Standardization and tuning
+
+The same rule covers every data-dependent step.
+
+- **Standardization.** `knn_classify()` computes the feature means and
+standard deviations from the training folds and applies them to the held-out
+fold. Standardizing the whole data set first lets the held-out observations
+influence the scale, the same kind of leak as screening.
+- **Tuning.** Choosing $K$ by cross-validation is itself a data-dependent
+step. The smallest of `r length(K_grid)` cross-validation error rates,
+`r pct(min(knn_errors$"10-fold CV"), 2)`, is the minimum of noisy estimates,
+so over repeated data sets it tends to fall below the test error rate of the
+classifier it chooses. An honest estimate of the error of "choose $K$ by
+`r n_folds`-fold cross-validation, then fit" needs data not used in the
+choosing: here the test half, where $K = `r K_cv`$ has error rate
+`r pct(knn_of(K_cv, "Test half"), 2)`. On this one split that is
+`r if (test_below_cv_min) "below" else "above"` the cross-validation minimum,
+`r if (test_below_cv_min) "the opposite of the tendency, because the test curve lies below the cross-validation curve" else "as the tendency predicts"`.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+- **One-standard-error rule.** When the cross-validation curve is nearly flat
+near its minimum, as for the polynomial degree of the cars, choose the
+simplest model whose estimate is within one standard error of the minimum,
+the standard error computed from the $k$ fold MSEs.
+- **Repeated and stratified $k$-fold.** Averaging $k$-fold estimates over
+several random partitions reduces their dependence on the partition;
+stratifying the folds keeps the class proportions the same in every fold,
+which matters when one class is rare, as defaulters are.
+- **Nested cross-validation.** An outer cross-validation loop around the
+whole procedure "choose the tuning parameter by inner cross-validation, then
+fit" estimates the test error of that procedure without a separate test set.
+:::
+
+## Conclusion
+
+Training error falls as flexibility increases, so it cannot choose a model's
+flexibility. Resampling methods estimate test error by fitting to part of the
+data and measuring error on the part held out.
+
+The validation set approach holds out one random part. Its estimate varies
+with the split, and because each model is fit to only part of the data it
+tends to overestimate the test error of the model fit to all $n$. Leave-one-out
+cross-validation holds out each observation in turn and averages the $n$
+squared held-out errors. It involves no random split and is nearly unbiased.
+For least squares it needs a single fit, since the held-out error of
+observation $i$ is its residual divided by $1 - h_i$.
+
+$k$-fold cross-validation divides the data into $k$ folds, fits $k$ times, and
+averages the held-out errors. Choosing $k$ trades bias, variance, and
+computation. Smaller $k$ means smaller training sets and so more upward bias;
+larger $k$ averages more, but more strongly correlated, fold errors, so its
+variance falls more slowly than the number of folds suggests; and each
+additional fold is another fit. $k = 5$ or $10$ is the usual choice because
+each fit uses 80% or 90% of the data, which keeps the bias modest, while a
+method without the least squares shortcut needs only 5 or 10 fits rather than
+$n$. For classification the squared
+error becomes the misclassification indicator or another loss such as log
+loss, and the cross-validation curve chooses a flexibility setting, such as
+the number of neighbors in KNN, as it chooses a polynomial degree.
+
+A cross-validation estimate is honest only when every data-dependent step,
+including feature screening, standardization, and tuning, is repeated inside
+each fold using only the training folds. Selecting features or tuning
+parameters on all the data first lets the held-out observations shape the
+fit, and the estimate becomes optimistic.
+
+The next lecture turns from estimating test error to estimating the
+variability of an estimate: the bootstrap resamples the observations with
+replacement to approximate a statistic's sampling distribution.

@@ -33,6 +33,8 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-01 | New | | 04-classification/60-qda-naive-bayes.qmd | |
 | 2026-10-01 | New | | 04-classification/70-generalized-linear-models.qmd | |
 | 2026-10-06 | New (split from 04-classification/50-lda.qmd) | | 04-classification/55-classifier-evaluation.qmd | |
+| 2026-10-08 | New | | 05-resampling/10-cross-validation.qmd | |
+| 2026-10-08 | New | | 05-resampling/20-bootstrap.qmd | |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into

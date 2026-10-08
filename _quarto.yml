@@ -30,6 +30,10 @@ book:
       - 04-classification/55-classifier-evaluation.qmd
       - 04-classification/60-qda-naive-bayes.qmd
       - 04-classification/70-generalized-linear-models.qmd
+    - part: "Resampling"
+      chapters:
+      - 05-resampling/10-cross-validation.qmd
+      - 05-resampling/20-bootstrap.qmd
 
 format:
   html:
