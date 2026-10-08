@@ -56,30 +56,23 @@ The data run through the whole lecture. The models are fit to the training half,
 
 $$p_k(x) \propto \pi_k f_k(x)$$
 
+$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad i = 1, \ldots, n$$
+
 ::: {.fragment}
 Generative classifiers differ only in the model for $f_k(x)$
 
-LDA
-
-::: {style="font-size: 0.7em"}
-$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right), \qquad i = 1, \ldots, n$$
+::: {style="font-size: 0.8em"}
+| Classifier           | Distribution                                                     |
+|:---------------------|:-----------------------------------------------------------------|
+| LDA                  | $X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma\right)$   |
+| QDA                  | $X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma_k\right)$  |
+| Naive Bayes          | $X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}, \quad j = 1, \ldots, p$  |
+| Gaussian naive Bayes | $X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Lambda_k\right)$ |
 :::
 :::
 
 ::: {.fragment}
-QDA
-
-::: {style="font-size: 0.7em"}
-$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_i \mid Y_i = k \stackrel{ind}{\sim} N_p\left(\mu_k, \Sigma_k\right), \qquad i = 1, \ldots, n$$
-:::
-:::
-
-::: {.fragment}
-Naive Bayes
-
-::: {style="font-size: 0.7em"}
-$$Y_i \stackrel{ind}{\sim} \text{Categorical}\left(\pi_1, \ldots, \pi_K\right), \qquad X_{ij} \mid Y_i = k \stackrel{ind}{\sim} f_{kj}, \qquad i = 1, \ldots, n, \quad j = 1, \ldots, p$$
-:::
+$\Lambda_k$: diagonal covariance matrix
 :::
 
 ::: notes
@@ -183,24 +176,17 @@ $$\begin{aligned}
 :::
 
 ::: {.fragment}
-Boundary: log posterior odds $= 0$, a conic section with two features; up to two points with one feature
+Boundary: log posterior odds $= 0$
+
+- Two features: a conic section
+- One feature: up to two points
 :::
 
 ::: notes
 An intercept, p linear terms and p(p+1)/2 squares and cross-products. The boundary is a curve, not a line.
 :::
 
-## QDA and LDA boundaries
-
-![Within the training balances, QDA's boundary runs close to LDA's line; beyond them it has a second branch](../_freeze/04-classification/60-qda-naive-bayes/figure-html/qda-boundary-figure-1.png)
-
-::: notes
-The shaded region is beyond the largest training balance, so the second branch is an extrapolation of Gaussian tails.
-:::
-
-## Second boundary branch
-
-One feature: the class with the larger variance is assigned in both tails
+## One feature
 
 ::: {.panel-tabset}
 
@@ -214,8 +200,18 @@ One feature: the class with the larger variance is assigned in both tails
 
 :::
 
+The class with the larger variance is assigned in both tails
+
 ::: notes
 With balance alone the discriminant functions are two downward parabolas that cross twice, where the LDA lecture's straight lines crossed once. The second crossing is past every customer in either half.
+:::
+
+## Two features
+
+![Within the training balances, QDA's boundary runs close to LDA's line; beyond them it has a second branch](../_freeze/04-classification/60-qda-naive-bayes/figure-html/qda-boundary-figure-1.png)
+
+::: notes
+The shaded region is beyond the largest training balance, so the second branch is an extrapolation of Gaussian tails.
 :::
 
 # Naive Bayes
@@ -361,14 +357,14 @@ $$\widehat p_k(x_0) = \frac{1}{K}\sum_{i \in \mathcal{N}_0}\mathrm{I}(y_i = k)$$
 
 - $x_0$ — feature vector to classify
 - $\mathcal{N}_0$ — the $K$ training points closest to $x_0$
-- $K$ — number of neighbors, not the number of classes
+- $K$ — number of neighbors (not the number of classes)
 
 ::: {.fragment}
-Assign $x_0$ to the class with the largest $\widehat p_k(x_0)$
+Neighbors voting: each of the $K$ neighbors votes for its own class, and $\widehat p_k(x_0)$ is the share of votes for class $k$
 :::
 
 ::: {.fragment}
-Two classes: $\widehat p_{\text{No}}(x_0) = 1 - \widehat p_{\text{Yes}}(x_0)$, so assign Yes when $\widehat p_{\text{Yes}}(x_0) > 0.5$
+Assign $x_0$ to the class with the largest $\widehat p_k(x_0)$
 :::
 
 ::: notes
