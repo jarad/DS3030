@@ -35,7 +35,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/55-classifier-evaluation.qmd @ uncommitted -->
+<!-- derived-from: 04-classification/55-classifier-evaluation.qmd @ bab6273 -->
 
 - Credit card classifiers
 - Confusion matrix
