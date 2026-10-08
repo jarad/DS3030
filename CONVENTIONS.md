@@ -57,8 +57,9 @@ convention.
   $\stackrel{iid}{\sim}$; identical distribution is visible from parameters
   that do not depend on $i$. A bare $\sim$ is for a distribution that is not
   a model for the observations, such as a derived one
-  ($S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$, in
-  `04-classification/55-classifier-evaluation.qmd`). In the
+  (the difference $D$ of two independent normal variables with means $\mu_2$
+  and $\mu_1$ and common variance $\sigma^2$,
+  $D \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$). In the
   generative-classifier chapters (`04-classification/50-lda.qmd` and
   `60-qda-naive-bayes.qmd`) the features of observation $i$ are random and
   written capital, $X_i$ or $X_{ij}$, with observed values $x_i$ and

@@ -34,12 +34,11 @@ After this lecture you should be able to
 confusion matrix for $K$ classes), **compute** the error rate, sensitivity,
 and specificity from it, and **explain** how sensitivity
 and specificity trade off as the threshold moves,
-- **interpret** an ROC curve and its AUC, including AUC as the probability that
-a randomly chosen positive observation receives a higher score than a randomly
-chosen negative one,
-- **explain** why the ROC curve and the AUC depend on a classifier only
-through how it orders the observations, and **compute** the AUC implied by a
-one-feature Gaussian model with a shared variance, and
+- **interpret** an ROC curve and its AUC, the area under the curve, for which
+larger values (at most 1) generally indicate a better classifier, **compute**
+the AUC from the points of an ROC curve by the trapezoid rule, and **explain**
+why the ROC curve and the AUC depend on a classifier only through how it
+orders the observations, and
 - **compare** classifiers fit to the same observations, including models fit
 separately within the strata of a categorical variable, by error rate,
 sensitivity, specificity, and AUC, and **explain** why training rates
@@ -171,7 +170,6 @@ lda_by_hand <- function(X, y) {
 
 # Balance alone.
 hand_1 <- lda_by_hand(Default["balance"], Default$default)
-sigma_hat_1 <- sqrt(hand_1$Sigma[1, 1])
 balance_lda <- MASS::lda(default ~ balance, data = Default)
 balance_glm <- glm(default ~ balance, data = Default, family = "binomial")
 post_1 <- predict(balance_lda)$posterior[, "Yes"]
@@ -722,13 +720,6 @@ auc_trapezoid <- function(roc) {
   with(roc, sum(diff(fpr) * (head(tpr, -1) + tail(tpr, -1)) / 2))
 }
 
-# AUC as the proportion of (positive, negative) pairs ordered correctly.
-auc_pairs <- function(score, positive) {
-  s_pos <- score[positive]
-  s_neg <- score[!positive]
-  mean(outer(s_pos, s_neg, ">")) + 0.5 * mean(outer(s_pos, s_neg, "=="))
-}
-
 # Everything the slider needs, indexed by t = 0.01, 0.02, ..., 0.99, is
 # computed here and passed to the page, which only looks values up.
 # Each histogram's outline, as a stair through the bin edges.
@@ -923,60 +914,31 @@ regression `r format(n_flag_glm_below, big.mark = ",")``r if (glm_within_lda_bel
 ### AUC
 
 The **AUC** is the area under the ROC curve, a single number summarizing the
-curve over all thresholds at once. It has a probabilistic interpretation.
-Let $S_+$ be the score of a randomly chosen positive observation and $S_-$ the
-score of an independently chosen negative one, and let $g_-$ be the density of
-$S_-$.
-At cutoff $c$ the true positive rate is $P(S_+ > c)$ and the false positive
-rate is $P(S_- > c)$, whose derivative with respect to $c$ is $-g_-(c)$. As
-$c$ runs from $+\infty$ down to $-\infty$ the false positive rate runs from
-$0$ to $1$, so
+curve over all thresholds at once. The AUC is at most 1 and, generally, a
+larger AUC is better; the caveat below is that a classifier with the larger AUC
+can still be the worse one over the false positive rates that matter for an
+application. A classifier that ignores the features has an ROC curve along the
+diagonal and an AUC of 0.5; a classifier whose curve reaches the top-left
+corner, with sensitivity 1 at a false positive rate of 0, has an AUC of 1.
 
-$$\text{AUC} = \int_0^1 \text{TPR}\; d\,\text{FPR} = \int_{-\infty}^{\infty} P(S_+ > c)\, g_-(c)\, dc = P(S_+ > S_-),$$
+The ROC curve of a sample is a set of points
+$\left(\text{FPR}_m, \text{TPR}_m\right)$, one for each threshold at which
+the confusion matrix changes. Joining consecutive points by straight lines
+and adding up the trapezoids beneath them gives the AUC,
 
-where
-
-- $S_+$ and $S_-$ are the classifier's scores for a random positive and a
-random negative observation, and
-- the final equality conditions on $S_- = c$ and integrates over its density.
-
-The AUC is the probability that the classifier scores a randomly chosen
-positive observation above a randomly chosen negative one. A classifier that
-ignores the features has $\text{AUC} = 0.5$; one that ranks every positive
-above every negative has $\text{AUC} = 1$.
-
-With training data the same probability is estimated by comparing every
-positive observation with every negative one,
-
-$$\widehat{\text{AUC}} = \frac{1}{n_+ n_-}\sum_{i:\, y_i = \text{positive}}\ \sum_{j:\, y_j = \text{negative}}\left[\mathrm{I}(s_i > s_j) + \tfrac{1}{2}\mathrm{I}(s_i = s_j)\right],$$
+$$\text{AUC} = \sum_{m=1}^{M}\left(\text{FPR}_m - \text{FPR}_{m-1}\right)\frac{\text{TPR}_m + \text{TPR}_{m-1}}{2},$$
 
 where
 
-- $n_+$ and $n_-$ are the numbers of positive and negative training
-observations,
-- $s_i$ is the classifier's score for observation $i$, and
-- tied scores count as half a correctly ordered pair.
-
-This equals the area under the empirical ROC curve computed by the trapezoid
-rule.
-
-Under the one-feature Gaussian model the score can be taken as $x$ itself
-(with class $2$ positive and $\mu_2 > \mu_1$), so
-$S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)$ and
-
-$$\text{AUC} = P(S_+ - S_- > 0) = \Phi\left(\frac{\Delta}{\sqrt{2}}\right), \qquad \Delta = \frac{\mu_2 - \mu_1}{\sigma},$$
-
-where
-
-- $\Phi$ is the standard normal cumulative distribution function, and
-- $\Delta$ is the separation of the class means in standard deviations.
+- $\left(\text{FPR}_m, \text{TPR}_m\right)$ is the false and true positive rate
+at the $m$th point, ordered by increasing false positive rate, and
+- $m = 0$ is the point $(0, 0)$ and $m = M$ is the point $(1, 1)$.
 
 For the credit card customers, the table below gives the AUC of LDA and
 logistic regression with `balance` alone and with `balance` and `income`,
-computed both as the area under the empirical ROC curve and as the proportion
-of (defaulter, non-defaulter) pairs ordered correctly. In the figure, the left
-panel shades the area under the running example's ROC curve, labeled with
-that area, with a dashed diagonal for reference. The right panel draws the
+computed this way. In the figure, the left panel shades the area under the
+running example's ROC curve, labeled with that area, with a dashed diagonal for
+reference. The right panel draws the
 ROC curves of four classifiers fit to the same customers — LDA with `balance`
 only, with `income` only, and with both, and a classifier that ignores the
 features — each labeled with its AUC.
@@ -992,21 +954,11 @@ scores <- list(
   "Logistic regression, balance + income" = post_glm_2
 )
 auc_values <- tibble(model = names(scores)) |>
-  mutate(trapezoid = map_dbl(scores, \(s) auc_trapezoid(roc_curve(s, is_yes))),
-         pairs = map_dbl(scores, \(s) auc_pairs(s, is_yes)))
-auc_of <- function(m) auc_values$trapezoid[auc_values$model == m]
+  mutate(auc = map_dbl(scores, \(s) auc_trapezoid(roc_curve(s, is_yes))))
+auc_of <- function(m) auc_values$auc[auc_values$model == m]
 auc_table <- auc_values |>
-  mutate(across(c(trapezoid, pairs), \(v) sprintf("%.5f", v))) |>
-  knitr::kable(col.names = c("Model", "AUC (trapezoid rule)",
-                             "AUC (pairwise comparison)"),
-               align = "lcc")
-
-# AUC implied by the fitted one-feature Gaussian model for balance.
-delta_hat_1 <- unname(diff(hand_1$mu[, 1]) / sigma_hat_1)
-auc_gauss_1 <- pnorm(delta_hat_1 / sqrt(2))
-# The same calculation with each class's own standard deviation.
-auc_gauss_sep <- pnorm(diff(hand_1$mu[, 1]) /
-                         sqrt(sum(class_summary$sd_balance^2)))
+  mutate(auc = sprintf("%.5f", auc)) |>
+  knitr::kable(col.names = c("Model", "AUC"), align = "lc")
 
 auc_area_plot <- ggplot(roc_lda_2, aes(x = fpr, y = tpr)) +
   geom_ribbon(aes(ymin = 0, ymax = tpr), fill = "grey70", alpha = 0.6) +
@@ -1087,8 +1039,7 @@ auc_area_plot
 auc_classifier_plot
 ```
 
-The two AUC computations agree in every row of the table. With `balance`
-alone, LDA and logistic regression have identical AUCs of
+With `balance` alone, LDA and logistic regression have identical AUCs of
 `r sprintf("%.5f", auc_of("LDA, balance"))`: both posterior probabilities are
 increasing functions of balance, so they order the customers identically and
 trace the same ROC curve. With `balance` and `income`, the two classifiers'
@@ -1097,24 +1048,8 @@ their orderings differ slightly. Their AUCs,
 `r sprintf("%.5f", auc_of("LDA, balance + income"))` and
 `r sprintf("%.5f", auc_of("Logistic regression, balance + income"))`, differ
 by $`r sci(auc_of("LDA, balance + income") - auc_of("Logistic regression, balance + income"), 2)`$.
-An AUC of `r sprintf("%.3f", auc_of("LDA, balance + income"))` means that for
-a randomly chosen defaulter and non-defaulter, the LDA classifier gives the
-defaulter the higher posterior probability about
-`r round(100 * auc_of("LDA, balance + income"))`% of the time.
-
-The fitted one-feature Gaussian model for balance has
-$\hat\Delta = `r sprintf("%.3f", delta_hat_1)`$, so it implies an AUC of
-$\Phi\left(`r sprintf("%.3f", delta_hat_1)`/\sqrt{2}\right) = `r sprintf("%.3f", auc_gauss_1)`$,
-below the empirical `r sprintf("%.3f", auc_of("LDA, balance"))`. That is
-consistent with the defaulters' balances being less spread out than the
-shared $\hat\sigma$ assumes, which separates the classes better than the
-fitted model expects. With each class's own standard deviation in place of
-$\hat\sigma$, $S_+ - S_-$ has variance
-$\hat\sigma_{\text{No}}^2 + \hat\sigma_{\text{Yes}}^2$, where
-$\hat\sigma_{\text{No}}$ and $\hat\sigma_{\text{Yes}}$ are the class sample
-standard deviations in the summary table, and
-$\Phi\left(`r sprintf("%.2f", diff(hand_1$mu[, 1]))`/\sqrt{`r dollars(summary_of("No", "sd_balance"))`^2 + `r dollars(summary_of("Yes", "sd_balance"))`^2}\right) = `r sprintf("%.3f", auc_gauss_sep)`$,
-close to the empirical value.
+An AUC of `r sprintf("%.3f", auc_of("LDA, balance + income"))`, close to 1,
+reflects an ROC curve that bows far toward the top-left corner.
 
 In the right panel, the AUC ranks the classifiers without a threshold.
 Income alone barely separates the classes: its curve stays near the
@@ -1365,8 +1300,9 @@ to
 and its AUC from
 `r sprintf("%.4f", strata_of("Logistic regression, additive", "auc"))` to
 `r sprintf("%.4f", strata_of("Logistic regression, interacted with student", "auc"))`.
-The AUC compares defaulters with non-defaulters across strata as well as
-within them. These are training rates, and the stratified models estimate
+The pooled ROC curve sweeps one threshold over the customers of both strata
+together, so it compares students' scores with non-students' as well as
+within each stratum. These are training rates, and the stratified models estimate
 twice as many parameters — `r 2 * n_par_lda` against `r n_par_lda` for LDA
 (`r K - 1` prior, `r K * p_features` means, and
 `r p_features * (p_features + 1) / 2` covariance entries per fit), and
@@ -1407,11 +1343,11 @@ true class, and moving the threshold trades one against the other. With $K$
 classes the confusion matrix is $K \times K$ and sensitivity and specificity
 are computed one class versus the rest. The ROC curve displays the two-class
 tradeoff at every threshold and depends only on how a classifier orders the
-observations. Its area, the AUC, is the probability that a randomly chosen
-positive observation is scored above a randomly chosen negative one, and it
+observations. Its area, the AUC, is at most 1 with larger values generally
+better, is computed from the points of the ROC curve by the trapezoid rule, and
 ranks classifiers without fixing a threshold, although a classifier with the
-larger AUC can be the worse one over the false positive rates that matter
-for an application.
+larger AUC can be the worse one over the false positive rates that matter for
+an application.
 
 Fitting a model separately within each stratum of a categorical variable lets
 every parameter differ by stratum; for logistic regression it is the same as

@@ -4,45 +4,48 @@ Outline for `55-classifier-evaluation_slides.qmd` (Wed 2026-10-07, one 50-minute
 period; chapter 14). **This file is the spec; the deck is built from it.** Edit
 it freely: reorder, cut, reword, change `tag:`, add notes. When it says what you
 want, ask for the deck to be built and `slides-author` will implement exactly
-these slides. The deck does not exist yet.
+these slides. The deck exists; this file was last revised 2026-10-08, after the
+2026-10-07 lecture, to match it: the Area under the ROC curve slide now follows
+ROC curves, balance + income (15, 16), the Credit card findings slide was cut
+(parked below), a Multiple classes transition (25) precedes the K-class
+Confusion matrix slide (26), and a Computing the AUC slide (17) holds the
+trapezoid-rule sum.
 
-Drafted 2026-10-06 against `55-classifier-evaluation.qmd`, whose frozen output
-(`_freeze/04-classification/55-classifier-evaluation/`, hash `639db023...`)
-matches the current file. The chapter is new, **split from `50-lda.qmd` on
-2026-10-06**: its evaluation material (confusion matrix through AUC), the credit
+Drafted 2026-10-06 against `55-classifier-evaluation.qmd`. The chapter is new,
+**split from `50-lda.qmd` on 2026-10-06**: its evaluation material (confusion matrix through AUC), the credit
 card findings and the student strata moved out of the LDA chapter, and the
 slides parked in `50-lda_slides.outline.md` under "Not in this deck" are the raw
-material here. The chapter is untracked in git, so no derived-from hash exists
-yet; the deck's provenance comment should record the commit once the chapter is
-committed.
+material here. The deck's provenance comment records the chapter commit it was
+built from.
 
 The core line is: the credit card default data and the fitted classifiers the
 chapter recaps (14.1), the confusion matrix, sensitivity and specificity,
-threshold choice, the ROC curve and the AUC (14.2.1 to 14.2.6), the credit card
-findings (14.3), and the student strata (14.4). Chapter sections and
-subsections are numbered 14.1 (Credit card classifiers), 14.2 (Classifier
+threshold choice, the ROC curve and the AUC (14.2.1 to 14.2.6), and the
+student strata (14.4); the credit card findings (14.3) are in the chapter but
+not in the deck. Chapter sections and subsections are numbered 14.1 (Credit card classifiers), 14.2 (Classifier
 evaluation), 14.3 (Credit card findings), 14.4 (Student strata) and 14.5
 (Conclusion); within 14.2, 14.2.1 Confusion matrix, 14.2.2 Sensitivity and
 specificity, 14.2.3 Multiple classes, 14.2.4 Classification threshold, 14.2.5 ROC
 curve, 14.2.6 AUC.
 
 **Cut to optional, in the order they would go:** the student strata summary table
-and the strata scatterplot (21, 22), Multiple classes (25, 26; the lecture's
+and the strata scatterplot (21, 22), Multiple classes (26, 27; the lecture's
 `$K \times K$` learning objective is then covered by the notes only), the income
-and balance scatterplot (3), ROC curves, same customers (18) and the Conclusion
-slide (27). If time is still short, the Student strata section (23, 24) is the
+and balance scatterplot (3), ROC curves, same customers (19) and the Conclusion
+slide (28). If time is still short, the Student strata section (23, 24) is the
 part to give up, since nothing after it but the optional Multiple classes and
 Conclusion slides depends on it. **Cut from the deck entirely and parked below:**
-the AUC definition, the AUC estimate and the one-feature Gaussian AUC (moved out
-on 2026-10-06), the error-minimizing threshold and the interactions with income
+the AUC integral chain, estimate and Gaussian formula (moved out of the deck
+on 2026-10-06 and removed from the chapter on 2026-10-08, so nothing is left to
+restore), the error-minimizing threshold and the interactions with income
 (text only in the chapter), the strata thresholds and prior-shift discussion
 (text only), and every `### Beyond this course` pointer.
 
 Two slides embed the chapter's Observable JS widgets live, the checkbox rate
-plot and the ROC slider (11, 14). Four transition slides (1, 5, 10, 20), as in
+plot and the ROC slider (11, 14). Five transition slides (1, 5, 10, 20, 25), as in
 the LDA and QDA decks; slide 10 introduces the Classification threshold
-subsection and differs from slide 11's title only in case. The two Multiple
-classes slides (25, 26) sit at the end, after the student strata and just before
+subsection and differs from slide 11's title only in case. The Multiple
+classes slides (25 to 27) sit at the end, after the student strata and just before
 the Conclusion, so the lecture's main line runs from the confusion matrix
 straight through the threshold and the ROC curve.
 
@@ -89,12 +92,12 @@ Equations use the bracket convention (`\log\left[\frac{t}{1 - t}\right]`, never
 braces or the same bracket at two levels) and `\widehat` for `\hat`. No equation
 writes terms that do not involve $k$; none is needed here.
 
-**Timing:** 28 slides: 4 transitions (no time), 18 `core` content slides (slide 0
+**Timing:** 29 slides: 5 transitions (no time), 18 `core` content slides (slide 0
 and 17 more) and 6 `optional`. At about 2 to 3 minutes each, 18 content slides
-fits 50 minutes only because the quick ones (2, 4, 6, 7, 13, 19) take a minute or
+fits 50 minutes only because the quick ones (2, 4, 6, 7, 13) take a minute or
 less; the two interactive slides (11, 14) take longer, since the instructor works the
 widget live. If time runs short, drop in this
-order: 21 and 22, 25 and 26, 3, 18, 27, then 23 and 24.
+order: 21 and 22, 26 and 27, 3, 19, 28, then 23 and 24.
 
 ---
 
@@ -102,7 +105,7 @@ order: 21 and 22, 25 and 26, 3, 18, 27, then 23 and 24.
 tag: core
 show: none
 words: agenda as noun phrases — Credit card classifiers · Confusion matrix · Sensitivity and specificity · Threshold choice · ROC curve · AUC · Student strata
-note: distilled from the chapter's four learning objectives; Multiple classes is not on the agenda because it is optional.
+note: distilled from the chapter's three learning objectives; Multiple classes is not on the agenda because it is optional.
 
 ## 1. Credit Card Classifiers
 tag: core
@@ -220,34 +223,34 @@ words: "Almost on top of one another, far above the diagonal"
 say: lowering t from 0.5 to 0.2 moves each model's marked point up and slightly right along its curve; logistic regression's point sits further along its nearly shared curve than LDA's; the crossover discussion (the balances where the two posterior curves cross at the income quartiles, and the order reversing at a low threshold) is in the notes
 note: the title is the figure's own. The crossover paragraph is inline R and text only, so it is parked.
 
-## 16. AUC of the fitted classifiers
-tag: core
-show: table — auc-table (LDA and logistic regression with balance alone and with balance and income, AUC by the trapezoid rule and by pairwise comparison)
-words: "Two computations of the AUC agree in every row"
-say: with balance alone LDA and logistic regression have identical AUCs, since both posterior probabilities are increasing functions of balance, so they order the customers identically and trace the same ROC curve; with balance and income the orderings differ slightly, and the AUCs 0.94907 and 0.94905 differ by 2.1 × 10⁻⁵; an AUC of 0.949 means that for a random defaulter and non-defaulter, LDA gives the defaulter the higher posterior probability about 95% of the time
-note: the title is new (the chapter has no heading for the table). The numbers in the say line are inline R in the chapter, quoted from the frozen markdown.
-
-## 17. Area under the ROC curve
+## 16. Area under the ROC curve
 tag: core
 show: figure — auc-figure-display-1 (the shaded area under the running example's ROC curve, labeled with its AUC, dashed diagonal)
 words: "AUC = 0.94907 for balance and income"
-say: the left panel of the chapter's two-panel figure; the area is the AUC (trapezoid rule) in the table on the previous slide
-note: the chapter lays the two panels side by side in one chunk, so the freeze holds them as `auc-figure-display-1.png` and `auc-figure-display-2.png`; the deck shows one per slide (17 and 18) rather than two small images side by side. The panel's own title is "Area under the ROC curve". The AUC value is the label inside the figure and inline R in the chapter's table; quote from the frozen markdown.
+say: the left panel of the chapter's two-panel figure; the area is the AUC; the next slide computes it and the slide after gives the AUCs of the fitted classifiers
+note: the chapter lays the two panels side by side in one chunk, so the freeze holds them as `auc-figure-display-1.png` and `auc-figure-display-2.png`; the deck shows one per slide (16 and 19) rather than two small images side by side. The panel's own title is "Area under the ROC curve". The AUC value is the label inside the figure and inline R in the chapter's table; quote from the frozen markdown.
 
-## 18. ROC curves, same customers
+## 17. Computing the AUC
+tag: core
+show: equation — `\text{AUC} = \sum_{m=1}^{M}\left(\text{FPR}_m - \text{FPR}_{m-1}\right)\frac{\text{TPR}_m + \text{TPR}_{m-1}}{2}`, set at about 0.85 of the slide font
+words: "$\left(\text{FPR}_m, \text{TPR}_m\right)$ — point $m$ on the ROC curve, by increasing FPR", "$m = 0$ is $(0, 0)$; $m = M$ is $(1, 1)$", then "Trapezoid rule: join consecutive points by lines and add up the areas beneath"
+reveal: on arrival: the equation and the two labels; click 1: the trapezoid line
+say: each term is the width of a strip times the average of its two heights, the area of one trapezoid under the line joining consecutive ROC points
+note: added 2026-10-08 when the chapter's formal AUC material was replaced by this one computation. Source: chapter subsection "AUC".
+
+## 18. AUC of the fitted classifiers
+tag: core
+show: table — auc-table (LDA and logistic regression with balance alone and with balance and income, one AUC column, trapezoid rule)
+words: "Generally, larger is better, at most 1"
+say: with balance alone LDA and logistic regression have identical AUCs, since both posterior probabilities are increasing functions of balance, so they order the customers identically and trace the same ROC curve; with balance and income the orderings differ slightly, and the AUCs 0.94907 and 0.94905 differ by 2.1 × 10⁻⁵; an AUC of 0.949 is close to 1: the curve bows far toward the top-left corner
+note: the title is new (the chapter has no heading for the table). The numbers in the say line are inline R in the chapter, quoted from the frozen markdown.
+
+## 19. ROC curves, same customers
 tag: core
 show: figure — auc-figure-display-2 (ROC curves of LDA with balance only, with income only, with both, and a classifier that ignores the features, each labeled with its AUC)
 words: "AUC ranks classifiers without a threshold"
 say: income alone barely separates the classes, its curve staying near the diagonal; the balance-only and two-feature curves nearly coincide and cross, so each has the higher true positive rate over part of the range of false positive rates, and the AUC averages over all of them: the classifier with the larger AUC can still be the worse one over the false positive rates that matter for a given application; the shares of the range and the AUCs are inline R in the chapter
 note: the right panel of the two-panel figure. Move to optional if time is short.
-
-## 19. Credit card findings
-tag: core
-show: none
-words: three lines — "LDA and logistic regression order the customers almost identically" · "Income adds little beyond balance: AUC +0.0011" · "At $t = 0.5$ either catches a minority of defaulters: use a lower threshold"
-reveal: on arrival: the first line; click 1: the second; click 2: the third
-say: LDA's Gaussian assumptions fit these customers imperfectly, yet it orders them almost exactly as logistic regression does and differs mainly in flagging fewer customers at high thresholds; income's logistic regression coefficient is clearly nonzero (z = 4.17) although it adds only 0.0011 to LDA's AUC; a lender who cares about missed defaults would use a lower threshold
-note: the section is one paragraph of prose with no figure or table, so the slide is words only: three compressions of the chapter's own sentences, with the two numbers inline R quoted from the frozen markdown. The deck does not draw a new table or figure for it.
 
 ## 20. Student Strata
 tag: core
@@ -289,25 +292,35 @@ note: the numbers in the say line are inline R in the chapter, quoted from the f
 
 ## 25. Multiple classes
 tag: optional
+show: none (transition slide, title only)
+words: none
+note: the chapter's subsection is "Multiple classes"; the transition takes its title and the first slide after it is retitled "Confusion matrix" (the $K \times K$ table), after the 2026-10-07 lecture.
+
+---
+
+# 14.2.3 Multiple classes
+
+## 26. Confusion matrix
+tag: optional
 show: table — confusion-template-k-table
 words: "$n_{kj}$ — true class $k$, predicted class $j$" and "Error rate: $1 - \sum_{k=1}^K n_{kk} / n$"
 reveal: on arrival: the table and the $n_{kj}$ label; click 1: the error rate
 say: with K classes the confusion matrix is K × K, true classes in the rows and predicted classes in the columns; the diagonal entries are the correct classifications
-note: optional ("multiple classes only if time"); placed after the student strata slides, just before the Conclusion. The error rate is the chapter's inline expression. Uses K for the class count, per `CONVENTIONS.md`.
+note: optional ("multiple classes only if time"); placed after the student strata slides and the Multiple classes transition (25), just before the Conclusion; the title was "Multiple classes" before the transition was added. The error rate is the chapter's inline expression. Uses K for the class count, per `CONVENTIONS.md`.
 
-## 26. Multiple classes, one versus rest
+## 27. Multiple classes, one versus rest
 tag: optional
 show: equation — `\text{Sensitivity}_k = \frac{n_{kk}}{\sum_{j=1}^K n_{kj}}, \qquad \text{Specificity}_k = \frac{\sum_{l \ne k} \sum_{j \ne k} n_{lj}}{\sum_{l \ne k} \sum_{j=1}^K n_{lj}}`
 words: "One versus the rest: class $k$ positive, the other $K - 1$ classes together negative"
 reveal: on arrival: the equation; click 1: the words line
 say: collapsing to two-by-two gives class k's rates; the threshold t = 0.5 generalizes to the class with the largest posterior probability, and the two rules coincide when K = 2; other thresholds, the ROC curve and the AUC are two-class tools
-note: the chapter's heading is "Multiple classes", used on slide 25; the title here is shortened to fit one line and names the "one versus the rest" idea the chapter bolds. The ROC/AUC extension to K > 2 is in a `### Beyond this course` callout and is not used.
+note: the chapter's heading is "Multiple classes", used as the transition (25); the title here is shortened to fit one line and names the "one versus the rest" idea the chapter bolds. The ROC/AUC extension to K > 2 is in a `### Beyond this course` callout and is not used.
 
-## 27. Conclusion
+## 28. Conclusion
 tag: optional
 show: none
 words: the bare concept names from the chapter's `## Conclusion`, no recap sentences — Confusion matrix · Sensitivity and specificity · Threshold · ROC curve · AUC · Stratified models
-note: optional; the lecture may end on slide 26 (or 24, when Multiple classes is skipped) with the next lecture's preview said aloud (quadratic discriminant analysis, naive Bayes and KNN, compared on a held-out test set). The chapter's concept list is the confusion matrix, sensitivity and specificity, the threshold, the K × K matrix with one versus rest, the ROC curve, the AUC and fitting within strata with each stratum's own priors; the shorter list drops the two that are optional on the core line.
+note: optional; the lecture may end on slide 27 (or 24, when Multiple classes is skipped) with the next lecture's preview said aloud (quadratic discriminant analysis, naive Bayes and KNN, compared on a held-out test set). The chapter's concept list is the confusion matrix, sensitivity and specificity, the threshold, the K × K matrix with one versus rest, the ROC curve, the AUC and fitting within strata with each stratum's own priors; the shorter list drops the two that are optional on the core line.
 
 ---
 
@@ -315,42 +328,22 @@ note: optional; the lecture may end on slide 26 (or 24, when Multiple classes is
 
 Cut from the lecture's core line, with their assets, so they can come back.
 
-- **AUC (the integral chain):** formerly slide 17, titled "AUC" (core). Equation
-  `\text{AUC} = \int_0^1 \text{TPR}\; d\,\text{FPR} = \int_{-\infty}^{\infty} P(S_+ > c)\, g_-(c)\, dc = P(S_+ > S_-)`,
-  set at about 0.8 of the slide font. Words: "$S_+$, $S_-$ — scores of a random
-  positive and a random negative" and "AUC = 0.5: ignores the features · AUC = 1:
-  ranks every positive above every negative". Reveal: on arrival the equation;
-  click 1 the first label line; click 2 the second line. Say: the area under the
-  ROC curve summarizes the curve over all thresholds at once; the final equality
-  conditions on S₋ = c and integrates over its density; the AUC is the probability
-  that the classifier scores a randomly chosen positive above a randomly chosen
-  negative; the derivation (the true positive rate P(S₊ > c) and the false
-  positive rate P(S₋ > c) whose derivative is −g₋(c)) is in the notes. Note: the
-  chapter's `$g_-$` (the density of $S_-$) is said, not shown. Source: chapter
-  subsection "AUC".
-- **Estimating the AUC:** formerly slide 18 (optional). Equation
-  `\widehat{\text{AUC}} = \frac{1}{n_+ n_-}\sum_{i:\, y_i = \text{positive}}\ \sum_{j:\, y_j = \text{negative}}\left[\mathrm{I}(s_i > s_j) + \tfrac{1}{2}\mathrm{I}(s_i = s_j)\right]`.
-  Words: "$n_+$, $n_-$ — numbers of positive and negative observations" and "Tied
-  scores count as half a correctly ordered pair". Reveal: on arrival the
-  equation; click 1 both labels. Say: with training data the same probability is
-  estimated by comparing every positive observation with every negative one; this
-  equals the area under the empirical ROC curve by the trapezoid rule, which the
-  AUC table of the fitted classifiers confirms. Source: chapter subsection "AUC".
-- **One-feature Gaussian AUC:** formerly slide 19 (optional). Equations
-  `S_+ - S_- \sim N\left(\mu_2 - \mu_1, 2\sigma^2\right)`, then
-  `\text{AUC} = P(S_+ - S_- > 0) = \Phi\left(\frac{\Delta}{\sqrt{2}}\right), \qquad \Delta = \frac{\mu_2 - \mu_1}{\sigma}`;
-  words "$\Phi$ — standard normal CDF" and "$\Delta$ — separation of the class means
-  in standard deviations". Reveal: on arrival the distribution; click 1 the AUC
-  equation; click 2 the two labels. Say: under the one-feature Gaussian model of
-  the LDA lecture the score can be taken as x itself, with class 2 positive and
-  μ₂ > μ₁; the fitted model for balance has Δ̂ = 2.083, implying an AUC of 0.930,
-  below the empirical 0.948, consistent with the defaulters' balances being less
-  spread out than the shared σ̂ assumes; with each class's own standard deviation
-  the implied AUC is 0.951, close to the empirical value (numbers are inline R in
-  the chapter, quoted from the frozen markdown). This is the learning objective
-  "compute the AUC implied by a one-feature Gaussian model with a shared
-  variance", now covered by the notes only. The bare $\sim$ is the derived
-  distribution `CONVENTIONS.md` reserves it for. Source: chapter subsection "AUC".
+- **AUC probability interpretation, pairwise estimate and one-feature Gaussian AUC:** removed from the
+  chapter on 2026-10-08 (the integral chain, the pairwise estimator and the
+  Gaussian formula, with their R code and the second table column). The chapter
+  now defines the AUC in words as the area under the ROC curve, at most 1,
+  generally larger is better, and computes it one way, the trapezoid rule
+  (slide 17); the learning objectives no longer mention the probability
+  interpretation or the Gaussian calculation.
+- **Credit card findings:** formerly slide 19 (core), cut after the 2026-10-07
+  lecture. Three lines: "LDA and logistic regression order the customers almost
+  identically", "Income adds little beyond balance: AUC +0.0011" and "At
+  $t = 0.5$ either catches a minority of defaulters: use a lower threshold". Say:
+  LDA's Gaussian assumptions fit these customers imperfectly, yet it orders them
+  almost exactly as logistic regression does; income's logistic regression
+  coefficient is clearly nonzero (z = 4.17) although it adds only 0.0011 to LDA's
+  AUC; a lender who cares about missed defaults would use a lower threshold.
+  Source: chapter section "Credit card findings" (14.3).
 - **Error-minimizing threshold:** the chapter's paragraph that LDA's training
   error rate is lowest near t = 0.427, at 2.61%, against 2.76% at t = 0.5, and the
   logistic regression's near t = 0.504 (inline R, text only, no figure); slide 12's
@@ -376,17 +369,16 @@ Cut from the lecture's core line, with their assets, so they can come back.
 - **Figures (PNG in `_freeze/04-classification/55-classifier-evaluation/figure-html/`):**
   default-scatter-figure (slide 3, optional), fitted-boundary-figure (4),
   score-hist-figure (6), roc-figure (15), auc-figure-display-1 and
-  auc-figure-display-2 (17 and 18; the two panels of one chunk),
+  auc-figure-display-2 (16 and 19; the two panels of one chunk),
   strata-data-figure (22, optional), strata-figure (23).
 - **Tables (kable, copied from the frozen markdown):** class-summary-table (2),
   confusion-template-table (7), confusion-lda-table (8),
-  compare-table (12), auc-table (16), strata-summary-table (21, optional),
-  strata-table (24), confusion-template-k-table (25, optional).
+  compare-table (12), auc-table (18), strata-summary-table (21, optional),
+  strata-table (24), confusion-template-k-table (26, optional).
 - **Equations:** Sensitivity and specificity (9); the rule p̂(x) > t and the
-  cutoff c = log[t/(1 − t)] (13); the K-class sensitivity and specificity (26,
-  optional). Parked, not in the deck: AUC as the area, the integral chain; the
-  AUC estimate; the one-feature Gaussian AUC, S₊ − S₋ and Φ(Δ/√2) (see
-  "Not in this deck"). Refer to them by subsection and a few words, as above.
+  cutoff c = log[t/(1 − t)] (13); the AUC trapezoid sum (17); the K-class sensitivity and specificity (27,
+  optional). The formal AUC material (integral chain, pairwise estimate, Gaussian
+  formula) was removed from the chapter on 2026-10-08; nothing is parked.
 - **Interactive widgets (OJS):** the `{ojs}` cells threshold-checkboxes and
   threshold-plot (11) and roc-slider and roc-slider-plots (14), copied from
   the chapter source; their data are the two `<script type="ojs-define">` blocks
@@ -396,9 +388,9 @@ Cut from the lecture's core line, with their assets, so they can come back.
   R chunks `threshold-data` or `roc-slider-define` change, recopy both blocks.
 - **Numbers quoted from inline R in the frozen markdown:** 77 and 333, 9,647
   and 9,667, 2.76%, 3.33%, 256, 276, 23.1%, 99.8% (slides 8 and 9); 56.8%, 97.5%,
-  3.84%, 0.427, 2.61% (12); 0.94907, 0.94905, 0.949 (16, 17); 0.0011, z = 4.17
-  (19); 4.31%, 2.92% (21); 2.73%, 0.9495, 2.63%, 2.68%, 16 against 8, 6 against 3
-  (24). Parked with the one-feature Gaussian AUC: 2.083, 0.930, 0.951.
+  3.84%, 0.427, 2.61% (12); 0.94907, 0.94905, 0.949 (16, 18); 4.31%, 2.92% (21); 2.73%,
+  0.9495, 2.63%, 2.68%, 16 against 8, 6 against 3 (24). Parked with the Credit
+  card findings: 0.0011, z = 4.17.
 - **Chunk names to confirm at build time:** the `figure-html/` directory holds
   default-scatter-figure, fitted-boundary-figure, score-hist-figure, roc-figure,
   auc-figure-display-1, auc-figure-display-2, strata-data-figure and

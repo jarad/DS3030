@@ -46,7 +46,7 @@ execute:
 - Student strata
 
 ::: notes
-Distilled from the chapter's four learning objectives. Multiple classes is not on the agenda because it is optional.
+Distilled from the chapter's three learning objectives. Multiple classes is not on the agenda because it is optional.
 :::
 
 # Credit Card Classifiers
@@ -339,22 +339,39 @@ Lowering t from 0.5 to 0.2 moves each model's marked point up and slightly right
 ![AUC = 0.94907 for balance and income](../_freeze/04-classification/55-classifier-evaluation/figure-html/auc-figure-display-1.png)
 
 ::: notes
-The left panel of the chapter's two-panel figure. The area is the AUC (trapezoid rule) in the table on the next slide.
+The left panel of the chapter's two-panel figure. The area is the AUC; the next slide computes it and the slide after gives the AUCs of the fitted classifiers.
+:::
+
+## Computing the AUC
+
+::: {style="font-size: 0.85em"}
+$$\text{AUC} = \sum_{m=1}^{M}\left(\text{FPR}_m - \text{FPR}_{m-1}\right)\frac{\text{TPR}_m + \text{TPR}_{m-1}}{2}$$
+:::
+
+- $\left(\text{FPR}_m, \text{TPR}_m\right)$ — point $m$ on the ROC curve, by increasing $\text{FPR}$
+- $m = 0$ is $(0, 0)$; $m = M$ is $(1, 1)$
+
+::: {.fragment}
+Trapezoid rule: join consecutive points by lines and add up the areas beneath
+:::
+
+::: notes
+The chapter's one computation of the AUC. Each term is the width of a strip times the average of its two heights, the area of one trapezoid under the line joining consecutive ROC points. The chapter's code builds the points from the sorted scores and applies this sum.
 :::
 
 ## AUC of the fitted classifiers
 
-|Model                                 | AUC (trapezoid rule) | AUC (pairwise comparison) |
-|:-------------------------------------|:--------------------:|:-------------------------:|
-|LDA, balance                          |       0.94798        |          0.94798          |
-|Logistic regression, balance          |       0.94798        |          0.94798          |
-|LDA, balance + income                 |       0.94907        |          0.94907          |
-|Logistic regression, balance + income |       0.94905        |          0.94905          |
+|Model                                 |   AUC   |
+|:--------------------------------------|:-------:|
+|LDA, balance                           | 0.94798 |
+|Logistic regression, balance           | 0.94798 |
+|LDA, balance + income                  | 0.94907 |
+|Logistic regression, balance + income  | 0.94905 |
 
-Two computations of the AUC agree in every row
+Generally, larger is better, at most 1
 
 ::: notes
-With balance alone LDA and logistic regression have identical AUCs, since both posterior probabilities are increasing functions of balance, so they order the customers identically and trace the same ROC curve. With balance and income the orderings differ slightly, and the AUCs 0.94907 and 0.94905 differ by 2.1 times 10 to the minus 5. An AUC of 0.949 means that for a random defaulter and non-defaulter, LDA gives the defaulter the higher posterior probability about 95% of the time.
+With balance alone LDA and logistic regression have identical AUCs, since both posterior probabilities are increasing functions of balance, so they order the customers identically and trace the same ROC curve. With balance and income the orderings differ slightly, and the AUCs 0.94907 and 0.94905 differ by 2.1 times 10 to the minus 5. An AUC of 0.949 is close to 1: the curve bows far toward the top-left corner.
 :::
 
 ## ROC curves, same customers

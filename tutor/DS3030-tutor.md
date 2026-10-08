@@ -596,11 +596,11 @@ regression fits of the LDA chapter (balance alone, and balance + income),
 whose posterior probabilities are the scores, with the two-feature decision
 boundaries drawn over the scatterplot. Learning objectives: construct a
 confusion matrix and compute error rate, sensitivity, and specificity, and
-explain the threshold tradeoff; interpret an ROC curve and AUC, including
-AUC $= P(S_+ > S_-)$; explain why ROC and AUC depend only on how a classifier
-orders observations and compute the AUC implied by a one-feature
-equal-variance Gaussian model; compare classifiers, including models fit
-within strata, by these measures, and explain why training rates are
+explain the threshold tradeoff; interpret an ROC curve and AUC (the area
+under the curve; generally larger is better, at most 1); compute the AUC from
+the points of an ROC curve by the trapezoid rule; explain why ROC and AUC
+depend only on how a classifier orders observations; compare classifiers,
+including models fit within strata, by these measures, and explain why training rates are
 optimistic.
 
 Classifier evaluation, with the balance + income LDA as the running example,
@@ -629,16 +629,15 @@ moves the threshold on the example's real log posterior odds and its real
 ROC curve, and the LDA and logistic regression ROC curves, which nearly
 coincide; LDA's flatter posterior means it flags a subset of logistic
 regression's customers at high thresholds and a superset at low ones.
-**AUC**, derived as $P(S_+ > S_-)$, with the pairwise-comparison estimator
-and, for equal-variance Gaussians, $\Phi[(\mu_2-\mu_1)/(\sigma\sqrt2)]$. The
+**AUC**, the area under the ROC curve, at most 1 with larger values generally
+better (0.5 for a classifier that ignores the features), computed from the
+ROC curve's points by the trapezoid rule, a sum of trapezoid areas. The
 example's AUCs (identical for the two one-feature models, about 0.95 for both
 two-feature models) and a figure comparing classifiers fit to the same
 customers (balance only, income only, both, and no features): income alone
 is near the diagonal, and the balance-only and two-feature curves cross, so
 the classifier with the larger AUC can still be the worse one over the false
-positive rates that matter for a given application. The fitted
-equal-variance model understates the empirical AUC, while the same formula
-with each class's own standard deviation comes close. All rates are training
+positive rates that matter for a given application. All rates are training
 rates; test-error estimation is deferred to resampling.
 
 A short "Credit card findings" section, after classifier evaluation, answers
