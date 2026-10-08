@@ -129,6 +129,15 @@ convention.
 - **"Rate ratio"** names $e^{\beta_j}$ in Poisson regression: the factor by
   which the mean count is multiplied per one-unit increase in feature $j$,
   the analogue of the odds ratio.
+- **In the resampling chapters (`05-resampling/`), the number of folds is
+  lowercase $k$**, matching "$k$-fold" and $\text{CV}_{(k)}$, with the folds
+  indexed $\ell$. It is unrelated to $K$ (neighbors or classes) and indexes
+  no class; each chapter says so where $k$ first appears. Polynomial degree is
+  $d$. The number of bootstrap samples is $B$, a bootstrap replicate of a
+  statistic $\hat\theta$ is $\hat\theta^{*b}$, and the bootstrap standard
+  error is $\text{SE}_B$. $\theta$ is the quantity whose standard error is
+  wanted (not the Bernoulli parameter $\theta_{kj}$ of
+  `04-classification/60-qda-naive-bayes.qmd`; the passages are far apart).
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

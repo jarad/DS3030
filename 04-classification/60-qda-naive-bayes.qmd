@@ -1887,9 +1887,20 @@ all_scores <- function(d) {
 scores_train <- all_scores(train)
 scores_test  <- all_scores(test)
 
-# AUC as the proportion of (defaulter, non-defaulter) pairs ordered correctly.
-auc_pairs <- function(s, pos) {
-  mean(outer(s[pos], s[!pos], ">")) + 0.5 * mean(outer(s[pos], s[!pos], "=="))
+# Empirical ROC curve: every distinct score is a cutoff; classify positive
+# when score >= cutoff.
+roc_curve <- function(score, positive) {
+  ord <- order(score, decreasing = TRUE)
+  s   <- score[ord]
+  pos <- positive[ord]
+  keep <- c(diff(s) != 0, TRUE)
+  tibble(fpr = c(0, cumsum(!pos)[keep] / sum(!positive)),
+         tpr = c(0, cumsum(pos)[keep] / sum(positive)))
+}
+
+# Area under an ROC curve (sorted by fpr) by the trapezoid rule.
+auc_trapezoid <- function(roc) {
+  with(roc, sum(diff(fpr) * (head(tpr, -1) + tail(tpr, -1)) / 2))
 }
 yes_train <- train$default == "Yes"
 yes_test  <- test$default == "Yes"
@@ -1899,7 +1910,7 @@ rates <- function(p_train, p_test) {
          test_error  = mean((p_test > 0.5) != yes_test),
          sensitivity = mean(p_test[yes_test] > 0.5),
          specificity = mean(p_test[!yes_test] <= 0.5),
-         auc         = auc_pairs(p_test, yes_test),
+         auc         = auc_trapezoid(roc_curve(p_test, yes_test)),
          flagged     = sum(p_test > 0.5))
 }
 performance <- map(names(scores_test), \(m) rates(scores_train[[m]], scores_test[[m]])) |>
@@ -2232,7 +2243,7 @@ data-generating process and on the sizes of $n$ and $p$; no method is best
 in every setting. Comparing classifiers requires test data the models were
 not fit to, since training error rates reward flexibility.
 
-The next lecture begins the resampling unit. Resampling methods refit a model
-to repeated subsets of the training data to estimate its test error without a
-separate held-out test set, which lets choices such as the number of neighbors
-$K$ be made from the data.
+The next lecture returns to the generalized linear model that contains logistic
+regression and extends it to other response types, notably Poisson regression
+for counts. Choosing $K$ and the other flexibility settings from the data is
+left to the resampling methods that follow.

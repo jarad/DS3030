@@ -46,6 +46,9 @@ shifted.
 | 2026-10-02 | Fri | **Exam 1** | |
 | 2026-10-07 | Wed | `04-classification/55-classifier-evaluation.qmd` | Covered every slide in `55-classifier-evaluation_slides.qmd` (confusion matrix, sensitivity and specificity, classification thresholds, ROC curve and AUC, student strata, multiple classes), though some slides were skipped on the fly as less important. Afterwards the deck was revised: the Area under the ROC curve slide moved to follow ROC curves, balance + income; the Credit card findings slide was removed; and the Multiple classes slides got a transition slide, with the first retitled Confusion matrix. |
 | 2026-10-09 | Fri | `04-classification/60-qda-naive-bayes.qmd` | QDA (bias-variance tradeoff vs. LDA); naive Bayes (conditional independence); KNN classification; comparison of classification methods (ISLR2 4.5) on a held-out test set |
+| 2026-10-12 | Mon | `04-classification/70-generalized-linear-models.qmd` | Generalized linear models: count responses, Poisson regression, overdispersion |
+| 2026-10-14 | Wed | `05-resampling/10-cross-validation.qmd` | Cross-validation: validation set, leave-one-out with its least squares shortcut, k-fold, choosing polynomial degree on `Auto` and KNN's K on `Default`, and doing it correctly (ISLR2 5.1) |
+| 2026-10-16 | Fri | `05-resampling/20-bootstrap.qmd` | The bootstrap: standard errors and intervals for statistics with no simple formula, the multiplicative effect of cloud seeding as the running example, and when the bootstrap fails (ISLR2 5.2) |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |
 
@@ -84,9 +87,10 @@ the semester in which they were noted.
   `40-problems-in-logistic-regression.qmd`, and
   `\log\left(L(\hat\beta_r)/L(\hat\beta_f)\right)` in
   `20-multiple-logistic-regression.qmd`.
-- `04-classification/70-generalized-linear-models.qmd` was not taught in
-  Fall 2026; it was left in the book as a notes-only chapter for interested
-  students. Decide whether to schedule it next time.
+- `04-classification/70-generalized-linear-models.qmd` was originally to be a
+  notes-only chapter in Fall 2026; on 2026-10-08 it was scheduled for
+  Mon 2026-10-12 (see the plan table above), so no decision is needed unless
+  that changes.
 - Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
   has a callout headed `### Two questions, two verdicts`, which is not one of
   the three fixed callout headings in `CONVENTIONS.md`.

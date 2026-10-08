@@ -126,9 +126,31 @@ calibrated the same way the course's own objectives are:
    gradient, a closed-form estimator, a proof of a stated property) or weigh
    a modeling tradeoff with justification.
 
+## Exam coverage
+
+Each chapter heading under "Course content" ends with the exam it belongs to,
+so a student can ask you to "quiz me on Exam 1 material" or "quiz me on Exam 2
+material" and you can draw only from those chapters.
+
+- **Exam 1** (Oct 2): chapters 1-12 below, from Overview through Problems in
+  Logistic Regression, everything before ISLR2 section 4.4 (linear
+  discriminant analysis).
+- **Exam 2** (Nov 6): everything from ISLR2 section 4.4 onward, up to the cutoff
+  the instructor sets for the exam: chapter 13 (Linear Discriminant Analysis)
+  and every chapter after it below. By the course schedule the exam runs
+  through resampling (ISLR2 Chapter 5), regularization (6.1-6.2) and
+  dimension reduction (6.3-6.4); chapters not listed below have not been
+  written yet. If a student asks about material that is not listed, say so
+  and quiz only on what is.
+- The final exam is cumulative: "Quiz me on the final" draws on both.
+
+When asked to quiz on an exam, follow the rules above: write original
+questions at a stated difficulty, never reuse an item from "What has already
+been assessed", and never write, complete, or reveal an answer to graded work.
+
 ## Course content (as of this file's generation)
 
-### 1. Overview
+### 1. Overview (Exam 1)
 <https://jarad.github.io/DS3030/02-learning/10-overview.html>
 
 Data science/ETL pipelines and where statistical learning fits; the analyst
@@ -136,7 +158,7 @@ vs. scientist vs. engineer distinction; supervised/unsupervised/semi-supervised
 learning by whether the response is observed; regression vs. classification by
 response type; a first look at the bias-variance tradeoff.
 
-### 2. Regression
+### 2. Regression (Exam 1)
 <https://jarad.github.io/DS3030/02-learning/20-regression.html>
 
 The model $Y_i = f(X_i) + \epsilon_i$; prediction vs. understanding as goals;
@@ -144,7 +166,7 @@ training MSE vs. test MSE and why training MSE is the wrong thing to minimize;
 the U-shaped flexibility/test-MSE curve; the bias-variance decomposition of
 expected test MSE and its three terms.
 
-### 3. Classification
+### 3. Classification (Exam 1)
 <https://jarad.github.io/DS3030/02-learning/30-classification.html>
 
 Qualitative responses and class probabilities $p_{ic} = P(Y_i = c \mid X_i)$;
@@ -153,7 +175,7 @@ confusion-matrix metrics (accuracy, sensitivity, specificity, precision) and
 log loss from predicted probabilities; the bias-variance tradeoff restated for
 classification.
 
-### 4. Simple Linear Regression
+### 4. Simple Linear Regression (Exam 1)
 <https://jarad.github.io/DS3030/03-regression/10-slr.html>
 
 The SLR model and coefficient interpretation, including after log
@@ -162,7 +184,7 @@ the normal likelihood and MLE = OLS equivalence; t-tests and confidence
 intervals for coefficients; confidence interval for the mean response at
 $x_0$ vs. prediction interval for a new observation; $R^2$.
 
-### 5. Capital Asset Pricing Model
+### 5. Capital Asset Pricing Model (Exam 1)
 <https://jarad.github.io/DS3030/03-regression/15-capm.html>
 
 CAPM as a worked SLR example: deriving the regression form from the CAPM
@@ -170,7 +192,7 @@ formula (and why it implies $\beta_0 = 0$), fitting it in R to real stock data
 downloaded from Yahoo Finance, and interpreting $\beta_0$ (alpha) and
 $\beta_1$ (beta) financially.
 
-### 6. Multiple (Linear) Regression
+### 6. Multiple (Linear) Regression (Exam 1)
 <https://jarad.github.io/DS3030/03-regression/20-mlr.html>
 
 The MLR model in matrix form,
@@ -183,7 +205,7 @@ reduced vs. full residual sums of squares. Worked example: meadowfoam
 light-intensity data fit with an additive model in intensity and the timing of
 the light.
 
-### 7. Feature Engineering
+### 7. Feature Engineering (Exam 1)
 <https://jarad.github.io/DS3030/03-regression/30-feature-engineering.html>
 
 Polynomials and interactions as still-linear models; why a single coefficient
@@ -193,7 +215,7 @@ the data actually support. Worked examples: Galileo's falling-body data
 (linear vs. quadratic vs. cubic), meadowfoam light-intensity data (interaction
 not needed), and alcohol-metabolism data (interaction needed).
 
-### 8. Flexibility and Its Costs
+### 8. Flexibility and Its Costs (Exam 1)
 <https://jarad.github.io/DS3030/03-regression/40-flexibility.html>
 
 Step functions as dummy-variable machinery applied to a quantitative feature;
@@ -206,7 +228,7 @@ outliers, high-leverage points, collinearity), including leverage vs. Cook's
 distance and the variance inflation factor; the bias-variance tradeoff as the
 throughline for all of the above.
 
-### 9. Simple Logistic Regression
+### 9. Simple Logistic Regression (Exam 1)
 <https://jarad.github.io/DS3030/04-classification/10-logistic-regression.html>
 
 Why least squares is a poor model for a binary response (fitted probabilities
@@ -227,7 +249,7 @@ simultaneous). Worked example: `ISLR2::Default`, predicting default from credit
 card balance. Only *one* feature is covered here — multiple logistic
 regression, interactions, and separation come in later chapters.
 
-### 10. Multiple Logistic Regression
+### 10. Multiple Logistic Regression (Exam 1)
 <https://jarad.github.io/DS3030/04-classification/20-multiple-logistic-regression.html>
 
 The additive multiple logistic regression model, with the log-odds equal to
@@ -255,7 +277,7 @@ fixed — a confounding reversal explained by students carrying higher balances,
 named as an instance of Simpson's paradox. Additive models only; interactions
 are not covered in this chapter.
 
-### 11. Flexible Logistic Regression
+### 11. Flexible Logistic Regression (Exam 1)
 <https://jarad.github.io/DS3030/04-classification/30-flexible-logistic-regression.html>
 
 Opens by framing interactions, polynomials, and step functions as all being
@@ -376,7 +398,7 @@ AIC comparisons and random/mixed effects (`lme4::glmer()`) appear only inside
 "Beyond this course" callouts. Multinomial (multi-class) logistic regression
 and separation are *not* covered here.
 
-### 12. Problems in Logistic Regression
+### 12. Problems in Logistic Regression (Exam 1)
 <https://jarad.github.io/DS3030/04-classification/40-problems-in-logistic-regression.html>
 
 Two halves: **separation**, the one way maximum likelihood for logistic
@@ -490,7 +512,7 @@ and overdispersion, are named only inside "Beyond this course" callouts and
 are neither taught nor tested. Multinomial (multi-class) logistic regression
 is still not covered.
 
-### 13. Linear Discriminant Analysis
+### 13. Linear Discriminant Analysis (Exam 2)
 <https://jarad.github.io/DS3030/04-classification/50-lda.html>
 
 First generative classifier, worked through the whole chapter on one running
@@ -586,7 +608,7 @@ Classifier evaluation (confusion matrix, thresholds, ROC curve, AUC), the
 credit card findings, and the student strata analysis of these fits follow
 in the next chapter.
 
-### 14. Classifier Evaluation
+### 14. Classifier Evaluation (Exam 2)
 <https://jarad.github.io/DS3030/04-classification/55-classifier-evaluation.html>
 
 Split out of the LDA chapter (taught as its own lecture). It opens with the
@@ -661,7 +683,7 @@ changes training error or AUC, and the stratified models, with twice as many
 parameters, tend to have more optimistic training rates. QDA and naive Bayes
 are the next chapter.
 
-### 15. Quadratic Discriminant Analysis and Naive Bayes
+### 15. Quadratic Discriminant Analysis and Naive Bayes (Exam 2)
 <https://jarad.github.io/DS3030/04-classification/60-qda-naive-bayes.html>
 
 Two relaxations of LDA's model for $f_k(x)$, then KNN, which models no
@@ -802,11 +824,8 @@ non-students share one set of balance and income densities; this adds only
 one proportion per class. On this split, adding it slightly raises naive
 Bayes's test error rate and lowers its test AUC.
 
-### 16. Generalized Linear Models
+### 16. Generalized Linear Models (Exam 2)
 <https://jarad.github.io/DS3030/04-classification/70-generalized-linear-models.html>
-
-**Notes only in Fall 2026:** this chapter was not taught in class and is not
-assessed; treat it as optional reading for interested students.
 
 A count response, and the framework that contains linear, logistic, and
 Poisson regression. The chapter opens with the hourly bike-rental counts and
@@ -903,6 +922,62 @@ overdispersed.
 Multinomial logistic regression is not covered. Cross-validation is the next
 unit.
 
+### 17. Cross-Validation (Exam 2)
+<https://jarad.github.io/DS3030/05-resampling/10-cross-validation.html>
+
+ISLR2 5.1. Training MSE always falls with flexibility, so it cannot choose a
+model; resampling methods estimate test error from held-out data. The
+**validation set approach** is shown on 100 random splits of `ISLR2::Auto`
+(`mpg` on polynomials in `horsepower`): its estimate and the chosen degree vary
+from split to split, and a learning curve shows that fitting on half the data
+overstates test error. **Leave-one-out cross-validation** (LOOCV), with the
+least squares shortcut $\text{CV}_{(n)} = \frac1n\sum[(y_i-\hat y_i)/(1-h_i)]^2$
+derived (leverage $h_i$) and checked against the brute-force loop. **$k$-fold
+cross-validation** (lowercase $k$ for the number of folds, unrelated to KNN's
+$K$): the algorithm, how much it varies across random partitions, and the
+bias, variance, and computation tradeoff in choosing $k$ (usually 5 or 10),
+measured by resampling 50-car samples from `Auto`. Cross-validation for
+classification (error rate; log loss as an alternative), used to choose KNN's
+$K$ on the `ISLR2::Default` training half and compare it with the rule-of-thumb
+$K = 71$ of the QDA chapter. **Doing it correctly:** every data-dependent step
+(screening, standardization, tuning) must be repeated inside each fold; a
+noise-feature simulation shows screening once giving about 5% cross-validated
+error against a true 50%, while screening inside each fold gives about 52%,
+slightly above 50% because of the fixed class counts, not the screening
+(class-stratified folds give about 50%). A `Beyond this course` callout mentions the
+one-standard-error rule and repeated, stratified, and nested cross-validation;
+it is not assessed.
+
+### 18. The Bootstrap (Exam 2)
+<https://jarad.github.io/DS3030/05-resampling/20-bootstrap.html>
+
+ISLR2 5.2, on the cloud-seeding rainfall experiment (`Sleuth3::case0301`). The
+running statistic is the multiplicative effect of seeding,
+$\hat\theta = e^{\hat\beta_1}$, the ratio of geometric means from
+`lm(log(Rainfall) ~ seeded)`, for which `lm()` gives no standard error. A
+standard error is the standard deviation of a statistic's sampling
+distribution; the **bootstrap algorithm** draws $B$ samples of size $n$ with
+replacement, recomputes the statistic on each, and uses their standard
+deviation, $\text{SE}_B$. The bootstrap standard error of the slope $\hat\beta_1$
+is checked against the `lm()` standard error, and a known-population simulation
+(the fitted lognormal model) compares the sampling and bootstrap distributions.
+A bootstrap standard error is itself an estimate: for $\hat\theta$ it is not
+systematically too small or too large but is off by about 30% at 26 days per
+group, because $\text{SE}(\hat\theta)$ is proportional to $\theta$. **Percentile** and **normal-approximation**
+intervals agree only when the bootstrap distribution is approximately normal
+and centered at $\hat\theta$; the percentile interval follows skewness and
+moves with monotone transformations (the interval for $\theta$ is the
+exponential of the one for $\beta_1$), while the normal interval for $\theta$
+can fall below zero. The chance an observation appears in a bootstrap sample is
+derived, $1 - (1 - 1/n)^n \approx 1 - 1/e \approx 0.632$, which explains why
+the bootstrap is a poor estimator of test error (use cross-validation).
+Limitations: small samples; heavy-tailed or skewed populations summarized by a
+mean-type statistic (the ratio of mean rainfall has a bootstrap standard error
+that is usually too small, even at 400 days per group); extreme statistics such
+as the maximum; and dependent data. A `Beyond this course` callout (delta
+method, out-of-bag error, parametric bootstrap, BCa and bootstrap-t intervals,
+block and stratified resampling) is not assessed.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can
@@ -966,19 +1041,22 @@ interaction coefficient does and does not measure, a property of the fitted
 probabilities implied by the score equations, and the consequence of swapping
 which class is the event.
 
-**Homework 6** (generative classifiers, classifier evaluation, Poisson
-regression): deriving the log posterior odds of a naive Bayes classifier with
-non-Gaussian features, estimating its parameters, and the effect of redundant
-features; comparing logistic regression, LDA, QDA, naive Bayes, and KNN on a
-held-out test set by error rate, sensitivity, specificity, ROC curves, and AUC,
-relating the results to each method's assumptions, and choosing a threshold to
-meet a sensitivity target; a simulation of how training-set size shifts the
+**Homework 6** (generative classifiers, classifier evaluation): deriving the
+log posterior odds of a naive Bayes classifier with non-Gaussian features,
+estimating its parameters, and the effect of redundant features; comparing
+logistic regression, LDA, QDA, naive Bayes, and KNN on a held-out test set by
+error rate, sensitivity, specificity, ROC curves, and AUC, relating the
+results to each method's assumptions, and choosing a threshold to meet a
+sensitivity target; a simulation of how training-set size shifts the
 LDA-versus-QDA tradeoff; choosing a classifier for described settings; a
-Poisson regression with rate ratios, Wald intervals and tests, a
-drop-in-deviance test, and an overdispersion check, with a critique of an
-overstated claim; a true/false conceptual review touching AUC versus
-thresholds, the role of the priors, training error of nested classifiers,
-conditional independence, the error rate of a trivial classifier, and what
+true/false conceptual review touching AUC versus thresholds, the role of the
+priors, training error of nested classifiers, conditional independence, and
+the error rate of a trivial classifier.
+
+**Homework 7** (Poisson regression): a Poisson regression on real count data
+with rate ratios, Wald intervals and tests, a drop-in-deviance test, and an
+overdispersion check, including how the picture changes when the model is
+extended, with a critique of an overstated claim; a true/false item on what
 overdispersion does and does not affect.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
