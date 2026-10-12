@@ -1,5 +1,7 @@
 # Generalized Linear Models
 
+[Slides for this lecture](70-generalized-linear-models_slides.html)
+
 ```{r packages}
 #| include: false
 library("tidyverse")
@@ -721,6 +723,17 @@ estimate. Fitting the bike counts with the features of the linear regression:
 
 ```{r bike-glm}
 bike_glm <- glm(bike_formula, data = bike, family = poisson)
+```
+
+`summary()` reports each coefficient's estimate, standard error, Wald $z$
+statistic, and $p$-value. Of the `r length(coef(bike_glm))` coefficients,
+these are the intercept and the coefficients for working day, temperature, and
+weather:
+
+```{r bike-glm-summary}
+printCoefmat(summary(bike_glm)$coefficients[
+  c("(Intercept)", "workingYes", "temp_c", "weathercloudy/misty",
+    "weatherrain/snow"), ])
 ```
 
 ::: {.callout-note collapse="true"}
