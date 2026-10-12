@@ -35,7 +35,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 04-classification/70-generalized-linear-models.qmd @ cc6686a -->
+<!-- derived-from: 04-classification/70-generalized-linear-models.qmd @ 203c11a -->
 
 - Count response
 - Poisson distribution
