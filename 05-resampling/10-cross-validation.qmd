@@ -1,5 +1,7 @@
 # Cross-Validation
 
+[Slides for this lecture](10-cross-validation_slides.html)
+
 ```{r packages}
 #| include: false
 library("tidyverse")

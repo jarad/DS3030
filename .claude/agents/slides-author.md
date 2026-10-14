@@ -151,9 +151,27 @@ deck should be rebuilt rather than trusted as still matching.
 
 ## Building the deck
 
-- **Title slide**: chapter title, plus an agenda distilled from the chapter's
-  learning-objectives block — compress each objective to a noun phrase, not
-  the full "define... derive..." sentence.
+- **Title slide and `## Today` agenda**: the chapter title, plus an agenda
+  distilled from the chapter's learning-objectives block, compressed to noun
+  phrases and **organized as a nested outline** that mirrors how the lecture
+  is structured: a top-level item for each major part of the lecture (each
+  one a transition slide), with the main methods or topics of that part
+  nested beneath it. For a cross-validation lecture:
+
+  ```
+  - Training error
+  - Estimating test error
+    - Validation set approach
+    - Leave-one-out cross-validation (LOOCV)
+    - k-fold cross-validation
+  - Classification
+  ```
+
+  List only what the deck actually spends slides on. A topic that is
+  optional, a derivation that is only in the speaker notes, or a detail the
+  instructor cut (a shortcut formula, a tuning choice, a simulation) does not
+  appear in the agenda. Never write the agenda as a flat list of every
+  section title, and never use `·` separators.
 - **One idea per slide.** Split a chapter subsection into several slides
   rather than shrinking font or cramming multiple figures onto one.
 - **Reuse the chapter's own section and subsection headings verbatim** as
@@ -176,6 +194,28 @@ deck should be rebuilt rather than trusted as still matching.
   Follow the outline's `reveal:` line for where each click falls; without
   one, leave the slide static. Figures, tabsets and code slides do not get
   fragments, and a fragment never holds the only copy of a slide's title.
+- **Penalize explanation: when in doubt, cut it.** A slide carries what has
+  to be *seen*, and the title says what the slide is about. A figure or table
+  slide is the title and the figure and nothing else. Bullet lines under or
+  beside a figure that restate what the figure shows ("estimates vary from
+  split to split", "the curve falls then rises") are explanation: leave them
+  out and put the sentence in the speaker notes, where the instructor can say
+  it. The same goes for a data-introduction slide whose figure already shows
+  the variables: no bullet list of the response and explanatory variables
+  (put them in the speaker notes); a words-only data slide that has no
+  figure may list the response variable and the explanatory variables.
+  Bullets and short lists are for content that is itself the slide: the
+  steps of an algorithm, an agenda, the items of a comparison, a symbol
+  legend after an equation. A bullet that interprets, motivates, or
+  summarizes the slide is never part of that. Do not add a caption under a
+  figure unless the figure cannot be understood without it, and never put
+  bullet lines under a tall figure (they push the figure down the slide).
+  Every outline `words:` line is a ceiling, not a target: if a `words:` line
+  only restates a figure or a result, drop it and move the sentence into the
+  `say:` text. Prefer fewer slides over slides that exist to explain: a
+  derivation, a computational shortcut, a code walk-through, or a
+  data-processing pitfall belongs in the notes unless the instructor has
+  asked for it in the outline.
 - **Compress prose to fragments.** A symbol's definition becomes a short
   label (`$\hat\beta_1$ — slope estimate`), not the notes' full defining
   sentence. A bulleted list of diagnostic signs in the notes can usually be
@@ -186,8 +226,13 @@ deck should be rebuilt rather than trusted as still matching.
   The first is a written-page aside; the second is explicitly out of scope
   for this course. If the instructor wants either live in class, that's a
   choice they make in the room, not something the deck decides for them.
-- **Closing slide**: the bare concept names from the chapter's
-  `## Conclusion` section — no recap sentences, no restated numbers.
+- **Closing slide**: it mirrors the `## Today` outline item for item (same
+  nesting, same order) and under each item states the most important result
+  or takeaway of that part, drawn from the chapter's own `## Conclusion`,
+  as a short phrase: what the audience should leave remembering (for
+  example "Training error always falls with flexibility" or "k = 5 or 10
+  balances bias and variance"). Not bare concept names, not recap sentences,
+  and no restated example numbers.
 
 ## Linking from the notes chapter
 
