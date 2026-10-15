@@ -107,6 +107,12 @@ built entirely from content that already exists as static output:
   auto-render script doesn't run against reveal.js's DOM in this version.
   `\widehat` is a source-level fix with no such downside; use it in a slide
   file even where the notes chapter it's drawn from uses plain `\hat`.
+- **Violin plots, not boxplots.** A slide reuses the chapter's figure as
+  rendered, so it inherits whatever the notes drew. If the notes chapter still
+  draws a boxplot, do not redraw it (slides execute nothing); flag the figure
+  in your report so `notes-author` can switch the chapter to a violin plot
+  (the course prefers violins, which show the shape of a distribution) and
+  re-render.
 - **Numbers quoted from a model** (a coefficient, a $p$-value, an odds ratio)
   are already baked into the frozen markdown as plain text wherever the notes
   chapter used inline R — pull the already-computed value from there rather

@@ -927,15 +927,17 @@ max_extreme <- max(two_fold)
 sd_two_fold_trimmed <- sd(two_fold[!extreme])
 
 k_plot <- ggplot(k_sims, aes(x = method, y = estimate)) +
-  geom_boxplot(outlier.size = 0.6, outlier.alpha = 0.5) +
+  geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75),
+              quantile.linetype = "solid") +
   stat_summary(fun = mean, geom = "point", shape = 23, size = 3,
                fill = "#E69F00") +
   geom_hline(yintercept = mean_test_mse, linetype = "dashed") +
   coord_cartesian(ylim = quantile(k_sims$estimate, c(0.005, 0.995))) +
   labs(x = NULL, y = "Cross-validation estimate of test MSE",
        title = paste0(format(n_sims, big.mark = ","), " samples of ", n_sample,
-                      " cars; quadratic; diamond = mean; dashed = mean test MSE"),
-       caption = "Vertical axis clipped to the middle 99% of the estimates")
+                      " cars; quadratic fit"),
+       caption = paste("Lines = quartiles and median, diamond = mean, dashed line = mean test MSE.",
+                       "Vertical axis clipped to the middle 99% of the estimates."))
 ```
 :::
 
@@ -945,7 +947,9 @@ sample of `r n_sample` cars was drawn without replacement and a quadratic was
 fit to it; the actual test MSE of that fit is its average squared error on the
 `r n_auto - n_sample` cars not drawn. The figure compares the cross-validation
 estimates from the same `r n_sample` cars, with $k$ equal to
-`r and_list(k_values)` (LOOCV), against it.
+`r and_list(k_values)` (LOOCV), against it. Each violin shows the distribution
+of one method's estimates, with lines at its first quartile, median, and third
+quartile and a diamond at its mean; the dashed line is the mean test MSE.
 
 ```{r k-simulation-figure}
 #| echo: false

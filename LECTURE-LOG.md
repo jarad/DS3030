@@ -98,6 +98,13 @@ the semester in which they were noted.
   notes-only chapter in Fall 2026; on 2026-10-08 it was scheduled for
   Mon 2026-10-12 (see the plan table above), so no decision is needed unless
   that changes.
+- Boxplots to violin plots: `geom_boxplot()` still appears in
+  `04-classification/60-qda-naive-bayes.qmd` and `05-resampling/20-bootstrap.qmd`
+  (replace with `geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75), quantile.linetype = "solid")`
+  as in `05-resampling/10-cross-validation.qmd`, then
+  re-render and refresh the figures in their slide decks). The course now
+  prefers violin plots; `notes-author` and `slides-author` were updated
+  2026-10-15 (noted 2026-10-15, to do next semester).
 - Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
   has a callout headed `### Two questions, two verdicts`, which is not one of
   the three fixed callout headings in `CONVENTIONS.md`.

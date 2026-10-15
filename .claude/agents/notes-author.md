@@ -205,6 +205,18 @@ still. When `shape` or `linetype` must encode a *different* variable, use a
 color-blind-friendly palette — Okabe-Ito or viridis — instead of the default hue
 scale.
 
+**Prefer violin plots to boxplots** when showing the distribution of a
+quantity across groups, with lines at the quartiles and the median, as a
+boxplot draws them:
+`geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75), quantile.linetype = "solid")`
+(ggplot2 4.0 and later; ggplot2's default violin has no lines, and before 4.0
+the argument was `draw_quantiles = c(0.25, 0.5, 0.75)`). Add a
+`stat_summary()` point for the mean only if the mean matters, and explain the
+lines in the figure caption or the text interpreting the figure. A violin shows
+the shape of the distribution (skewness, several modes), which a box hides. Use
+`geom_boxplot()` only when the five-number summary itself is the point. Plots
+must stay legible without color, as above.
+
 **Put extensive R code in a collapsed callout.** For a chunk with substantial
 setup — simulating data, fitting several models, building a prediction grid or
 a table — wrap it in `::: {.callout-note collapse="true"}`, suppress its
