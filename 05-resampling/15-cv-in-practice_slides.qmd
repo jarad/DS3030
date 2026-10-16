@@ -35,7 +35,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 05-resampling/15-cv-in-practice.qmd @ uncommitted -->
+<!-- derived-from: 05-resampling/15-cv-in-practice.qmd @ dad843c -->
 
 - Candidate models
 - Selection optimism

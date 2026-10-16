@@ -35,7 +35,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 05-resampling/10-cross-validation.qmd @ 00b74f9 -->
+<!-- derived-from: 05-resampling/10-cross-validation.qmd @ dad843c -->
 
 - Training error
 - Estimating test error
