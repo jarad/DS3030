@@ -138,7 +138,8 @@ material" and you can draw only from those chapters.
 - **Exam 2** (Nov 6): everything from ISLR2 section 4.4 onward, up to the cutoff
   the instructor sets for the exam: chapter 13 (Linear Discriminant Analysis)
   and every chapter after it below. By the course schedule the exam runs
-  through resampling (ISLR2 Chapter 5), regularization (6.1-6.2) and
+  through cross-validation (ISLR2 Chapter 5; the bootstrap chapter is
+  optional reading and not assessed), regularization (6.1-6.2) and
   dimension reduction (6.3-6.4); chapters not listed below have not been
   written yet. If a student asks about material that is not listed, say so
   and quiz only on what is.
@@ -940,7 +941,7 @@ measured by resampling 50-car samples from `Auto`. Cross-validation for
 classification (error rate; log loss as an alternative), used to choose KNN's
 $K$ on the `ISLR2::Default` training half and compare it with the rule-of-thumb
 $K = 71$ of the QDA chapter. **Doing it correctly:** every data-dependent step
-(screening, standardization, tuning) must be repeated inside each fold; a
+(screening, standardization) must be repeated inside each fold, while choosing a tuning parameter by the smallest estimate is itself optimistic; a
 noise-feature simulation shows screening once giving about 5% cross-validated
 error against a true 50%, while screening inside each fold gives about 52%,
 slightly above 50% because of the fixed class counts, not the screening
@@ -948,8 +949,41 @@ slightly above 50% because of the fixed class counts, not the screening
 one-standard-error rule and repeated, stratified, and nested cross-validation;
 it is not assessed.
 
-### 18. The Bootstrap (Exam 2)
+### 18. Cross-Validation in Practice (Exam 2)
+<https://jarad.github.io/DS3030/05-resampling/15-cv-in-practice.html>
+
+Using cross-validation to choose among many candidate models, and the issues
+with doing so, on `modeldata::ames` (home sales in Ames, Iowa; response is log10
+sale price). The candidates are KNN regressions over the neighbor count $K$ and
+the number of explanatory variables used, 240 candidates in all, fit to a
+training sample of 200 homes with 10-fold cross-validation. The smallest
+cross-validation estimate over many candidates tends to underestimate the test
+error of the model it selects, because the same data choose the model and
+estimate its error; a short derivation gives the expected minimum of two tied
+noisy estimates, $-\tau\sqrt{(1-\rho)/\pi}$, which grows with the noise and
+shrinks with the correlation of the estimates. A simulation over repeated
+samples (1, 40 and 240 candidates) shows the optimism is real but modest on
+these data. The workflow keeps test data out of every choice: split off the test
+data first, choose by cross-validation on the training data (standardization is
+repeated inside each fold; $q$ and $K$ are chosen by comparing the estimates),
+refit the chosen model to all the training data, and evaluate it once on the
+test data. The roles of data are training (fits the model), validation (held-out
+folds that estimate test error and compare models) and test (never used to fit
+or choose); test data used to choose again become validation data. The full-data
+test MSE of the refit model is above the cross-validation estimate, consistent with the variability of
+an MSE computed from a few hundred homes. An in-class activity script
+(`15-cv-in-practice_activity.R`) has groups compare logistic regression, LDA and
+KNN on `modeldata::stackoverflow` (remote work), by cross-validated AUC and
+error rate against the always-"Not remote" benchmark, then evaluate the chosen
+model once on test data. A `Beyond this course` callout (the one-standard-error
+rule, nested cross-validation) is not assessed.
+
+### 19. The Bootstrap (optional reading)
 <https://jarad.github.io/DS3030/05-resampling/20-bootstrap.html>
+
+**Optional reading, not covered in class and not assessed:** the bootstrap
+lecture was dropped from Fall 2026; bootstrap samples are explained in the
+bagging and random forests lecture. Do not quiz on this chapter for Exam 2.
 
 ISLR2 5.2, on the cloud-seeding rainfall experiment (`Sleuth3::case0301`). The
 running statistic is the multiplicative effect of seeding,
@@ -1053,11 +1087,20 @@ true/false conceptual review touching AUC versus thresholds, the role of the
 priors, training error of nested classifiers, conditional independence, and
 the error rate of a trivial classifier.
 
-**Homework 7** (Poisson regression): a Poisson regression on real count data
-with rate ratios, Wald intervals and tests, a drop-in-deviance test, and an
-overdispersion check, including how the picture changes when the model is
-extended, with a critique of an overstated claim; a true/false item on what
-overdispersion does and does not affect.
+**Homework 7** (Poisson regression, cross-validation): a Poisson regression on
+real count data with a multi-level categorical explanatory variable,
+interpreting rate ratios against a reference level and between other levels,
+Wald intervals, a drop-in-deviance test of the whole variable, and an
+overdispersion check, including how the estimates change when other variables
+are added, with a critique of an overstated claim; standardizing features with
+training-set statistics, then hand-coded k-fold cross-validation comparing
+several classifiers on real data, the variability of the estimate across
+random partitions, a comparison with a separate test set, and a critique of an
+overconfident conclusion; a simulation of the optimism of reporting the best
+cross-validation result; a true/false conceptual review touching what an
+exponentiated Poisson coefficient measures, leave-one-out variability, how
+k-fold cross-validation uses each observation, shared folds when comparing
+methods, and when a flexible classifier wins.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable

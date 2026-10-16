@@ -33,6 +33,7 @@ book:
     - part: "Resampling"
       chapters:
       - 05-resampling/10-cross-validation.qmd
+      - 05-resampling/15-cv-in-practice.qmd
       - 05-resampling/20-bootstrap.qmd
 
 format:

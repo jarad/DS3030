@@ -1060,7 +1060,7 @@ predict the original $n$ observations, and average the error over $b$. About
 also used to fit the model, some of them several times, so this estimate
 mixes training error into test error and is too optimistic, increasingly so
 for flexible models that fit their training data closely. Cross-validation,
-the subject of the previous lecture, avoids the overlap: each fold's held-out
+the subject of the cross-validation lecture, avoids the overlap: each fold's held-out
 observations are not in the data the model is fit to.
 
 ## Limitations

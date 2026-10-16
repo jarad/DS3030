@@ -121,7 +121,7 @@ $$\text{MSE}_{\mathcal{V}} = \frac{1}{n_{\mathcal{V}}}\sum_{i \in \mathcal{V}}\l
 ::::
 
 ::: notes
-The figure shows the cars split at random into two halves of 196, a training set (blue circles) and a validation set (orange triangles). Both halves cover the range of horsepower and either shows the same curved decline as the full data. Every validation observation is new to f-hat, so MSE_V is a test MSE in the sense of the regression lecture. MSE_V is computed for each degree d to compare them. K is not involved; the degree d is the only setting.
+The figure shows the cars split at random into two halves of 196, a training set (blue circles) and a validation set (orange triangles). Both halves cover the range of horsepower and either shows the same curved decline as the full data. Every validation observation is new to f-hat, so MSE_V estimates the test MSE. It is also used to choose among degrees, so the validation set is not untouched test data: training data fit the model, validation data estimate test error and choose among models, and test data are never used for either. MSE_V is computed for each degree d to compare them. K is not involved; the degree d is the only setting.
 :::
 
 ## Split variability
@@ -384,5 +384,5 @@ The training half was divided into 10 folds, and the 10-fold cross-validation er
 :::
 
 ::: notes
-Optional; the lecture may end on Neighbor count with the next lecture's preview said aloud: Friday 2026-10-16, the bootstrap, which turns from estimating test error to estimating the variability of an estimate by resampling the observations with replacement to approximate a statistic's sampling distribution.
+Optional; the lecture may end on Neighbor count with the next lecture's preview said aloud: Friday 2026-10-16, cross-validation in practice: choosing among models on real data and the issues that choosing raises.
 :::

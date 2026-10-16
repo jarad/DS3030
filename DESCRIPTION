@@ -16,6 +16,7 @@ Imports:
     ISLR2,
     knitr,
     MASS,
+    modeldata,
     mvtnorm,
     quantmod,
     rmarkdown,

@@ -49,7 +49,7 @@ computation, and **justify** the usual choice $k = 5$ or $10$,
 - **use** cross-validation to choose a flexibility setting, such as a
 polynomial degree or the number of neighbors $K$ in KNN, and
 - **identify** the data-dependent steps of a fit (feature screening,
-standardization, tuning) that must be repeated inside every fold, and
+standardization) that must be repeated inside every fold, and
 **explain** why performing them once on all the data makes the
 cross-validation estimate optimistic.
 :::
@@ -214,7 +214,7 @@ anything that will appear in new data, so it cannot choose $d$.
 
 The regression lecture defined the test MSE as the average squared error on
 observations that were not used to estimate $\hat f$. With a large, separate
-test set, choosing $d$ would be easy: fit each degree to the training data and
+set of data held out from fitting, choosing $d$ would be easy: fit each degree to the training data and
 keep the degree with the smallest test MSE. A separate test set is rarely
 available. Collecting one costs as much as collecting the training data, and
 setting aside part of the data already in hand leaves less to fit with.
@@ -224,6 +224,15 @@ fitting the model to part of the data and measuring its error on the part
 left out. This lecture develops three, in increasing order of reuse: the
 validation set approach, leave-one-out cross-validation, and $k$-fold
 cross-validation.
+
+The data play three different roles, and the names keep them apart. The
+**training set** is what a model is fit to. A **validation set**, such as the
+held-out part in the next section or a held-out fold in cross-validation, is
+part of the data in hand that was held out from fitting; its prediction error
+estimates the test error and is used to compare models and choose tuning
+parameters such as $d$. **Test data** are observations that were never used to
+fit a model or to choose among models, so only they give an estimate of the
+test error that the choosing has not affected.
 
 ## Validation set approach
 
@@ -281,7 +290,8 @@ $n_{\mathcal{V}}$ their number, and
 - $\hat f$ is the model fit to the training set only.
 
 Every validation observation is new to $\hat f$, so $\text{MSE}_{\mathcal{V}}$
-is a test MSE in the sense of the regression lecture. In R, with `train_id`
+estimates the test MSE. It is also used to choose among degrees, so the
+validation set is not untouched test data. In R, with `train_id`
 the row numbers of the training set:
 
 ```{r validation-mse}
@@ -1397,7 +1407,7 @@ and both estimates are within simulation error of `r pct(true_error, 0)`.
 
 ### Standardization and tuning
 
-The same rule covers every data-dependent step.
+Standardization follows the same rule as screening; tuning does not.
 
 - **Standardization.** `knn_classify()` computes the feature means and
 standard deviations from the training folds and applies them to the held-out
@@ -1457,11 +1467,11 @@ loss, and the cross-validation curve chooses a flexibility setting, such as
 the number of neighbors in KNN, as it chooses a polynomial degree.
 
 A cross-validation estimate is honest only when every data-dependent step,
-including feature screening, standardization, and tuning, is repeated inside
-each fold using only the training folds. Selecting features or tuning
-parameters on all the data first lets the held-out observations shape the
-fit, and the estimate becomes optimistic.
+including feature screening and standardization, is repeated inside each fold
+using only the training folds. Selecting features on all the data first lets
+the held-out observations shape the fit, and the estimate becomes optimistic.
+Choosing a tuning parameter by the smallest cross-validation estimate is itself
+a data-dependent choice, so that minimum tends to be optimistic as well.
 
-The next lecture turns from estimating test error to estimating the
-variability of an estimate: the bootstrap resamples the observations with
-replacement to approximate a statistic's sampling distribution.
+The next lecture puts cross-validation into practice: choosing among models
+and tuning parameters on real data, and the issues that choosing raises.

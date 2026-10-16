@@ -35,6 +35,7 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-06 | New (split from 04-classification/50-lda.qmd) | | 04-classification/55-classifier-evaluation.qmd | |
 | 2026-10-08 | New | | 05-resampling/10-cross-validation.qmd | |
 | 2026-10-08 | New | | 05-resampling/20-bootstrap.qmd | |
+| 2026-10-15 | New | | 05-resampling/15-cv-in-practice.qmd | |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into
@@ -44,3 +45,9 @@ those sections by anchor (for example `50-lda.html#threshold-choice`,
 anchor on `55-classifier-evaluation.html`. Adding the chapter also shifts
 the book's chapter numbers from it on: QDA and naive Bayes is now chapter 15
 and generalized linear models chapter 16.
+
+The 2026-10-15 chapter `05-resampling/15-cv-in-practice.qmd` sits between
+cross-validation and the bootstrap, so the bootstrap chapter is now the book's
+chapter after it (its chapter number shifts by one). The bootstrap lecture was
+dropped from the class schedule; its chapter stays in the book as optional
+reading.
