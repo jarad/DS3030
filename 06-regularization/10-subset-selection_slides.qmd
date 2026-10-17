@@ -39,7 +39,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 06-regularization/10-subset-selection.qmd @ uncommitted -->
+<!-- derived-from: 06-regularization/10-subset-selection.qmd @ 6b86734 -->
 
 ::: {.columns}
 ::: {.column width="50%"}
