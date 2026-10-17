@@ -153,6 +153,13 @@ convention.
   coefficient); the chapter says which scale is meant wherever it matters. The
   number of repeated training samples is $M$ (indexed $m$), never $R$, which
   would collide with $R^2$ and $B$ is reserved for bootstrap samples.
+- **In the lasso chapter (`06-regularization/30-lasso.qmd`)**, the penalty is
+  $\lambda\sum_j|\beta_j|$ with $\hat\beta^L_{\lambda j}$ the lasso and
+  $\hat\beta^R_{\lambda j}$ the ridge estimate, $\lambda_{\max}$ the smallest
+  $\lambda$ giving the null model, $(u)_+ = \max(u, 0)$, and $s$ the budget of
+  the constrained form (as in the textbook; unrelated to $s_j$ and $s_y$, the
+  standard deviations of a feature and of the response). The lasso chapter
+  reuses the ridge chapter's seed, split and notation.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

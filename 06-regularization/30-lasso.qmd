@@ -1,0 +1,1315 @@
+# The Lasso
+
+[Slides for this lecture](30-lasso_slides.html)
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("glmnet")
+theme_set(theme_bw())
+# The ridge lecture's seed, reused so that the split and folds are identical.
+set.seed(20261017)
+
+# Fixed decimals with thousands separators, and percentages, for prose; a
+# negative value prints with a minus sign (the HTML entity) rather than a
+# hyphen. Inside $...$ use fmt_math, whose hyphen MathJax sets as a minus.
+fmt_math <- function(x, digits = 2) {
+  formatC(x, format = "f", digits = digits, big.mark = ",")
+}
+fmt <- function(x, digits = 2) sub("^-", "&minus;", fmt_math(x, digits))
+pct <- function(x, digits = 1) paste0(fmt(100 * x, digits), "%")
+big <- function(x) format(x, big.mark = ",")
+# The same inside $...$, where MathJax reads % as a comment and spaces a bare comma.
+big_math <- function(x) format(x, big.mark = "{,}")
+# A number in LaTeX scientific notation for use inside $...$.
+sci <- function(x, digits = 1) {
+  e <- floor(log10(abs(x)))
+  sprintf("%s \\times 10^{%d}", formatC(x / 10^e, format = "f", digits = digits), e)
+}
+# "a", "a and b", "a, b, and c".
+and_list <- function(x) {
+  if (length(x) == 1) x else if (length(x) == 2) paste(x, collapse = " and ") else
+    paste0(paste(x[-length(x)], collapse = ", "), ", and ", x[length(x)])
+}
+code <- function(x) paste0("`", x, "`")
+okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#0072B2", "#CC79A7")
+log_lambda <- scale_x_log10(breaks = 10^(-2:3),
+                            labels = scales::label_number(big.mark = ",", drop0trailing = TRUE))
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **write** the lasso criterion $RSS + \lambda\sum_{j=1}^p\left|\beta_j\right|$
+and its constrained form, **contrast** them with ridge regression's, and
+**state** the fits as $\lambda \to 0$ and for $\lambda \ge \lambda_{\max}$,
+- **explain**, using the constraint regions $\sum_j\left|\beta_j\right| \le s$
+and $\sum_j\beta_j^2 \le s$ drawn over the RSS contours, why the lasso sets
+some coefficients exactly to zero and ridge regression, except by
+coincidence, does not,
+- **derive** the lasso estimate for orthogonal standardized features as soft
+thresholding of the least squares estimate, and **compare** it with ridge
+regression's proportional shrinkage,
+- **read** a lasso coefficient path: which features enter first, and how many
+coefficients are nonzero at each $\lambda$,
+- **choose** $\lambda$ by $k$-fold cross-validation on the training data,
+evaluate the chosen model once on test data, and **compare** the lasso, ridge
+regression, and least squares by test MSE and by the features they keep, and
+- **explain**, from repeated training samples, why the set of features the
+lasso selects is unstable and why its nonzero coefficients are biased toward
+zero, and **explain** why `lm()`'s standard errors and $p$-values do not apply
+to them.
+:::
+
+## Delivery times
+
+### Data
+
+**Question.** Does a model that keeps only some of the
+`r ncol(model.matrix(time_to_delivery ~ ., data = modeldata::deliveries)) - 1`
+features predict delivery times better than one that uses all of them?
+
+**Data.** The `modeldata::deliveries` orders of the
+[Ridge Regression](20-ridge-regression.qmd) lecture: the delivery time
+`time_to_delivery`, in minutes, with `hour`, `day`, `distance`, and the counts
+`item_01`, ..., `item_27` of each menu item.
+
+```{r delivery-split}
+deliveries <- modeldata::deliveries
+n_orders <- nrow(deliveries)
+n_train <- 100
+n_large <- 300
+train_id <- sample(n_orders, n_train)
+train <- deliveries[train_id, ]
+test <- deliveries[-train_id, ]
+n_test <- nrow(test)
+# Folds for 10-fold cross-validation of the training orders.
+n_folds <- 10
+fold_id <- sample(rep(seq_len(n_folds), length.out = n_train))
+```
+
+These are the first random draws after the ridge lecture's
+`set.seed(20261017)`, so the split and the folds are the ridge lecture's:
+`r n_train` training orders and `r big(n_test)` test orders, set aside until
+the chosen model is evaluated. As there, the training sample is deliberately
+small relative to the
+`r ncol(model.matrix(time_to_delivery ~ ., data = train))` coefficients of the
+model, so that they are poorly determined; the repeated samples at the end
+also use `r n_large` training orders. The figure plots, for each item, the
+delivery times of the training orders that contain it.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r item-eda}
+#| output: false
+item_names <- sprintf("item_%02d", 1:27)
+orders_with <- colSums(train[item_names] > 0)
+time_median <- median(train$time_to_delivery)
+item_long <- train |>
+  pivot_longer(all_of(item_names), names_to = "item", values_to = "count") |>
+  filter(count > 0) |>
+  mutate(item = factor(item, levels = rev(item_names)))
+item_medians <- tapply(item_long$time_to_delivery, item_long$item, median)
+item_plot <- ggplot(item_long, aes(x = time_to_delivery, y = item)) +
+  geom_vline(xintercept = time_median, linetype = "dashed", color = "grey50") +
+  geom_point(position = position_jitter(width = 0, height = 0.15, seed = 1),
+             size = 0.9, alpha = 0.6) +
+  stat_summary(fun = median, fun.min = median, fun.max = median,
+               geom = "crossbar", width = 0.7, color = "#D55E00") +
+  scale_y_discrete(labels = paste0(rev(item_names), " (", rev(orders_with), ")")) +
+  labs(x = "Delivery time (minutes)", y = "Item (number of training orders containing it)",
+       title = paste(n_train, "training orders"),
+       caption = "Bars = median for orders with the item; dashed line = median of all training orders.")
+```
+:::
+
+```{r item-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 7
+item_plot
+```
+
+Each item appears in between `r min(orders_with)` and `r max(orders_with)` of
+the `r n_train` training orders. The median delivery time of the orders containing an item
+ranges from `r fmt(min(item_medians), 1)` to `r fmt(max(item_medians), 1)`
+minutes, around the overall median of `r fmt(time_median, 1)`, and the times
+of the orders containing any one item vary widely. These orders also differ
+in distance, hour, and day, which the ridge lecture showed matter, so a
+difference between items here need not be an effect of the items.
+
+### Ridge coefficients
+
+```{r features}
+model_matrix <- function(data) model.matrix(time_to_delivery ~ ., data = data)[, -1]
+X_train <- model_matrix(train)
+y_train <- train$time_to_delivery
+X_test <- model_matrix(test)
+y_test <- test$time_to_delivery
+p <- ncol(X_train)
+mse <- function(y, y_hat) mean((y - y_hat)^2)
+sd_n <- function(v) sqrt(mean((v - mean(v))^2))
+s_y <- sd_n(y_train)
+x_scale <- apply(X_train, 2, sd_n)
+```
+
+As in the ridge lecture, `day` enters as `r nlevels(train$day) - 1` dummy
+variables with Monday as the reference, so there are $p = `r p`$ features.
+The figure repeats that lecture's coefficient path: each standardized
+coefficient of ridge regression fit to the training orders, against
+$\lambda$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r ridge-path}
+#| output: false
+lambda_grid <- 10^seq(3, -2, length.out = 101)
+# The ridge lecture's conversion of lambda to glmnet()'s scale.
+to_glmnet_ridge <- function(lambda) lambda * s_y / n_train
+group_levels <- c("distance", "hour", paste0("day (", nlevels(train$day) - 1, " dummies)"),
+                  paste0("items (", length(item_names), ")"))
+# Standardized coefficients of a glmnet() path, one row per feature and lambda.
+path_data <- function(fit, lambdas) {
+  stopifnot(length(fit$lambda) == length(lambdas))
+  as_tibble(as.matrix(coef(fit))[-1, ] * x_scale, rownames = "feature") |>
+    pivot_longer(-feature, values_to = "coefficient") |>
+    mutate(lambda = rep(lambdas, times = p),
+           group = case_when(feature %in% c("distance", "hour") ~ feature,
+                             str_starts(feature, "day") ~ group_levels[3],
+                             TRUE ~ group_levels[4]),
+           group = factor(group, levels = group_levels))
+}
+path_plot <- function(path, title) {
+  ggplot(path, aes(x = lambda, y = coefficient, group = feature,
+                   color = group, linetype = group)) +
+    geom_hline(yintercept = 0, color = "grey50") +
+    geom_line() +
+    log_lambda +
+    scale_color_manual(values = okabe_ito[c(4, 5, 3, 1)]) +
+    scale_linetype_manual(values = c("solid", "longdash", "dotdash", "dotted")) +
+    labs(x = expression(lambda ~ "(log scale)"),
+         y = "Standardized coefficient\n(minutes per standard deviation)",
+         color = NULL, linetype = NULL, title = title) +
+    theme(legend.position = "bottom")
+}
+ridge_path_fit <- glmnet(X_train, y_train, alpha = 0, lambda = to_glmnet_ridge(lambda_grid),
+                         thresh = 1e-12)
+ridge_path <- path_data(ridge_path_fit, lambda_grid)
+ridge_path_plot <- path_plot(ridge_path, paste("Ridge coefficient path,", n_train, "training orders"))
+ridge_min_nonzero <- min(colSums(as.matrix(coef(ridge_path_fit))[-1, ] != 0))
+ridge_smallest <- ridge_path |> filter(lambda == max(lambda_grid), str_starts(feature, "item")) |>
+  slice_min(abs(coefficient), n = 1)
+```
+:::
+
+```{r ridge-path-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 5
+ridge_path_plot
+```
+
+The coefficients shrink toward zero as $\lambda$ grows, but at every one of
+the `r length(lambda_grid)` values of $\lambda$ on the grid
+`r if (ridge_min_nonzero == p) paste("all", p, "are") else paste("at least", ridge_min_nonzero, "of the", p, "are")`
+nonzero. At
+$\lambda = `r big_math(max(lambda_grid))`$ the item coefficient closest to
+zero, that of `r code(ridge_smallest$feature)`, is still
+$`r sci(ridge_smallest$coefficient)`$ minutes per standard deviation.
+
+## Lasso
+
+The geometry of this section uses two features: the standardized distance and
+hour of the training orders. The figure plots the delivery time against each.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r two-feature-eda}
+#| output: false
+two_names <- c("distance", "hour")
+Z2 <- sweep(sweep(X_train[, two_names], 2, colMeans(X_train[, two_names])), 2,
+            x_scale[two_names], "/")
+two_plot <- as_tibble(Z2) |>
+  mutate(time = y_train) |>
+  pivot_longer(-time, names_to = "feature") |>
+  ggplot(aes(x = value, y = time)) +
+  geom_point(size = 1) +
+  facet_wrap(~ paste("Standardized", feature)) +
+  labs(x = "Standard deviations from the training mean", y = "Delivery time (minutes)",
+       title = paste(n_train, "training orders"))
+two_cor <- cor(Z2)[1, 2]
+```
+:::
+
+```{r two-feature-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 3.5
+two_plot
+```
+
+Delivery time rises with both, and the two are nearly uncorrelated in the
+training orders (correlation `r fmt(two_cor)`).
+
+### Penalized criterion
+
+The **lasso** estimates the coefficients by minimizing
+
+$$\sum_{i=1}^n\left(y_i - \beta_0 - \sum_{j=1}^p\beta_j\tilde x_{ij}\right)^2 + \lambda\sum_{j=1}^p\left|\beta_j\right| = RSS + \lambda\sum_{j=1}^p\left|\beta_j\right|,$$
+
+where
+
+- $y_i$ is the delivery time of training order $i = 1, \ldots, n$, with
+$n = `r n_train`$,
+- $\tilde x_{ij} = \left(x_{ij} - \bar x_j\right)/s_j$ is feature $j$ of order
+$i$ standardized, with $\bar x_j$ the mean of feature $j$ over the $n$
+training orders and $s_j$ its standard deviation, computed with divisor $n$,
+- $\beta_0$ and $\beta_1, \ldots, \beta_p$ are the coefficients on the
+standardized scale, where $\beta_j$ is $s_j$ times the coefficient of feature
+$j$ on the original scale, as in the
+[Ridge Regression](20-ridge-regression.qmd) lecture,
+- $\lambda \ge 0$ is the tuning parameter, and
+- $\lambda\sum_{j=1}^p\left|\beta_j\right|$ is the **$\ell_1$ penalty**, in
+place of ridge regression's $\ell_2$ penalty $\lambda\sum_{j=1}^p\beta_j^2$.
+
+The intercept is not penalized and the features are standardized, for the
+reasons the ridge lecture gave; the $\ell_1$ penalty is no more scale
+equivariant than the $\ell_2$ penalty. The criterion is convex but not
+differentiable where some $\beta_j = 0$, and in general its minimum has no
+closed form.
+
+At $\lambda = 0$ the lasso is least squares. Unlike ridge regression, it
+reaches the null model at a finite $\lambda$. The standardized features are
+centered, so whatever the slopes, the intercept that minimizes the criterion
+is $\hat\beta_0 = \bar y$, the mean delivery time of the training orders; take
+$\beta_0 = \bar y$. At $\beta = 0$, changing one coefficient $\beta_j$ to $t$
+then changes the RSS by
+$-2t\sum_i\tilde x_{ij}\left(y_i - \bar y\right) + nt^2$ and the penalty by
+$\lambda\left|t\right|$, so no coefficient can leave zero when
+
+$$\lambda \ge \lambda_{\max} = \max_{j}\, 2\left|\sum_{i=1}^n\tilde x_{ij}\left(y_i - \bar y\right)\right|,$$
+
+and, because the criterion is convex and the penalty is a sum over $j$, every
+slope is zero and every prediction is $\hat\beta_0 = \bar y$, the null model.
+
+```{r lambda-max}
+X_std <- sweep(sweep(X_train, 2, colMeans(X_train)), 2, x_scale, "/")
+lambda_scores <- 2 * abs(drop(crossprod(X_std, y_train - mean(y_train))))
+lambda_max <- max(lambda_scores)
+```
+
+For the training orders $\lambda_{\max} = `r fmt(lambda_max, 1)`$, set by
+`r code(names(which.max(lambda_scores)))`, the feature most correlated with
+the delivery time.
+
+### Constraint regions
+
+Minimizing the lasso criterion is equivalent to minimizing the RSS subject to
+
+$$\sum_{j=1}^p\left|\beta_j\right| \le s, \qquad\text{and for ridge regression}\qquad \sum_{j=1}^p\beta_j^2 \le s,$$
+
+where $s \ge 0$ is a **budget**: each $\lambda$ corresponds to some $s$, a
+smaller $\lambda$ to a larger $s$. The budget $s$ is the textbook's symbol; it
+is unrelated to the standard deviations $s_j$ above and $s_y$ below. For the
+two standardized features above,
+the region is a diamond for the lasso and a disk for ridge regression, and the
+RSS has elliptical contours centered at the least squares estimate. The
+constrained estimate is where the smallest contour touches the region.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r geometry}
+#| output: false
+yc <- y_train - mean(y_train)
+A2 <- crossprod(Z2)
+b_two <- drop(solve(A2, crossprod(Z2, yc)))
+rss_two <- function(b1, b2) {
+  d1 <- b1 - b_two[1]
+  d2 <- b2 - b_two[2]
+  sum((yc - Z2 %*% b_two)^2) + A2[1, 1] * d1^2 + 2 * A2[1, 2] * d1 * d2 + A2[2, 2] * d2^2
+}
+# While only the first feature to enter is nonzero, the lasso keeps the other
+# at zero; that holds for every budget below s_enter.
+a <- drop(crossprod(Z2, yc)) / n_train
+first <- which.max(abs(a))
+s_enter <- (abs(a[first]) - abs(a[-first])) / (1 - two_cor * sign(a[first]) * sign(a[-first]))
+s_budget <- 1.5
+# The prose writes the corner as (0, s): hour enters first.
+stopifnot(s_budget < s_enter, first == 2)
+b_lasso2 <- replace(c(0, 0), first, sign(a[first]) * s_budget)
+# Ridge with sum of squares s_budget^2: the disk through the diamond's corners.
+ridge2 <- function(l) drop(solve(A2 + l * diag(2), crossprod(Z2, yc)))
+b_ridge2 <- ridge2(uniroot(\(l) sqrt(sum(ridge2(l)^2)) - s_budget, c(0, 1e5))$root)
+grid <- expand_grid(b1 = seq(-2, 5, length.out = 281), b2 = seq(-2, 6, length.out = 321)) |>
+  mutate(rss = rss_two(b1, b2))
+diamond <- tibble(b1 = c(s_budget, 0, -s_budget, 0), b2 = c(0, s_budget, 0, -s_budget))
+disk <- tibble(t = seq(0, 2 * pi, length.out = 361), b1 = s_budget * cos(t), b2 = s_budget * sin(t))
+geometry_base <- ggplot(grid, aes(x = b1, y = b2)) +
+  geom_hline(yintercept = 0, color = "grey70") +
+  geom_vline(xintercept = 0, color = "grey70") +
+  geom_contour(aes(z = rss), breaks = rss_two(b_two[1], b_two[2]) + 200 * (1:6)^2,
+               color = "grey60", linewidth = 0.3) +
+  annotate("point", x = b_two[1], y = b_two[2], shape = 4, size = 3, stroke = 1.3) +
+  annotate("text", x = b_two[1], y = b_two[2], label = "Least squares", vjust = -1, size = 3.5) +
+  coord_equal(xlim = c(-2, 5), ylim = c(-2, 6)) +
+  labs(x = expression(beta[1] ~ "(standardized distance)"),
+       y = expression(beta[2] ~ "(standardized hour)"),
+       title = paste(n_train, "training orders; grey ellipses = RSS contours"))
+add_region <- function(region, b, color, linetype, label) {
+  geometry_base +
+    geom_polygon(data = region, fill = color, alpha = 0.25, color = color) +
+    geom_contour(aes(z = rss), breaks = rss_two(b[1], b[2]), color = color,
+                 linetype = linetype, linewidth = 0.9) +
+    annotate("point", x = b[1], y = b[2], shape = 16, size = 3, color = color) +
+    labs(caption = label)
+}
+# Least squares estimates whose constrained estimate at this budget is the
+# corner b_lasso2: b_lasso2 + mu * solve(A2) %*% g, mu >= 0, with g a normal to
+# the region there. The diamond has normals g = (u, 1), |u| <= 1, a wedge; the
+# disk has the single normal b_lasso2, a ray.
+A2_inv <- solve(A2)
+normal <- function(u) replace(c(u, u), first, sign(a[first]))
+unit <- function(v) v / sqrt(sum(v^2))
+far <- 50
+wedge <- as_tibble(rbind(b_lasso2,
+                         b_lasso2 + far * unit(drop(A2_inv %*% normal(-1))),
+                         b_lasso2 + far * unit(drop(A2_inv %*% normal(1)))),
+                   .name_repair = \(x) c("b1", "b2"))
+ray_end <- b_lasso2 + far * unit(drop(A2_inv %*% b_lasso2))
+ray_angle <- atan2(abs(ray_end[-first] - b_lasso2[-first]), abs(ray_end[first] - b_lasso2[first]))
+# Inside the wedge: A2 (b_two - corner) = mu * (u, 1) with |u| <= 1.
+wedge_u <- drop(A2 %*% (b_two - b_lasso2))
+wedge_u <- wedge_u[-first] / wedge_u[first]
+corner_plot <- geometry_base +
+  geom_polygon(data = wedge, fill = okabe_ito[5], alpha = 0.25) +
+  geom_polygon(data = diamond, fill = NA, color = okabe_ito[5]) +
+  geom_path(data = disk, color = okabe_ito[4]) +
+  annotate("segment", x = b_lasso2[1], y = b_lasso2[2], xend = ray_end[1], yend = ray_end[2],
+           color = okabe_ito[4], linetype = "dashed", linewidth = 0.9) +
+  annotate("point", x = b_lasso2[1], y = b_lasso2[2], shape = 16, size = 3) +
+  labs(caption = paste0("Budget ", s_budget, ". Shaded: least squares estimates whose lasso estimate is the corner;\n",
+                        "dashed line: those whose ridge estimate is that point."))
+geometry_plots <- list(
+  geometry_base,
+  add_region(diamond, b_lasso2, okabe_ito[5], "solid",
+             bquote("Lasso region" ~ abs(beta[1]) + abs(beta[2]) <= .(s_budget) *
+                      "; solid ellipse = contour through the estimate")),
+  add_region(disk, b_ridge2, okabe_ito[4], "dashed",
+             bquote("Ridge region" ~ beta[1]^2 + beta[2]^2 <= .(s_budget)^2 *
+                      "; dashed ellipse = contour through the estimate")),
+  corner_plot)
+```
+:::
+
+::: {.panel-tabset}
+#### RSS contours
+```{r geometry-base-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 6
+geometry_plots[[1]]
+```
+
+#### + Lasso
+```{r geometry-lasso-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 6
+geometry_plots[[2]]
+```
+
+#### + Ridge
+```{r geometry-ridge-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 6
+geometry_plots[[3]]
+```
+
+#### Estimates at the corner
+```{r geometry-corner-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 6.2
+geometry_plots[[4]]
+```
+:::
+
+The least squares estimate,
+$\left(`r fmt(b_two[1])`, `r fmt(b_two[2])`\right)$, lies outside both
+regions, so each constrained estimate is on the boundary. With budget
+$s = `r s_budget`$ the smallest contour touches the diamond at its corner
+$\left(`r fmt(b_lasso2[1])`, `r fmt(b_lasso2[2])`\right)$: the coefficient of
+`r two_names[-first]` is exactly zero. The disk
+$\beta_1^2 + \beta_2^2 \le `r s_budget`^2$, through the same corners, is
+touched at $\left(`r fmt(b_ridge2[1])`, `r fmt(b_ridge2[2])`\right)$, where
+neither coefficient is zero.
+
+Which point of the boundary is touched depends on where the least squares
+estimate $\hat\beta$ is. Write $\mathbf{A} = \tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$,
+with $\tilde{\mathbf{X}}$ here the $n \times 2$ matrix of the two standardized
+features, so that the RSS is
+$\left(\beta - \hat\beta\right)^\top\mathbf{A}\left(\beta - \hat\beta\right)$
+plus a constant. At a constrained estimate $b$ on the boundary, the direction
+in which the RSS decreases fastest, $-2\mathbf{A}\left(b - \hat\beta\right)$,
+must be an outward normal $g$ of the region at $b$, or moving along the
+boundary would lower the RSS; so $\hat\beta = b + \mu\mathbf{A}^{-1}g$ for
+some $\mu \ge 0$.
+
+- On the disk of radius $s$, through the diamond's corners, the only outward
+normal at the axis point $(0, s)$ is $(0, 1)^\top$, so the least squares estimates whose ridge estimate is
+$(0, s)$ form a single ray from that point, in the direction
+$\mathbf{A}^{-1}(0, 1)^\top$.
+- At the diamond's corner $(0, s)$ every $g = (u, 1)^\top$ with
+$\left|u\right| \le 1$ is an outward normal, so the least squares estimates
+whose lasso estimate is the corner fill a wedge.
+
+The last tab draws both for $s = `r s_budget`$. The ray is tilted
+`r fmt(180 / pi * ray_angle, 1)` degrees from the `r two_names[first]` axis.
+With uncorrelated features $\mathbf{A}$ would be $n\mathbf{I}_2$ and the ray
+would run along the axis, so that only a least squares estimate on the axis
+would give a zero coefficient. Either way the ray has no area, and a zero ridge
+coefficient is a coincidence. The wedge has area, and the least squares
+estimate of the training orders falls inside it, near its edge
+($u = `r fmt(wedge_u)`$): the lasso keeps `r two_names[-first]` at zero for
+every budget below $s = `r fmt(s_enter)`$.
+
+The figure shows one budget and two nearly uncorrelated features; it
+illustrates the mechanism but does not show how often it acts. In $p$
+dimensions the region $\sum_j\left|\beta_j\right| \le s$ has corners and
+edges on which many coefficients are zero at once, and the least squares
+estimates whose lasso estimate lies on one of them fill a set of positive
+volume. For ridge regression the least squares estimates that give some
+coefficient exactly zero fill a set of zero volume.
+
+[Best subset selection](10-subset-selection.qmd) is the same problem with the
+budget $\sum_j\mathrm{I}\left(\beta_j \ne 0\right) \le s$ on the number of
+nonzero coefficients; that count, used as a penalty, is the **$\ell_0$
+penalty**. It is not convex, and minimizing it means searching over subsets.
+The lasso replaces it with a convex relaxation, the $\ell_1$ budget, which
+can be minimized quickly.
+
+### Soft thresholding
+
+Write $\tilde{\mathbf{X}}$ now for the $n \times p$ matrix of all $p$
+standardized features, without a column of ones. When they are orthogonal,
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} = n\mathbf{I}_p$ with
+$\mathbf{I}_p$ the $p \times p$ identity matrix, the least squares estimate is $\hat\beta_j = \sum_i\tilde x_{ij}\left(y_i - \bar y\right)/n$, and
+
+$$RSS = \sum_{i=1}^n\left(y_i - \bar y\right)^2 - 2n\sum_{j=1}^p\beta_j\hat\beta_j + n\sum_{j=1}^p\beta_j^2 = c + n\sum_{j=1}^p\left(\beta_j - \hat\beta_j\right)^2,$$
+
+with $\hat\beta_0 = \bar y$ and $c$ not depending on $\beta$. The lasso
+criterion splits into one problem per coefficient: minimize
+$n\left(\beta_j - \hat\beta_j\right)^2 + \lambda\left|\beta_j\right|$.
+
+- For $\beta_j > 0$ the derivative $2n\left(\beta_j - \hat\beta_j\right) + \lambda$
+is zero at $\beta_j = \hat\beta_j - \lambda/(2n)$, which is positive only if
+$\hat\beta_j > \lambda/(2n)$.
+- For $\beta_j < 0$, likewise $\beta_j = \hat\beta_j + \lambda/(2n)$, negative
+only if $\hat\beta_j < -\lambda/(2n)$.
+- Otherwise $\left|\hat\beta_j\right| \le \lambda/(2n)$, the criterion
+decreases toward $\beta_j = 0$ from both sides, and the minimum is
+$\beta_j = 0$.
+
+Together,
+
+$$\hat\beta^L_{\lambda j} = \text{sign}\left(\hat\beta_j\right)\left(\left|\hat\beta_j\right| - \frac{\lambda}{2n}\right)_+, \qquad \hat\beta^R_{\lambda j} = \frac{n}{n + \lambda}\hat\beta_j,$$
+
+where
+
+- $\hat\beta^L_{\lambda j}$ is the **lasso estimate** of standardized
+coefficient $j$ for tuning parameter $\lambda$, and $\hat\beta^R_{\lambda j}$
+the ridge estimate of the ridge lecture,
+- $(u)_+ = \max(u, 0)$, and
+- the map from $\hat\beta_j$ to $\hat\beta^L_{\lambda j}$ is **soft
+thresholding** at $\lambda/(2n)$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r soft-threshold}
+#| output: false
+soft <- function(b, t) sign(b) * pmax(abs(b) - t, 0)
+Z_orth <- sqrt(n_train) * qr.Q(qr(X_std))
+b_orth <- drop(crossprod(Z_orth, y_train - mean(y_train))) / n_train
+lambda_orth <- 150
+orth_threshold <- lambda_orth / (2 * n_train)
+orth_lasso <- coef(glmnet(Z_orth, y_train, alpha = 1, lambda = orth_threshold,
+                          thresh = 1e-14))[-1, 1]
+orth_diff <- max(abs(orth_lasso - soft(b_orth, orth_threshold)))
+# The same fit with the s_y of ridge regression's conversion carried over.
+orth_wrong <- coef(glmnet(Z_orth, y_train, alpha = 1, lambda = s_y * orth_threshold,
+                          thresh = 1e-14))[-1, 1]
+rule_labels <- c("Least squares", "Ridge", "Lasso")
+soft_plot <- tibble(b = seq(-1.1, 1.1, length.out = 401) * max(abs(b_orth))) |>
+  mutate(`Least squares` = b, Ridge = n_train / (n_train + lambda_orth) * b,
+         Lasso = soft(b, lambda_orth / (2 * n_train))) |>
+  pivot_longer(-b, names_to = "rule", values_to = "estimate") |>
+  mutate(rule = factor(rule, levels = rule_labels)) |>
+  ggplot(aes(x = b, y = estimate)) +
+  geom_line(aes(color = rule, linetype = rule), linewidth = 0.9) +
+  geom_point(data = tibble(b = b_orth, estimate = orth_lasso), shape = 1, size = 2) +
+  scale_color_manual(values = okabe_ito[c(1, 4, 5)]) +
+  scale_linetype_manual(values = c("dotted", "dashed", "solid")) +
+  coord_equal() +
+  labs(x = "Least squares estimate (orthogonalized feature)", y = "Estimate",
+       color = NULL, linetype = NULL, title = bquote(lambda == .(lambda_orth) * ", n =" ~ .(n_train)),
+       caption = "Circles: glmnet() lasso estimates for the orthogonalized training features.") +
+  theme(legend.position = "bottom")
+```
+:::
+
+The delivery features are not orthogonal, so the figure uses orthogonalized
+versions: $\sqrt{n}$ times an orthonormal basis for the span of the
+standardized training features, `r p` centered columns with
+$\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} = n\mathbf{I}_p$ exactly and no
+meaning of their own. The lines are the formulas at
+$\lambda = `r lambda_orth`$; the circles are the lasso estimates `glmnet()`
+computes for these features, with $\lambda$ converted as in the next
+subsection.
+
+```{r soft-figure}
+#| echo: false
+#| fig-width: 6
+#| fig-height: 6.5
+soft_plot
+```
+
+At $\lambda = `r lambda_orth`$ the ridge factor $n/(n + \lambda)$ is
+`r fmt(n_train / (n_train + lambda_orth))`. Ridge regression multiplies every
+estimate by that factor, so it moves the large estimates furthest. The lasso
+threshold $\lambda/(2n)$ is `r fmt(orth_threshold)`, in the units of the
+estimates. The lasso moves every estimate larger than
+`r fmt(orth_threshold)` in absolute value toward zero by exactly that amount,
+and sets the other `r sum(orth_lasso == 0)` of the `r p` to zero, moving
+each of them by its own magnitude. The `glmnet()` estimates match soft
+thresholding to within $`r sci(orth_diff)`$.
+
+### glmnet scaling
+
+`glmnet::glmnet()` with `alpha = 1` fits the lasso, with documented criterion
+
+$$\frac{1}{2n}RSS + \lambda_{\text{glmnet}}\sum_{j=1}^p\left|\beta_j\right|,$$
+
+or, multiplied by $2n$, $RSS + 2n\lambda_{\text{glmnet}}\sum_j\left|\beta_j\right|$.
+As the ridge lecture explained, `glmnet()` also divides $y$ and the supplied
+$\lambda_{\text{glmnet}}$ by $s_y$, the standard deviation of the responses
+$y_1, \ldots, y_n$ computed with divisor $n$. Fitting $y/s_y$ with coefficients
+$\beta/s_y$ and tuning parameter $\lambda_{\text{glmnet}}/s_y$ divides both
+the RSS and the penalty $2n\left(\lambda_{\text{glmnet}}/s_y\right)\sum_j\left|\beta_j/s_y\right|$
+by $s_y^2$, which leaves the minimizer unchanged. For the lasso the two
+divisions cancel:
+
+$$\lambda = 2n\,\lambda_{\text{glmnet}},$$
+
+with no $s_y$, unlike ridge regression's $\lambda = n\lambda_{\text{glmnet}}/s_y$.
+The circles in the soft-thresholding figure were computed at
+$\lambda_{\text{glmnet}} = `r lambda_orth` / (2 \cdot `r n_train`) = `r fmt(orth_threshold)`$
+and fall on the formula, which checks the conversion. The $s_y$ of ridge
+regression's conversion must not be carried over: the analogous
+$\lambda = 2n\lambda_{\text{glmnet}}/s_y$ would supply
+$\lambda_{\text{glmnet}} = `r fmt(s_y * orth_threshold)`$,
+$s_y = `r fmt(s_y)`$ times as large, and `glmnet()` would then set
+`r if (all(orth_wrong == 0)) paste("all", p, "coefficients") else paste(sum(orth_wrong == 0), "of the", p, "coefficients")`
+to zero, against the `r sum(orth_lasso == 0)` of soft thresholding at
+$\lambda = `r lambda_orth`$.
+
+```{r glmnet-conversion}
+to_glmnet <- function(lambda, n = n_train) lambda / (2 * n)
+to_chapter <- function(lambda_glmnet, n = n_train) 2 * n * lambda_glmnet
+```
+
+`glmnet()` minimizes the criterion by **coordinate descent**: it cycles
+through the coefficients, minimizing over one at a time with the others
+fixed. With the others fixed, the problem in $\beta_j$ is the one-coefficient
+problem above, with $\hat\beta_j$ replaced by the least squares coefficient
+of the partial residuals $y_i - \bar y - \sum_{j' \ne j}\beta_{j'}\tilde x_{ij'}$
+on $\tilde x_{ij}$, so each step is a soft thresholding. From here on
+$\lambda$ is this chapter's, converted where `glmnet()` is used.
+
+## Coefficient path
+
+::: {.callout-note collapse="true"}
+### Code
+```{r lasso-path}
+#| output: false
+lasso_grid <- 10^seq(3, -1, length.out = 81)
+lasso_path_fit <- glmnet(X_train, y_train, alpha = 1, lambda = to_glmnet(lasso_grid),
+                         thresh = 1e-12)
+lasso_path <- path_data(lasso_path_fit, lasso_grid)
+lasso_path_plot <- path_plot(lasso_path, paste("Lasso coefficient path,", n_train, "training orders"))
+nonzero_plot <- tibble(lambda = lasso_grid, Lasso = lasso_path_fit$df, Ridge = p) |>
+  pivot_longer(-lambda, names_to = "method", values_to = "n") |>
+  mutate(method = factor(method, levels = c("Ridge", "Lasso"))) |>
+  ggplot(aes(x = lambda, y = n, color = method, linetype = method)) +
+  geom_step(direction = "mid", linewidth = 0.9) +
+  log_lambda +
+  scale_color_manual(values = okabe_ito[c(4, 5)]) +
+  scale_linetype_manual(values = c("dashed", "solid")) +
+  labs(x = expression(lambda ~ "(log scale)"), y = "Nonzero coefficients",
+       color = NULL, linetype = NULL, title = paste(n_train, "training orders")) +
+  theme(legend.position = "bottom")
+# Largest lambda on the grid at which each feature is nonzero.
+entry <- lasso_path |> filter(coefficient != 0) |> group_by(feature) |>
+  summarize(lambda = max(lambda)) |> arrange(desc(lambda))
+# Features that return to zero after entering, as lambda decreases.
+n_left <- lasso_path |> arrange(feature, desc(lambda)) |> group_by(feature) |>
+  summarize(left = any(diff(coefficient != 0) < 0)) |> pull(left) |> sum()
+stopifnot(entry$feature[1] == names(which.max(lambda_scores)))
+df_at <- function(l) lasso_path_fit$df[which.min(abs(lasso_grid - l))]
+# Largest absolute correlation between two features in the training orders.
+feature_cor <- cor(X_train)
+max_cor <- max(abs(feature_cor[upper.tri(feature_cor)]))
+ls_fit <- lm(time_to_delivery ~ ., data = train)
+small_diff <- max(abs(coef(lasso_path_fit)[-1, length(lasso_grid)] - coef(ls_fit)[-1]) * x_scale)
+```
+:::
+
+The tabs plot the standardized coefficients of the lasso fit to the training
+orders against $\lambda$, from $`r min(lasso_grid)`$ to
+$`r big_math(max(lasso_grid))`$, and the number of nonzero coefficients,
+with ridge regression's for comparison.
+
+::: {.panel-tabset}
+#### Coefficient path
+```{r lasso-path-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 5
+lasso_path_plot
+```
+
+#### Nonzero coefficients
+```{r nonzero-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+nonzero_plot
+```
+:::
+
+Read from the right. At $\lambda = `r big_math(max(lasso_grid))`$, above
+$\lambda_{\max} = `r fmt(lambda_max, 1)`$, every coefficient is zero. As
+$\lambda$ decreases the first features to enter are
+`r and_list(code(entry$feature[1:3]))`. `r code(entry$feature[1])` enters at
+$\lambda_{\max}$ itself. The grid does not contain the points of entry; the
+largest grid values of $\lambda$ at which the three are nonzero are
+`r and_list(fmt(entry$lambda[1:3], 0))`. Each coefficient leaves zero
+continuously rather than jumping to its least squares value. At
+$\lambda = 100$, `r df_at(100)` of the `r p` coefficients are nonzero; at
+$\lambda = 10$, `r df_at(10)`. `r if (n_left == 0) "On this path no coefficient returns to zero once it has entered." else paste(n_left, "coefficients return to zero after entering.")`
+A coefficient can return to zero when features are correlated; the largest
+absolute correlation between two of the `r p` training features is
+`r fmt(max_cor)`. At $\lambda = `r min(lasso_grid)`$ all
+`r lasso_path_fit$df[length(lasso_grid)]` are nonzero, within
+`r fmt(small_diff)` minutes per standard deviation of least squares.
+
+## Tuning parameter selection
+
+### Cross-validation
+
+`cv.glmnet()` computes $\text{CV}_{(k)}(\lambda)$ on the grid of the path,
+with $k = `r n_folds`$ and the ridge lecture's folds `fold_id`; inside each
+fold `glmnet()` standardizes from the other `r n_folds - 1` folds only.
+Ridge regression is cross-validated on the same folds and grid as in the
+ridge lecture.
+
+```{r cv-lasso}
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1, lambda = to_glmnet(lasso_grid),
+                      foldid = fold_id, thresh = 1e-12)
+lambda_cv <- to_chapter(cv_lasso$lambda.min)
+cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0, lambda = to_glmnet_ridge(lambda_grid),
+                      foldid = fold_id, thresh = 1e-12)
+lambda_cv_ridge <- cv_ridge$lambda.min * n_train / s_y
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cv-plot}
+#| output: false
+# The ridge lecture's ridge estimate for many lambdas at once, from the
+# singular value decomposition of the standardized features. A feature absent
+# from a sample gets coefficient 0, which at lambda = 0 is least squares on
+# the rest; this is the ridge lecture's least squares in every fold and sample.
+ridge_path <- function(X, y, lambdas) {
+  center <- colMeans(X)
+  scale <- apply(X, 2, sd_n)
+  scale[scale == 0] <- 1
+  sv <- svd(sweep(sweep(X, 2, center), 2, scale, "/"))
+  shrink <- outer(sv$d, lambdas, \(d, l) ifelse(d > 1e-8, d / (d^2 + l), 0))
+  b <- (sv$v %*% (shrink * drop(crossprod(sv$u, y - mean(y))))) / scale
+  rbind(`(Intercept)` = mean(y) - colSums(b * center), b)
+}
+fold_size <- tabulate(fold_id)
+ls_fold_mse <- map_dbl(seq_len(n_folds), \(l) {
+  out <- fold_id == l
+  mse(y_train[out], cbind(1, X_train[out, ]) %*% ridge_path(X_train[!out, ], y_train[!out], 0))
+})
+cv_ls <- weighted.mean(ls_fold_mse, fold_size)
+# One standard error over the folds, computed as cv.glmnet() computes it.
+ls_se <- sqrt(weighted.mean((ls_fold_mse - cv_ls)^2, fold_size) / (n_folds - 1))
+cv_lambda <- to_chapter(cv_lasso$lambda)
+cv_min <- min(cv_lasso$cvm)
+i_min <- which.min(cv_lasso$cvm)
+i_min_ridge <- which.min(cv_ridge$cvm)
+# Share of the lasso's one-standard-error interval covered by ridge regression's.
+ridge_overlap <- max(0, min(cv_lasso$cvup[i_min], cv_ridge$cvup[i_min_ridge]) -
+                       max(cv_lasso$cvlo[i_min], cv_ridge$cvlo[i_min_ridge])) /
+  (cv_lasso$cvup[i_min] - cv_lasso$cvlo[i_min])
+nonzero_cv <- cv_lasso$nzero[[cv_lasso$index["min", 1]]]
+near_min <- cv_lasso$cvm < 1.05 * cv_min
+# Cross-validation with this chapter's lambda applied exactly in every fold.
+cv_exact <- rowSums(sapply(seq_len(n_folds), \(l) {
+  out <- fold_id == l
+  fit <- glmnet(X_train[!out, ], y_train[!out], alpha = 1,
+                lambda = to_glmnet(lasso_grid, sum(!out)), thresh = 1e-12)
+  colSums((y_train[out] - predict(fit, X_train[out, ]))^2)
+})) / n_train
+ref_labels <- c("Least squares", "Ridge, smallest estimate")
+cv_plot <- ggplot(tibble(lambda = cv_lambda, cv = cv_lasso$cvm, low = cv_lasso$cvlo,
+                         high = cv_lasso$cvup), aes(x = lambda, y = cv)) +
+  geom_linerange(aes(ymin = low, ymax = high), color = "grey70") +
+  geom_line() +
+  geom_hline(data = tibble(fit = factor(ref_labels, levels = ref_labels),
+                           cv = c(cv_ls, min(cv_ridge$cvm))),
+             aes(yintercept = cv, color = fit, linetype = fit), linewidth = 0.7) +
+  geom_vline(xintercept = lambda_cv, linetype = "dotted", color = okabe_ito[5]) +
+  scale_color_manual(values = okabe_ito[c(1, 4)]) +
+  scale_linetype_manual(values = c("dashed", "dotdash")) +
+  log_lambda +
+  labs(x = expression("Lasso" ~ lambda ~ "(log scale)"),
+       y = paste0(n_folds, "-fold CV estimate of test MSE"), color = NULL, linetype = NULL,
+       title = paste(n_train, "training orders; dotted line = smallest lasso estimate"),
+       caption = "Grey bars: plus and minus one standard error over the folds.") +
+  theme(legend.position = "bottom")
+```
+:::
+
+The figure plots $\text{CV}_{(`r n_folds`)}(\lambda)$ for the lasso, with
+the estimates for least squares and for ridge regression at its chosen
+$\lambda$ as horizontal lines.
+
+```{r cv-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.6
+cv_plot
+```
+
+The estimate is smallest, `r fmt(cv_min)`, at
+$\lambda = `r fmt(lambda_cv, 1)`$
+($\lambda_{\text{glmnet}} = `r fmt(cv_lasso$lambda.min, 3)`$), where
+`r nonzero_cv` coefficients are nonzero, against `r fmt(cv_ls)` for least
+squares and `r fmt(min(cv_ridge$cvm))` for ridge regression at
+$\lambda = `r fmt(lambda_cv_ridge, 1)`$.^[Each fold is fit to
+`r n_train - fold_size[1]` orders, so by $\lambda = 2n\lambda_{\text{glmnet}}$
+the $\lambda$ a fold applies is `r fmt((n_train - fold_size[1]) / n_train)`
+times the plotted value, which uses all `r n_train` training orders.
+Applying this chapter's $\lambda$ exactly in every fold gives a smallest
+estimate of `r fmt(min(cv_exact))` at
+$\lambda = `r fmt(lasso_grid[which.min(cv_exact)], 1)`$; no conclusion below
+changes.] The minimum is shallow: from
+$\lambda = `r fmt(min(cv_lambda[near_min]), 0)`$ to
+`r fmt(max(cv_lambda[near_min]), 0)`, with `r max(cv_lasso$nzero[near_min])`
+down to `r min(cv_lasso$nzero[near_min])` nonzero coefficients, the estimate
+is within 5% of its smallest value.
+
+These estimates are uncertain. Plus or minus one standard error is
+`r fmt(cv_lasso$cvlo[i_min])` to `r fmt(cv_lasso$cvup[i_min])` for the lasso
+at its minimum and `r fmt(cv_ls - ls_se)` to `r fmt(cv_ls + ls_se)` for least
+squares, intervals that
+`r if (cv_lasso$cvup[i_min] > cv_ls - ls_se) paste0("overlap only from ", fmt(cv_ls - ls_se), " to ", fmt(cv_lasso$cvup[i_min])) else "do not overlap"`.
+The difference, `r fmt(cv_ls - cv_min)`, is
+`r fmt((cv_ls - cv_min) / ls_se, 1)` times the least squares standard error
+and `r fmt((cv_ls - cv_min) / cv_lasso$cvsd[i_min], 1)` times the lasso's.
+For ridge regression at its minimum the interval is
+`r fmt(cv_ridge$cvlo[i_min_ridge])` to `r fmt(cv_ridge$cvup[i_min_ridge])`,
+which covers
+`r pct(ridge_overlap, 0)` of the lasso's.
+
+### Test evaluation
+
+`cv.glmnet()` has also fit the path to all `r n_train` training orders, so
+predicting with `s = "lambda.min"` uses the refit. The three chosen models
+are evaluated once on the `r big(n_test)` test orders.
+
+```{r test-evaluation}
+lasso_test_pred <- drop(predict(cv_lasso, X_test, s = "lambda.min"))
+ridge_test_pred <- drop(predict(cv_ridge, X_test, s = "lambda.min"))
+ls_test_pred <- predict(ls_fit, test)
+test_mse <- c(ls = mse(y_test, ls_test_pred), ridge = mse(y_test, ridge_test_pred),
+              lasso = mse(y_test, lasso_test_pred))
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r test-table}
+#| output: false
+train_mse <- c(mse(y_train, fitted(ls_fit)),
+               mse(y_train, predict(cv_ridge, X_train, s = "lambda.min")),
+               mse(y_train, predict(cv_lasso, X_train, s = "lambda.min")))
+test_table <- tibble(
+  Method = c("Least squares", "Ridge", "Lasso"),
+  lambda = c("0", fmt(lambda_cv_ridge, 1), fmt(lambda_cv, 1)),
+  kept = c(p, p, nonzero_cv),
+  train = fmt(train_mse), cv = fmt(c(cv_ls, min(cv_ridge$cvm), cv_min)),
+  test = fmt(test_mse)) |>
+  knitr::kable(col.names = c("Method", "$\\lambda$", "Nonzero coefficients", "Training MSE",
+                             paste0(n_folds, "-fold CV estimate"), "Test MSE"),
+               align = "lrrrrr")
+# Paired comparison over the test orders: ridge squared error minus lasso's.
+sq_diff <- (y_test - ridge_test_pred)^2 - (y_test - lasso_test_pred)^2
+# Cross-validation estimate over test MSE, for least squares, ridge, and lasso.
+cv_over_test <- c(cv_ls, min(cv_ridge$cvm), cv_min) / test_mse
+stopifnot(all(cv_over_test > 1))
+```
+:::
+
+```{r test-table-display}
+#| echo: false
+test_table
+```
+
+The lasso's test MSE is `r fmt(test_mse[["lasso"]])`, against
+`r fmt(test_mse[["ridge"]])` for ridge regression and
+`r fmt(test_mse[["ls"]])` for least squares,
+`r pct(1 - test_mse[["lasso"]] / test_mse[["ridge"]])` and
+`r pct(1 - test_mse[["lasso"]] / test_mse[["ls"]])` lower. The paired
+difference in squared error, ridge minus lasso, has mean
+`r fmt(mean(sq_diff))` and standard error
+`r fmt(sd(sq_diff) / sqrt(n_test))` over the test orders. As in the ridge
+lecture, that standard error treats the fitted models as fixed and says
+nothing about another training sample; the repeated samples below do.
+
+All three cross-validation estimates are above the test MSEs, by factors of
+`r fmt(min(cv_over_test))` to `r fmt(max(cv_over_test))`. As in the ridge
+lecture, each fit in cross-validation uses
+`r n_train * (n_folds - 1) / n_folds` orders, and with so few orders per
+feature the error falls quickly as orders are added; an estimate from
+`r n_train` orders is also noisy. The lasso and ridge estimates are, in
+addition, each the smallest over a grid of $\lambda$ values, selected for
+being low, so as estimates of the chosen model's error they are optimistic.
+The least squares estimate involves no such choice.
+
+### Lasso coefficients
+
+::: {.callout-note collapse="true"}
+### Code
+```{r lasso-coefficients}
+#| output: false
+b_lasso <- coef(cv_lasso, s = "lambda.min")[, 1]
+b_ridge <- coef(cv_ridge, s = "lambda.min")[, 1]
+b_ls <- coef(ls_fit)
+feature_order <- colnames(X_train)
+fit_labels <- c("Least squares", "Ridge", "Lasso")
+coef_plot <- tibble(feature = factor(rep(feature_order, 3), levels = rev(feature_order)),
+                    estimate = c(b_ls[feature_order], b_ridge[feature_order], b_lasso[feature_order]),
+                    fit = factor(rep(fit_labels, each = p), levels = fit_labels)) |>
+  ggplot(aes(x = estimate, y = feature, color = fit, shape = fit)) +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  geom_point(size = 2, position = position_dodge(width = 0.7)) +
+  scale_color_manual(values = okabe_ito[c(1, 4, 5)]) +
+  scale_shape_manual(values = c(1, 17, 16)) +
+  labs(x = "Coefficient (minutes per unit of the feature)", y = NULL, color = NULL,
+       shape = NULL, title = paste(n_train, "training orders")) +
+  theme(legend.position = "bottom")
+kept <- names(b_lasso)[-1][b_lasso[-1] != 0]
+kept_items <- intersect(kept, item_names)
+day_names <- feature_order[str_starts(feature_order, "day")]
+kept_days <- intersect(kept, day_names)
+dropped_days <- str_remove(setdiff(day_names, kept), "day")
+items_pos <- sort(b_lasso[kept_items][b_lasso[kept_items] > 0], decreasing = TRUE)
+items_neg <- sort(b_lasso[kept_items][b_lasso[kept_items] < 0])
+typical <- sum(b_lasso[c("(Intercept)", "hour", "distance")] *
+                 c(1, mean(train$hour), mean(train$distance)))
+n_shrunk <- sum(abs(b_lasso[kept]) < abs(b_ls[kept]))
+```
+:::
+
+The figure compares the coefficients of the three fits, on the original
+scale.
+
+```{r coef-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 8.5
+coef_plot
+```
+
+Read in order,
+
+- **Intercept.** On the original scale,
+$\hat\beta_0 = `r fmt_math(b_lasso[["(Intercept)"]], 1)`$ minutes is the
+predicted time of a Monday order placed at hour 0, at distance 0, with no
+items, far outside the data. (The standardized-scale intercept is
+$\bar y = `r fmt(mean(y_train), 1)`$ minutes.) A Monday order with no items at
+the training orders' mean hour, `r fmt(mean(train$hour), 1)`, and mean
+distance, `r fmt(mean(train$distance))` miles, has predicted time
+`r fmt(typical, 1)` minutes.
+- **Hour and distance.** Each hour later adds `r fmt(b_lasso[["hour"]])`
+minutes (ridge `r fmt(b_ridge[["hour"]])`, least squares
+`r fmt(b_ls[["hour"]])`), and each mile `r fmt(b_lasso[["distance"]])`
+minutes (ridge `r fmt(b_ridge[["distance"]])`, least squares
+`r fmt(b_ls[["distance"]])`), holding the other features fixed. Relative to
+least squares, ridge regression shrinks the two by
+`r and_list(pct(1 - b_ridge[c("hour", "distance")] / b_ls[c("hour", "distance")], 0))`,
+the lasso by
+`r and_list(pct(1 - b_lasso[c("hour", "distance")] / b_ls[c("hour", "distance")], 0))`.
+- **Day.** The lasso keeps the dummies for
+`r and_list(str_remove(kept_days, "day"))`, with coefficients
+`r and_list(fmt(b_lasso[kept_days], 1))` minutes, and drops those for
+`r and_list(dropped_days)`. As in the
+[Subset Selection](10-subset-selection.qmd) lecture, a dropped dummy merges
+its day into the reference: the model predicts `r and_list(dropped_days)`
+orders like otherwise identical Monday orders.
+- **Items.** The lasso keeps `r length(kept_items)` of the
+`r length(item_names)` items. Each unit of
+`r and_list(code(names(items_pos)))` raises the predicted time, by
+`r and_list(fmt(items_pos))` minutes, and each unit of
+`r and_list(code(names(items_neg)))` lowers it, by
+`r and_list(fmt(abs(items_neg)))` minutes. The other
+`r length(item_names) - length(kept_items)` items do not affect the
+prediction. These signs are read with care: `r code(names(items_neg)[1])`,
+with the most negative item coefficient, is in only
+`r orders_with[[names(items_neg)[1]]]` of the training orders, and the
+repeated samples below show how much the kept items depend on the training
+sample.
+
+Of the `r length(kept)` nonzero lasso coefficients, `r n_shrunk` are smaller
+in absolute value than their least squares counterparts. Nonzero lasso
+coefficients are shrunken toward zero, by $\lambda/(2n)$ in the orthogonal
+case, so they are biased; the repeated samples below show the bias. And because the features were selected using the
+same data, the standard errors, $t$-statistics, and $p$-values that `lm()`
+would report, for the lasso fit or for least squares refit to the selected
+features, do not apply, as in the subset selection lecture. `glmnet()`
+reports none.
+
+## Repeated training samples
+
+### Test MSE
+
+```{r repeated-design}
+n_samples <- 500
+n_eval <- 4000
+```
+
+The ridge lecture divided the test orders into `r big(n_eval)` evaluation
+orders and a pool of `r big(n_test - n_eval)`, and drew $M = `r n_samples`$
+samples of $n$ pool orders. The next random draws here are the same, so the
+samples, and the folds drawn within each, are the ridge lecture's. In each
+sample $\lambda$ is chosen by `r n_folds`-fold cross-validation, for the
+lasso and for ridge regression on the same folds, each is refit, and its MSE
+at the evaluation orders is compared with that of least squares fit to the
+same sample, for $n = `r n_train`$ and $n = `r n_large`$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r repeated-samples}
+#| output: false
+eval_rows <- sample(n_test, n_eval)
+evaluation <- test[eval_rows, ]
+pool <- test[-eval_rows, ]
+X_eval <- model_matrix(evaluation)
+y_eval <- evaluation$time_to_delivery
+X_pool <- model_matrix(pool)
+y_pool <- pool$time_to_delivery
+sample_ids <- map(seq_len(n_samples), \(s) sample(nrow(pool), n_train))
+sample_ids_large <- map(seq_len(n_samples), \(s) sample(nrow(pool), n_large))
+procedure <- function(ids) {
+  map(ids, \(id) {
+    X <- X_pool[id, ]
+    y <- y_pool[id]
+    n <- length(y)
+    folds <- sample(rep(seq_len(n_folds), length.out = n))
+    cv_r <- cv.glmnet(X, y, alpha = 0, lambda = lambda_grid * sd_n(y) / n,
+                      foldid = folds, thresh = 1e-10)
+    cv_l <- cv.glmnet(X, y, alpha = 1, lambda = to_glmnet(lasso_grid, n),
+                      foldid = folds, thresh = 1e-10)
+    b_ls_s <- setNames(ridge_path(X, y, 0)[, 1], c("(Intercept)", colnames(X)))
+    b_lasso_s <- coef(cv_l, s = "lambda.min")[, 1]
+    b_ridge_s <- coef(cv_r, s = "lambda.min")[, 1]
+    tibble(n = n, ls = mse(y_eval, cbind(1, X_eval) %*% b_ls_s),
+           ridge = mse(y_eval, predict(cv_r, X_eval, s = "lambda.min")),
+           lasso = mse(y_eval, predict(cv_l, X_eval, s = "lambda.min")),
+           kept = list(b_lasso_s[-1] != 0),
+           coefs = list(tibble(feature = c("hour", "distance"),
+                               `Least squares` = b_ls_s[feature], Ridge = b_ridge_s[feature],
+                               Lasso = b_lasso_s[feature])))
+  }) |>
+    list_rbind()
+}
+reps <- bind_rows(procedure(sample_ids), procedure(sample_ids_large))
+rep_summary <- reps |> group_by(n) |>
+  summarize(lasso_beats_ls = mean(lasso < ls), lasso_beats_ridge = mean(lasso < ridge),
+            ridge_beats_ls = mean(ridge < ls),
+            mse_ls = mean(ls), mse_ridge = mean(ridge), mse_lasso = mean(lasso))
+rs <- function(size, col) rep_summary[[col]][rep_summary$n == size]
+# Per-sample gain over least squares with n = 100, and where this training
+# sample's test gain falls among them.
+sample_gain <- with(filter(reps, n == n_train), 1 - lasso / ls)
+test_gain <- 1 - test_mse[["lasso"]] / test_mse[["ls"]]
+gain_range <- quantile(sample_gain, c(0.05, 0.95))
+size_labels <- paste("n =", c(n_train, n_large))
+rep_plot <- reps |>
+  transmute(n = factor(paste("n =", n), levels = size_labels),
+            Ridge = 100 * (ridge / ls - 1), Lasso = 100 * (lasso / ls - 1)) |>
+  pivot_longer(-n, names_to = "method", values_to = "change") |>
+  mutate(method = factor(method, levels = c("Ridge", "Lasso"))) |>
+  ggplot(aes(x = method, y = change)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75),
+              quantile.linetype = "solid") +
+  facet_wrap(~ n) +
+  labs(x = NULL, y = "Change in MSE at the evaluation orders\nrelative to least squares (%)",
+       title = paste(n_samples, "training samples of each size"),
+       caption = "Lines = quartiles and median; below 0 = better than least squares.")
+```
+:::
+
+The figure plots, for each sample, the percent change in MSE relative to
+least squares.
+
+```{r rep-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 4.2
+rep_plot
+```
+
+With $n = `r n_train`$ the average MSE is `r fmt(rs(n_train, "mse_lasso"))`
+for the lasso, `r fmt(rs(n_train, "mse_ridge"))` for ridge regression, and
+`r fmt(rs(n_train, "mse_ls"))` for least squares. The lasso has a lower MSE
+than least squares in `r pct(rs(n_train, "lasso_beats_ls"), 0)` of the
+samples and than ridge regression in
+`r pct(rs(n_train, "lasso_beats_ridge"), 0)`; ridge regression beats least
+squares in `r pct(rs(n_train, "ridge_beats_ls"), 0)`, the ridge lecture's
+figure. On these data, with `r n_train` training orders, the lasso's
+advantage is not an accident of one training sample, although its average
+MSE, `r pct(1 - rs(n_train, "mse_lasso") / rs(n_train, "mse_ls"))` below that
+of least squares, is a smaller gain than the `r pct(test_gain)` on the test
+orders.
+
+This training sample is a favorable draw for the lasso. The median gain over
+the samples is `r pct(median(sample_gain))`, 90% of the gains lie between
+`r pct(gain_range[[1]])` and `r pct(gain_range[[2]])`, and
+`r pct(mean(sample_gain >= test_gain))` of the samples gain at least as much
+as this one, which puts it at about the
+`r scales::ordinal(round(100 * mean(sample_gain < test_gain)))` percentile.
+
+With $n = `r n_large`$ the averages are `r fmt(rs(n_large, "mse_lasso"))`,
+`r fmt(rs(n_large, "mse_ridge"))`, and `r fmt(rs(n_large, "mse_ls"))`. The
+lasso beats least squares in `r pct(rs(n_large, "lasso_beats_ls"), 0)` of the
+samples, but its average MSE is
+`r pct(abs(rs(n_large, "mse_lasso") / rs(n_large, "mse_ls") - 1))`
+`r if (rs(n_large, "mse_lasso") > rs(n_large, "mse_ls")) "above" else "below"`
+that of least squares`r if (rs(n_large, "lasso_beats_ls") > 0.5 && rs(n_large, "mse_lasso") > rs(n_large, "mse_ls")) ": it loses less often than it wins, but by more" else ""`.
+With `r n_large` orders least squares has little variance left to remove, and
+neither penalty improves on it on average.
+
+### Selected sets
+
+::: {.callout-note collapse="true"}
+### Code
+```{r selection}
+#| output: false
+kept_100 <- do.call(rbind, filter(reps, n == n_train)$kept)
+kept_300 <- do.call(rbind, filter(reps, n == n_large)$kept)
+freq_plot <- tibble(feature = factor(rep(feature_order, 2), levels = rev(feature_order)),
+                    share = c(colMeans(kept_100), colMeans(kept_300)),
+                    n = factor(rep(size_labels, each = p), levels = size_labels)) |>
+  ggplot(aes(x = share, y = feature, color = n, shape = n)) +
+  geom_point(size = 2) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_y_discrete(labels = \(f) if_else(f %in% kept, paste0(f, " *"), f)) +
+  scale_color_manual(values = okabe_ito[c(5, 4)]) +
+  scale_shape_manual(values = c(16, 17)) +
+  labs(x = "Share of samples in which the lasso keeps the feature", y = NULL,
+       color = NULL, shape = NULL, title = paste(n_samples, "training samples of each size"),
+       caption = "* = kept by the lasso fit to the training orders.") +
+  theme(legend.position = "bottom")
+size_100 <- rowSums(kept_100)
+item_share <- colMeans(kept_100[, item_names])
+top_share <- names(sort(item_share, decreasing = TRUE))[1:2]
+# Outside the workflow, for illustration: least squares on the evaluation orders.
+eval_coefs <- summary(lm(time_to_delivery ~ ., data = evaluation))$coefficients[item_names, ]
+eval_slow <- eval_coefs[, "Estimate"] > 0 & eval_coefs[, "Pr(>|t|)"] < 0.05
+eval_top <- names(sort(eval_coefs[, "Estimate"], decreasing = TRUE))[1:2]
+top_item <- names(which.max(item_share))
+neg_item <- names(items_neg)[1]
+```
+:::
+
+The figure plots how often the lasso kept each feature over the samples.
+
+```{r freq-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 8
+freq_plot
+```
+
+With $n = `r n_train`$, `hour` and `distance` are kept in
+`r if (all(colMeans(kept_100)[c("hour", "distance")] == 1)) "every sample" else paste(and_list(pct(colMeans(kept_100)[c("hour", "distance")], 1)), "of the samples")`
+and each item in between `r pct(min(item_share), 0)` and
+`r pct(max(item_share), 0)`. The lasso keeps a median of
+`r median(size_100)` features, from `r min(size_100)` to `r max(size_100)`,
+and the `r n_samples` samples give `r nrow(unique(kept_100))` different
+selected sets. With $n = `r n_large`$ it keeps more, a median of
+`r median(rowSums(kept_300))`, and each item in more samples.
+
+The selected items are not the only items that slow deliveries. Outside the
+workflow, least squares fit to the `r big(n_eval)` evaluation orders gives
+`r sum(eval_slow)` of the `r length(item_names)` items a positive coefficient
+with $p$-value below 0.05, a median of
+`r fmt(median(eval_coefs[, "Estimate"]), 1)` minutes per item, the largest
+for `r and_list(code(eval_top))`, `r if (setequal(eval_top, top_share)) "the two items the lasso keeps most often" else paste("while the lasso keeps", and_list(code(top_share)), "most often")`;
+even `r code(top_item)` is kept in only `r pct(max(item_share), 0)` of the
+samples. The lasso fit to the training orders
+`r if (b_lasso[[top_item]] == 0) "drops" else "keeps"` `r code(top_item)`
+and gives `r code(neg_item)` its most negative item coefficient,
+`r fmt(b_lasso[[neg_item]])` minutes, where least squares on the evaluation
+orders gives `r fmt(eval_coefs[neg_item, "Estimate"])`
+($p$-value `r fmt(eval_coefs[neg_item, "Pr(>|t|)"])`). Of the
+`r length(items_neg)` items with negative coefficients in the lasso fit to
+the training orders, `r sum(eval_slow[names(items_neg)])` have a positive
+coefficient with $p$-value below 0.05 on the evaluation orders. Almost every
+item slows deliveries a little; with `r n_train` orders those small effects
+are estimated with large error, and which of them clear the threshold
+depends on the noise in the sample. A dropped item is not shown to have no
+effect.
+
+### Coefficient bias
+
+::: {.callout-note collapse="true"}
+### Code
+```{r coefficient-bias}
+#| output: false
+two_levels <- c("hour", "distance")
+coef_reps <- filter(reps, n == n_train)$coefs |>
+  list_rbind() |>
+  pivot_longer(-feature, names_to = "fit", values_to = "estimate") |>
+  mutate(fit = factor(fit, levels = fit_labels), feature = factor(feature, levels = two_levels))
+eval_ls <- coef(lm(time_to_delivery ~ ., data = evaluation))[two_levels]
+coef_means <- coef_reps |>
+  group_by(feature, fit) |>
+  summarize(mean = mean(estimate), .groups = "drop")
+cmean <- function(f, m) coef_means$mean[coef_means$feature == f & coef_means$fit == m]
+# Average shrinkage relative to the least squares average, hour then distance.
+avg_shrink <- function(m) 1 - map_dbl(two_levels, \(f) cmean(f, m) / cmean(f, "Least squares"))
+# The prose says ridge regression shrinks both more than the lasso, on average
+# and in the fit to the training orders.
+stopifnot(all(avg_shrink("Ridge") > avg_shrink("Lasso")), all(avg_shrink("Lasso") > 0),
+          all(b_ridge[two_levels] < b_lasso[two_levels]))
+bias_plot <- ggplot(coef_reps, aes(x = fit, y = estimate)) +
+  geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75),
+              quantile.linetype = "solid") +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3) +
+  geom_hline(data = tibble(feature = factor(two_levels, levels = two_levels), estimate = eval_ls),
+             aes(yintercept = estimate), linetype = "dashed", color = okabe_ito[4]) +
+  facet_wrap(~ feature, scales = "free_y",
+             labeller = as_labeller(c(hour = "hour (minutes per hour)",
+                                      distance = "distance (minutes per mile)"))) +
+  labs(x = NULL, y = "Coefficient", title = paste(n_samples, "samples of", n_train, "pool orders"),
+       caption = paste("Lines = quartiles and median; diamond = mean;",
+                       "dashed line = least squares on the evaluation orders."))
+```
+:::
+
+The figure plots the hour and distance coefficients, on the original scale,
+of the three fits to each sample of `r n_train` pool orders, with the least
+squares coefficients from the `r big(n_eval)` evaluation orders as dashed
+lines.
+
+```{r bias-figure}
+#| echo: false
+#| fig-width: 7.5
+#| fig-height: 4.2
+bias_plot
+```
+
+Over the samples, least squares averages
+`r fmt(cmean("hour", "Least squares"))` minutes per hour and
+`r fmt(cmean("distance", "Least squares"))` per mile, close to the
+evaluation orders' `r and_list(fmt(eval_ls))`. The lasso averages
+`r fmt(cmean("hour", "Lasso"))` and `r fmt(cmean("distance", "Lasso"))`
+(zeros included), `r and_list(pct(avg_shrink("Lasso"), 0))` below the least
+squares averages: its nonzero coefficients are biased toward zero. Ridge
+regression averages `r fmt(cmean("hour", "Ridge"))` and
+`r fmt(cmean("distance", "Ridge"))`, `r and_list(pct(avg_shrink("Ridge"), 0))`
+below.
+
+The lasso plausibly predicts better than ridge regression on these data for
+two reasons. It drops item coefficients too poorly estimated to help the
+predictions. And ridge regression has one $\lambda$ for all `r p`
+coefficients: a $\lambda$ large enough to shrink the noisy item coefficients
+also shrinks the large hour and distance coefficients more than the lasso
+does, in the fit to the training orders and on average over the samples.
+Neither reason has been isolated from the other here.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+- **Bayesian interpretation.** If
+$y_i \mid \beta \stackrel{ind}{\sim} N\left(\beta_0 + \tilde x_i\beta, \sigma^2\right)$,
+with $\tilde x_i$ row $i$ of $\tilde{\mathbf{X}}$, and the slopes have
+independent Laplace priors with density proportional to
+$\exp\left(-\left|\beta_j\right|/b\right)$ (and a flat prior on $\beta_0$),
+the posterior mode of $\beta$ is the lasso estimate with
+$\lambda = 2\sigma^2/b$. Ridge regression's normal prior gives a posterior
+whose mode and mean coincide.
+- **Elastic net.** `glmnet()`'s `alpha` between 0 and 1 mixes the two
+penalties, keeping some of the lasso's zeros while sharing weight among
+correlated features as ridge regression does.
+- **One-standard-error rule.** `cv.glmnet()`'s `lambda.1se`, the largest
+$\lambda$ whose estimate is within one standard error of the smallest, here
+$\lambda = `r fmt(to_chapter(cv_lasso$lambda.1se), 1)`$ with
+`r cv_lasso$nzero[[cv_lasso$index["1se", 1]]]` nonzero coefficients,
+chooses a smaller model where the curve is flat.
+- **Group lasso.** The lasso treats the `r length(day_names)` day dummies as
+separate features, so it can keep some and drop others, as it did here. The
+group lasso penalizes the length of each group of coefficients, so it keeps
+or drops all the dummies of one categorical explanatory variable together.
+- **Inference after selection.** Methods exist for valid confidence
+intervals and tests after lasso selection, under assumptions this course
+does not cover.
+:::
+
+## Conclusion
+
+The lasso estimates the coefficients of standardized features by minimizing
+$RSS + \lambda\sum_{j=1}^p\left|\beta_j\right|$, with the intercept
+unpenalized. Equivalently, it minimizes the RSS within the budget
+$\sum_j\left|\beta_j\right| \le s$, a region with corners and edges on which
+some coefficients are zero. A set of least squares estimates with positive
+volume leads to each of them, so some lasso coefficients are exactly zero.
+Ridge regression's disk $\sum_j\beta_j^2 \le s$ has no corners, the least
+squares estimates that give a zero ridge coefficient form a set of zero
+volume, and its coefficients are shrunken but, except by coincidence, not
+zero. Best subset selection is the same problem with a budget on the number
+of nonzero coefficients, the $\ell_0$ penalty; the lasso is its convex
+relaxation.
+
+The lasso has no closed form in general. For orthogonal standardized features
+it soft-thresholds the least squares estimate, moving each coefficient toward
+zero by $\lambda/(2n)$ and setting to zero those within that distance, where
+ridge regression multiplies each by $n/(n + \lambda)$; in general it is
+computed by coordinate descent, one soft-thresholding step per coefficient.
+Its coefficient path starts from the null model at $\lambda_{\max}$ and adds
+features as $\lambda$ decreases, and the number of nonzero coefficients plays
+the role of the model size $d$ of subset selection. `glmnet()`'s $\lambda$
+converts to this one by $\lambda = 2n\lambda_{\text{glmnet}}$.
+
+$\lambda$ is chosen by $k$-fold cross-validation on the training data, with
+the standardization repeated inside every fold, followed by a refit and a
+single evaluation on test data. The smallest cross-validation estimate is
+optimistic as an estimate of the chosen model's error, because $\lambda$ was
+chosen to make it small. Whether the lasso predicts better than ridge
+regression or least squares depends on the data and the training sample size,
+and is best judged over repeated samples rather than one. The set of features
+it selects can change from sample to sample, especially when many features
+have small effects of similar size, so a dropped feature is not shown to have
+no effect. The nonzero coefficients are shrunken toward zero, so biased, and
+`lm()`'s standard errors and $p$-values do not apply to them.
+
+The next lecture begins dimension reduction with principal components:
+directions of maximum variance in the features, their loadings and scores,
+and the proportion of variance each explains.

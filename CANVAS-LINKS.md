@@ -38,6 +38,7 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-15 | New | | 05-resampling/15-cv-in-practice.qmd | |
 | 2026-10-17 | New | | 06-regularization/10-subset-selection.qmd | |
 | 2026-10-17 | New | | 06-regularization/20-ridge-regression.qmd | |
+| 2026-10-17 | New | | 06-regularization/30-lasso.qmd | |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into
