@@ -138,6 +138,14 @@ convention.
   error is $\text{SE}_B$. $\theta$ is the quantity whose standard error is
   wanted (not the Bernoulli parameter $\theta_{kj}$ of
   `04-classification/60-qda-naive-bayes.qmd`; the passages are far apart).
+- **In the model selection chapters (`06-regularization/`), $d$ is the number
+  of features in a model**, $\mathcal{M}_d$ is the best model of size $d$
+  ($\mathcal{M}_0$ the null model), $p$ is the number of candidate features,
+  and $\text{CV}_{(k)}(d)$ is the $k$-fold cross-validation estimate for
+  size $d$. $d$ is also the polynomial degree in the resampling chapters; the
+  meanings coincide for a polynomial, which has $d$ features, and
+  `06-regularization/10-subset-selection.qmd` says so where it first uses $d$.
+  The $p$ in $C_p$ is Mallows' historical subscript, not the feature count.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

@@ -15,6 +15,7 @@ Imports:
     hexbin,
     ISLR2,
     knitr,
+    leaps,
     MASS,
     modeldata,
     mvtnorm,

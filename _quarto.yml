@@ -35,6 +35,9 @@ book:
       - 05-resampling/10-cross-validation.qmd
       - 05-resampling/15-cv-in-practice.qmd
       - 05-resampling/20-bootstrap.qmd
+    - part: "Regularization"
+      chapters:
+      - 06-regularization/10-subset-selection.qmd
 
 format:
   html:

@@ -1012,6 +1012,29 @@ as the maximum; and dependent data. A `Beyond this course` callout (delta
 method, out-of-bag error, parametric bootstrap, BCa and bootstrap-t intervals,
 block and stratified resampling) is not assessed.
 
+### 20. Subset Selection (Exam 2)
+<https://jarad.github.io/DS3030/06-regularization/10-subset-selection.html>
+
+Choosing which of $p = 14$ candidate features a least squares model of log
+used-car price (`modeldata::car_prices`) should use. **Best subset selection**
+($2^p$ fits; the best model $\mathcal{M}_d$ of each size $d$ by RSS) versus
+**forward and backward stepwise selection** ($1 + p(p+1)/2$ fits; greedy, so a
+path can miss the best model of a size, and backward selection needs $n > p$).
+Training RSS and $R^2$ always pick the largest model; the $2(d+1)\sigma^2$
+optimism of the training RSS is derived from $Cov[y_i, \hat y_i] = h_{ii}\sigma^2$.
+$C_p$ (equal to AIC for Gaussian least squares; up to a constant it estimates
+the error on new responses at the observed feature values), **BIC**, and
+**adjusted $R^2$**, with the per-feature thresholds they imply (2, $\log n$,
+$F > 1$). $k$-fold cross-validation of model size with the best-subset search
+repeated inside each fold from the training folds only; the size it chooses
+depends on the partition. Interpreting a selected log-price model, including
+how a dropped dummy variable merges into the reference level, and why its
+standard errors and $p$-values are optimistic (the error variance estimate
+comes from the smallest of many RSS values, and features are kept for large
+$|t|$; a noise-response simulation shows it). A `Beyond this course` callout
+(branch and bound, hybrid searches, mixed-integer optimization, other models)
+is not assessed.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can
