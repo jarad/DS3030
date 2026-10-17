@@ -12,6 +12,7 @@ Imports:
     caret,
     class,
     e1071,
+    glmnet,
     hexbin,
     ISLR2,
     knitr,

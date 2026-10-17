@@ -38,6 +38,7 @@ book:
     - part: "Regularization"
       chapters:
       - 06-regularization/10-subset-selection.qmd
+      - 06-regularization/20-ridge-regression.qmd
 
 format:
   html:

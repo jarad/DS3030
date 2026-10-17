@@ -1035,6 +1035,33 @@ $|t|$; a noise-response simulation shows it). A `Beyond this course` callout
 (branch and bound, hybrid searches, mixed-integer optimization, other models)
 is not assessed.
 
+### 21. Ridge Regression (Exam 2)
+<https://jarad.github.io/DS3030/06-regularization/20-ridge-regression.html>
+
+Ridge regression on `modeldata::deliveries` (delivery time from hour, distance,
+day of week and 27 menu-item counts; $p = 35$ features), with a deliberately
+small training sample of 100 orders and all other orders as test data.
+**Ridge** minimizes $RSS + \lambda\sum_{j=1}^p\beta_j^2$ on standardized
+features with an unpenalized intercept; $\lambda \to 0$ gives least squares and
+$\lambda \to \infty$ the null model. Students derive the closed form
+$(\tilde X^\top\tilde X + \lambda I)^{-1}\tilde X^\top(y - \bar y\mathbf{1})$,
+its mean and variance (the variance is no larger than least squares'), and
+distinguish standardized-scale from original-scale coefficients. The penalty is
+not scale equivariant, so features are standardized, and the standardization is
+repeated inside each cross-validation fold. `glmnet()`'s $\lambda$ converts to
+the chapter's by $\lambda = n\lambda_{\text{glmnet}}/s_y$. The coefficient path
+shrinks smoothly and no coefficient reaches zero. Over repeated training
+samples the prediction error splits into the best linear predictor's error plus
+squared bias plus variance; shrinkage helps at $n = 100$ and not at $n = 300$.
+$\lambda$ is chosen by 10-fold cross-validation on the training data (the
+`cv.glmnet` curve), the model is refit, and the chosen model is evaluated once
+on test data; this sample's 7.5% test gain is a favorable draw, about twice the
+average gain, and ridge loses to least squares on a substantial share of
+samples. Interpretation reads $\beta_0$ first, then the shrunken coefficients;
+`lm()` standard errors and $p$-values do not apply. A `Beyond this course`
+callout (the Bayesian view, effective degrees of freedom, the
+one-standard-error rule) is not assessed.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can

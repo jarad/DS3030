@@ -146,6 +146,13 @@ convention.
   meanings coincide for a polynomial, which has $d$ features, and
   `06-regularization/10-subset-selection.qmd` says so where it first uses $d$.
   The $p$ in $C_p$ is Mallows' historical subscript, not the feature count.
+- **In the ridge chapter (`06-regularization/20-ridge-regression.qmd`),
+  $\lambda$ is the tuning parameter**, $\tilde x_{ij}$ the standardized
+  features (divisor $n$), and $\beta_0$, $\beta_j$ the coefficients on the
+  standardized scale ($\beta_j$ equals $s_j$ times the original-scale
+  coefficient); the chapter says which scale is meant wherever it matters. The
+  number of repeated training samples is $M$ (indexed $m$), never $R$, which
+  would collide with $R^2$ and $B$ is reserved for bootstrap samples.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

@@ -1,0 +1,415 @@
+---
+title: "Ridge Regression"
+format:
+  revealjs:
+    slide-number: true
+    width: 1280
+    height: 720
+    code-line-numbers: false
+    footer: "DS 3030"
+    include-in-header:
+      text: |
+        <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({"HTML-CSS": {availableFonts: [], preferredFont: null, webFont: "TeX"}});
+        </script>
+        <style>
+        .reveal table { font-size: 0.8em; }
+        .reveal .panel-tabset-tabby a { font-size: 0.6em; }
+        .reveal .panel-tabset .tab-content { margin-top: 0.2em; }
+        .reveal .panel-tabset .tab-content p { margin: 0; }
+        .reveal .panel-tabset .tab-content img { display: block; margin: 0 auto; width: auto; max-height: 420px; }
+        .reveal section:has(> .panel-tabset) > p { font-size: 0.7em; }
+        .reveal .columns { align-items: center; }
+        .reveal .columns .column ul, .reveal .columns .column ol { font-size: 0.8em; }
+        .reveal .columns .panel-tabset .tab-content img { max-width: 100%; height: auto; max-height: 400px; }
+        .reveal .columns pre { margin: 0; }
+        .reveal .columns pre code { max-height: none; }
+        .reveal pre { margin: 0; }
+        .reveal pre code { max-height: none; }
+        .reveal h2 { white-space: nowrap; font-size: 1.35em; }
+        .reveal[data-navigation-mode="linear"] section.title-slide:not(#title-slide) h1 { white-space: nowrap; font-size: 1.45em; }
+        </style>
+execute:
+  enabled: false
+---
+
+## Today
+
+<!-- derived-from: 06-regularization/20-ridge-regression.qmd @ uncommitted -->
+
+::: {.columns}
+::: {.column width="50%"}
+- Delivery times
+  - Data
+  - Features
+  - Least squares
+- Ridge regression
+  - Item counts
+  - Penalized criterion
+  - Closed form
+  - Standardization
+  - Coefficient path
+:::
+::: {.column width="50%"}
+- Bias-variance tradeoff
+  - Prediction spread
+  - Squared bias and variance
+  - Training sample size
+- Tuning parameter selection
+  - Cross-validation
+  - Test evaluation
+  - Favorable draw
+- Ridge coefficients
+  - Coefficient comparison
+  - Interpretation
+:::
+:::
+
+::: notes
+Distilled from the chapter's six learning objectives and the slides this deck spends time on: the ridge criterion, the tuning parameter and the unpenalized intercept; the closed form of the estimate; standardization of the features, repeated inside every cross-validation fold; the squared bias, variance and test MSE of ridge predictions over repeated training samples, and why shrinkage helps more when the training sample is small; choosing lambda by cross-validation on the training data and evaluating once on the test data; interpreting shrunken coefficients. The derivation of the mean and variance of the ridge estimate (optional slide), the glmnet conversion of lambda (optional slide), the orthogonal-case aside, the glmnet check of the conversion, the day-coefficient discussion, the Beyond this course callouts and the chapter's hand-off to the lasso are in the notes and not in the agenda. One running example, the delivery times of orders from one restaurant, and the question is how long a new order will take when only 100 orders have been recorded. Delivery times covers the data, the features and the least squares fit, with no transition slide of its own; the other four parts each have one.
+
+Timing: one 50-minute period; the core slides come to about 38 minutes. The Conclusion is the closing slide. If time is short, drop in this order: Shrinkage (say that the ridge estimate is biased toward zero and has smaller variance than least squares over Closed form), glmnet scaling (say that glmnet's lambda differs from this chapter's by a factor n over s_y), Item counts (say the single order that determines item_20 over Penalized criterion), the extra tabs of Data (leave it on Distance, hour, items) and of Prediction spread (show the first and last tabs).
+:::
+
+## Delivery times
+
+- Question: how long will a food delivery order take?
+- Response variable: `time_to_delivery`, in minutes
+- Explanatory variables: `hour`, `day`, `distance`, `item_01`, ..., `item_27`
+
+::: {.fragment}
+- Training orders: 100, a small random sample
+- Test orders: 9,912, every other order
+:::
+
+::: notes
+The question is how long a delivery will take, from the time the order is placed until it arrives. The data are modeldata::deliveries, 10,012 orders from one restaurant. The response is time_to_delivery in minutes. The explanatory variables are the hour the order was placed (a decimal hour on a 24-hour clock), the day of the week, the delivery distance in miles, and 27 columns item_01, item_02, ... that count how many of each menu item the order contains. The test orders are split off first, before any plotting or fitting. The training data are a small random sample of orders; every other order is test data. The training sample size was chosen to be small relative to the 36 coefficients of the model, so that they are poorly determined; the bias-variance section also shows what happens with 300 training orders. The next lecture, on the lasso, uses the same split and the same folds.
+:::
+
+## Data
+
+::: {.panel-tabset}
+
+### Distance, hour, items
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/numeric-figure-1.png)
+
+### Day
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/day-figure-1.png)
+
+:::
+
+::: notes
+The tabs plot the delivery time of the 100 training orders against distance, hour and the total number of items in the order, and against the day. Delivery time rises with distance and with the hour of the order: steeply from 11:00 to about 13:30 and more slowly after, so a straight line in hour is only an approximation. It rises less clearly with the number of items. The median delivery time is shortest on Monday and Tuesday (20.2 and 20.7 minutes), between 25.0 and 25.3 minutes on Wednesday, Thursday and Sunday, and longest on Friday and Saturday (28.7 and 31.4), but only 4 of the training orders were placed on a Monday and 6 on a Tuesday. The item counts are nearly uncorrelated with each other: over the 351 pairs of items, the median absolute correlation in the training orders is 0.07, and 97% of the pairs are below 0.2 in absolute value.
+
+If time is short, leave the tabset on Distance, hour, items.
+:::
+
+## Features
+
+- Features, $p = 35$: `hour`, `distance`, 27 item counts, 6 day dummies
+
+::: {.fragment}
+- Reference level: Monday
+:::
+
+::: notes
+Hour, distance and the 27 item counts enter as features as recorded. Day enters as 6 dummy variables with Monday as the reference level, so the model has p = 35 features. The model is y_i = beta_0 + sum_j beta_j x_ij + epsilon_i with epsilon_i independent N(0, sigma^2), where y_i is the delivery time of training order i = 1, ..., n with n = 100 and x_ij is the value of feature j for order i.
+:::
+
+## Least squares
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/ls-figure-1.png){height=540}
+
+::: notes
+The figure plots the delivery time against the least squares prediction, for the 100 training orders the model was fit to and for the test orders; the line is delivery time equals prediction. The training orders sit closer to the line than the test orders. The training MSE is 10.13 and the test MSE 22.02, 2.17 times as large. The Subset Selection lecture showed that, for a correct linear model, the training RSS underestimates the error on new responses at the same feature values by 2(p + 1) sigma^2 on average. With E[RSS] = sigma^2 (n - p - 1), the fact behind the unbiased estimate sigma-hat^2 = RSS/(n - p - 1), the expected error on those new responses is sigma^2 (n + p + 1), a ratio of (n + p + 1)/(n - p - 1) = 2.12 here, close to the observed ratio, although the test orders have new feature values as well as new responses. With p + 1 = 36 coefficients estimated from 100 orders, the average variance of the fitted values, sigma^2 (p + 1)/n, is 36% of the error variance.
+:::
+
+# Ridge regression
+
+::: notes
+Ridge regression keeps every feature but pulls the coefficients toward zero.
+:::
+
+## Item counts
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/item-count-figure-1.png){height=540}
+
+::: notes
+The figure counts how many of the 100 training orders contain each menu item. Each item appears in between 1 and 20 of the training orders, a median of 11. item_20 appears in only one order, so its least squares coefficient is set almost entirely by how far that order's delivery time is from the prediction of the other features, its error epsilon_i included. Ridge regression keeps every feature but pulls the coefficients toward zero.
+
+Core, but third in the drop order (say the single order that determines item_20 over Penalized criterion).
+:::
+
+## Penalized criterion
+
+::: {style="font-size: 0.75em"}
+$$\sum_{i=1}^n\left(y_i - \beta_0 - \sum_{j=1}^p\beta_j\tilde x_{ij}\right)^2 + \lambda\sum_{j=1}^p\beta_j^2 = RSS + \lambda\sum_{j=1}^p\beta_j^2$$
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.6em"}
+- $\tilde x_{ij} = \left(x_{ij} - \bar x_j\right)/s_j$ — feature $j$ of order $i$, standardized
+- $\lambda \ge 0$ — tuning parameter
+- $\lambda\sum_{j=1}^p\beta_j^2$ — shrinkage penalty
+- $\beta_0$ — intercept, not penalized
+:::
+:::
+
+::: notes
+Ridge regression estimates the coefficients by minimizing the display. The mean x-bar_j is the mean of feature j over the n training orders and s_j its standard deviation, computed with divisor n. The intercept beta_0 and the coefficients beta_1, ..., beta_p of the standardized features are on the standardized scale: each beta_j is the change in mean delivery time per standard deviation of its feature, and equals s_j times the coefficient of feature j on the original scale of the model. They keep this meaning through the Shrinkage slide. The RSS rewards coefficients that fit the training orders; the penalty charges lambda per unit of squared coefficient, so a coefficient grows only as far as the drop in RSS pays for it.
+
+The intercept is not penalized. It is the mean delivery time when every standardized feature is at its mean of zero, and penalizing it would pull every prediction toward zero minutes, an arbitrary point. Without a penalty on beta_0, adding a constant to every y_i adds the same constant to the intercept and changes no slope.
+:::
+
+## Closed form
+
+::: {style="font-size: 0.75em"}
+$$\widehat\beta_0 = \bar y, \qquad \widehat\beta^R_\lambda = \left(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} + \lambda\mathbf{I}_p\right)^{-1}\tilde{\mathbf{X}}^\top\left(y - \bar y\mathbf{1}\right)$$
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.6em"}
+- $\tilde{\mathbf{X}}$ — standardized features, without a column of ones
+- $\mathbf{I}_p$ — $p \times p$ identity matrix
+:::
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.8em"}
+- $\lambda = 0$: least squares
+- $\lambda \to \infty$: $\widehat\beta^R_\lambda \to 0$, the null model
+:::
+:::
+
+::: notes
+Setting the derivatives of the criterion to zero gives beta-hat_0 = y-bar and the ridge estimate; each column of X-tilde sums to zero, so the derivative with respect to beta_0 does not involve the slopes, and the criterion is a convex quadratic, so this is its minimum. For lambda greater than 0 the matrix X-tilde^T X-tilde + lambda I_p is invertible even when X-tilde^T X-tilde is not, so the ridge estimate is unique even when p is at least n. At lambda = 0 the ridge estimate is the least squares estimate on the standardized features, which gives the same predictions as least squares on the features as recorded. As lambda goes to infinity every slope goes to zero and every prediction is y-bar, the null model. Here beta-hat_0 = y-bar is the standardized-scale intercept and the ridge estimate is the estimate of the standardized-scale coefficients. A coefficient on the original scale is the ridge estimate divided by s_j, and the original-scale intercept is y-bar minus the sum over j of x-bar_j times the ridge estimate_j over s_j. The chapter's ridge_fit() computes the closed form and returns the coefficients on the original scale.
+:::
+
+## glmnet scaling
+
+::: {style="font-size: 0.75em"}
+$$\frac{1}{2n}RSS + \frac{\lambda_{\text{glmnet}}}{2}\sum_{j=1}^p\beta_j^2$$
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.75em"}
+$$\lambda = \frac{n\,\lambda_{\text{glmnet}}}{s_y}$$
+:::
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.6em"}
+- $\lambda_{\text{glmnet}}$ — the value `glmnet()` calls `lambda`
+- $s_y$ — standard deviation of $y$, divisor $n$
+:::
+:::
+
+::: notes
+glmnet::glmnet() with alpha = 0 fits ridge regression, but its documented criterion is the first display. Multiplying that criterion by 2n gives RSS + n lambda_glmnet times the sum of squared coefficients. Two more steps happen inside glmnet() for a numeric response. It divides y by its standard deviation s_y, fits, and multiplies the coefficients by s_y afterward; fitting y/s_y with penalty n lambda_glmnet gives the same criterion divided by s_y^2, so this step alone would give lambda = n lambda_glmnet. It also divides the supplied lambda_glmnet by s_y before fitting y/s_y. For the lasso's absolute-value penalty this division exactly undoes the effect of dividing y by s_y; glmnet() applies it to the squared penalty too, where it does not. The net effect, checked numerically in the notes, is that lambda_glmnet corresponds to the lambda of this chapter's criterion by the second display. glmnet() standardizes the features itself, with divisor n, and reports coefficients on the original scale. From here on lambda is this chapter's, converted where glmnet() is used.
+
+Optional: second in the drop order (say that glmnet's lambda differs from this chapter's by a factor n over s_y).
+:::
+
+## Shrinkage
+
+::: {style="font-size: 0.7em"}
+$$E\left[\widehat\beta^R_\lambda\right] = \mathbf{W}_\lambda\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\beta = \beta - \lambda\mathbf{W}_\lambda\beta, \qquad Var\left[\widehat\beta^R_\lambda\right] = \sigma^2\mathbf{W}_\lambda\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}\mathbf{W}_\lambda$$
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.6em"}
+- $\mathbf{W}_\lambda = \left(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} + \lambda\mathbf{I}_p\right)^{-1}$
+:::
+:::
+
+::: notes
+Treat the features as fixed and suppose the linear model is correct, so the expected centered response is X-tilde beta and its variance is sigma^2 I_n. The bias, minus lambda W_lambda beta, is zero at lambda = 0 and grows with lambda. The variance is smaller than the least squares variance sigma^2 A^{-1}, where A = X-tilde^T X-tilde is assumed invertible. Take any p-vector a and write v = W_lambda a, so that a = (A + lambda I_p) v. The linear combination a^T beta-hat^R has variance sigma^2 v^T A v, and the least squares a^T beta-hat has variance sigma^2 a^T A^{-1} a = sigma^2 (v^T A v + 2 lambda v^T v + lambda^2 v^T A^{-1} v). The last two terms are nonnegative for lambda at least 0: v^T v is a sum of squares, and with u = A^{-1} v, v^T A^{-1} v = u^T X-tilde^T X-tilde u is the sum of squares of X-tilde u. So every linear combination of the coefficients, every prediction included, has variance no larger under ridge regression than under least squares, and strictly smaller when lambda is above 0 and a is not zero. The derivation and the aside for uncorrelated features (the shrinkage factor n/(n + lambda), which approaches 1 as n grows, so ridge regression departs most from least squares when the training sample is small) are in the notes.
+
+Optional: first in the drop order (say that the ridge estimate is biased toward zero and has smaller variance than least squares over Closed form).
+:::
+
+## Standardization
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/scale-figure-1.png){height=540}
+
+::: notes
+Least squares is scale equivariant: recording distance in feet instead of miles divides its coefficient by 5,280 and leaves every prediction unchanged. The figure fits ridge regression to the training orders with centered but unstandardized features, once with distance in miles and once in feet, and with standardized features; the grey line is the least squares coefficient. All three agree with least squares as lambda goes to 0. As lambda grows the coefficient in miles shrinks, to 0.30 minutes per mile at lambda = 1,000. The coefficient in feet is never shrunk: it rises to 3.18, above its least squares value of 2.79, as distance takes over part of the effect of the features that are shrunk. With standardized features the fit is the same in either unit (the two distance coefficients at lambda = 50 agree to within the tolerance of all.equal()). The ridge penalty is not scale equivariant: in feet, the same effect needs a coefficient 5,280 times smaller, whose square the penalty barely charges. Without standardization the amount of shrinkage a feature receives depends on its units.
+
+The means and standard deviations are computed from the data the model is fit to, so standardization is a data-dependent step. As in the Cross-Validation lecture, it is repeated inside every fold from the training folds only. glmnet() standardizes whatever data it is given, so cv.glmnet() does this automatically.
+:::
+
+## Coefficient path
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/path-figure-1.png){height=540}
+
+::: notes
+The figure plots each standardized coefficient of the ridge fit to the 100 training orders against lambda, from 0.01 to 1,000. At the left the coefficients are those of least squares. The largest are hour (4.5), daySat (3.2) and distance (2.8) minutes per standard deviation, and 31 of the 35 are within a minute of zero. As lambda grows the coefficients move toward zero smoothly, and none reaches it: at lambda = 1,000 the hour coefficient is still 0.43. The length of the vector of standardized coefficients falls at every step of the grid, from 6.89 to 0.66, but a single coefficient need not: 20 of the 35 move away from zero somewhere along the path, and 8 change sign, among them 3 of the 6 day dummies. The dummy variables of one categorical explanatory variable are correlated, since an order placed on one day was placed on no other, and the penalty shrinks them together.
+:::
+
+# Bias-variance tradeoff
+
+::: notes
+What shrinkage does to predictions, over repeated training samples. The test orders were divided into a pool and 4,000 evaluation orders. Samples of 100 orders were drawn repeatedly from the pool, ridge regression was fit to each, and each fit predicted the evaluation orders. This demonstration chooses nothing: the delivery model is chosen and fit from the training orders alone.
+:::
+
+## Prediction spread
+
+::: {.panel-tabset}
+
+### $\lambda = 0$
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/spread-ls-figure-1.png)
+
+### $\lambda = 15.8$
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/spread-mid-figure-1.png)
+
+### $\lambda = 1{,}000$
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/spread-large-figure-1.png)
+
+:::
+
+::: notes
+Each violin shows one evaluation order's predictions over the 500 samples of 100 pool orders, and the cross marks its fitted value from least squares fit to the evaluation orders themselves. With lambda = 0, least squares, each order's predictions are centered near its cross but spread over several minutes. At lambda = 15.8 they spread less and are pulled slightly toward the mean. At lambda = 1,000 they spread least, but they are pulled toward the mean delivery time, above the cross for the quick orders and below it for the slow ones.
+
+If time is short, show the first and last tabs.
+:::
+
+## Squared bias and variance
+
+::: {style="font-size: 0.55em"}
+$$\bar f_\lambda(x_i) = \frac{1}{M}\sum_{m=1}^M\widehat f^{(m)}_\lambda(x_i), \qquad \text{Variance}(\lambda) = \frac{1}{|\mathcal{E}|}\sum_{i \in \mathcal{E}}\frac{1}{M}\sum_{m=1}^M\left[\widehat f^{(m)}_\lambda(x_i) - \bar f_\lambda(x_i)\right]^2$$
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.55em"}
+$$\text{Bias}^2(\lambda) = \frac{1}{|\mathcal{E}|}\sum_{i \in \mathcal{E}}\left[\bar f_\lambda(x_i) - f^*(x_i)\right]^2, \qquad \text{MSE}(\lambda) = \frac{1}{|\mathcal{E}|}\sum_{i \in \mathcal{E}}\frac{1}{M}\sum_{m=1}^M\left[y_i - \widehat f^{(m)}_\lambda(x_i)\right]^2$$
+:::
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.75em"}
+$$\text{MSE}(\lambda) = \text{MSE}^* + \text{Bias}^2(\lambda) + \text{Variance}(\lambda)$$
+:::
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.5em"}
+- $\widehat f^{(m)}_\lambda(x_i)$ — ridge prediction of order $i$ from sample $m$
+- $\mathcal{E}$ — evaluation orders; $f^*(x_i)$ — least squares fit to them
+- $\text{MSE}^*$ — does not depend on $\lambda$
+:::
+:::
+
+::: notes
+Index the evaluation orders by i in E (4,000 of them) and the samples by m = 1, ..., M, where M = 500 is the number of repeated training samples, each of n of the 5,912 pool orders. The bar-f_lambda(x_i) is the average prediction of order i. The f*(x_i) is the fitted value of order i from least squares fit to the evaluation orders, the closest a linear function of these features comes to their delivery times; it explains R^2 = 71% of their variability, and it is itself estimated, from 4,000 orders, so even least squares has a small squared bias. Variance measures how much a prediction depends on which orders were sampled, and Bias^2 how far the average prediction is from f*. Both are estimates from M samples. The bias is measured against the best linear function of these features, not against the true mean delivery time, so error from a nonlinear effect of hour, for example, is in neither term.
+
+Expanding the square in MSE around the average prediction, the cross term sums to zero over r; expanding again around f*, the cross term is zero because least squares residuals are orthogonal to every linear function of the features. So MSE = MSE* + Bias^2 + Variance, where MSE* = 13.71 does not depend on lambda. In the simulation the two sides differ by at most 1.2 x 10^-13, rounding error. If time is short, say the decomposition and skip the definitions.
+:::
+
+## Training sample size
+
+::: {.panel-tabset}
+
+### $n = 100$
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/bv-100-figure-1.png)
+
+### $n = 300$
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/bv-300-figure-1.png)
+
+:::
+
+::: notes
+The tabs plot the three terms against lambda for samples of 100 orders and of 300 orders; the dotted line marks the smallest test MSE. With n = 100, least squares has squared bias 0.30 and variance 8.57. As lambda grows the variance falls and the squared bias rises, slowly at first, so the test MSE falls to its minimum at lambda = 15.8: 21.24 against 22.58 for least squares, 5.9% lower. Beyond the minimum the squared bias dominates and the test MSE climbs toward that of the null model.
+
+With n = 300 the variance of least squares is only 1.94, so there is little for shrinkage to remove before the squared bias from shrinking the large coefficients of hour, distance and the days outweighs it: the smallest test MSE, at lambda = 1.0, is less than 0.1% below that of least squares. How much shrinkage helps depends on the data and on the sample size, so lambda has to be chosen from the training data.
+:::
+
+# Tuning parameter selection
+
+::: notes
+Lambda is chosen like any tuning parameter: by k-fold cross-validation on the training data, then a refit to all the training data and one evaluation on the test data.
+:::
+
+## Cross-validation
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/cv-figure-1.png){height=540}
+
+::: notes
+cv.glmnet() computes the 10-fold cross-validation estimate CV_(10)(lambda) for every lambda on a grid, with the folds drawn with the split. For each fold glmnet() standardizes and fits from the other 9 folds and predicts the held-out fold; the held-out folds are validation sets. The figure plots the estimate against lambda, with the estimate for least squares on the same folds as a dashed line; the grey bars are plus and minus one standard error over the folds. The estimate falls from 29.23 for least squares to its smallest value, 24.57, at lambda = 28.2 (lambda_glmnet = 2.071), and rises again beyond it, above the least squares estimate from lambda = 112 on. The estimated reduction, 15.9%, is small relative to its uncertainty: plus or minus one standard error is 19.62 to 29.52 at the minimum and 23.51 to 34.95 for least squares, intervals that overlap almost entirely. The curve is flat near its minimum: from lambda = 18 to 35 the estimate is within 1% of its smallest value. In 2 of the 10 folds some item appears in none of the training folds, and glmnet() gives it coefficient zero. The repeated samples of the previous section put the smallest average test MSE at lambda = 15.8; cross-validation sees only the 100 training orders and chooses a larger value.
+
+Optional footnote of the chapter: the lambda axis is this chapter's lambda only approximately. cv.glmnet() converts with the n and s_y of all 100 training orders, but each fold is fit to 90 orders with their own s_y, so the lambda a fold applies is 0.87 to 0.95 times the plotted value. Applying this chapter's lambda exactly in every fold gives a smallest estimate of 24.49 at lambda = 25.1; no conclusion changes.
+:::
+
+## Test evaluation
+
+|Method        | $\lambda$| Training MSE| 10-fold CV estimate| Test MSE|
+|:-------------|---------:|------------:|-------------------:|--------:|
+|Least squares |         0|        10.13|               29.23|    22.02|
+|Ridge         |      28.2|        12.23|               24.57|    20.38|
+
+::: notes
+cv.glmnet() also fits the whole path to all 100 training orders, so predicting with s = "lambda.min" uses the model refit to all the training data. The chosen model is evaluated once on test data, the 9,912 test orders, with least squares for comparison. The pool and evaluation orders of the bias-variance section were drawn from these test orders, but that demonstration chose nothing. Ridge regression's test MSE is 20.38, against 22.02 for least squares, 7.5% lower. The paired difference in squared error over the test orders has mean 1.64 and standard error 0.18, so the improvement is not an accident of which orders are test orders. That standard error treats the two fitted models as fixed: it reflects only which orders are test orders, not which training orders were drawn. Both cross-validation estimates are above the test MSE: each fit in cross-validation uses 90 orders, and with so few orders per feature the error falls quickly as orders are added; an estimate from 100 orders is also noisy. The reduction cross-validation estimated, 15.9%, is 2.1 times the 7.5% reduction on the test orders.
+
+The 7.5% is the gain on this one training sample; the next slide shows that this sample is a favorable draw, so do not quote the 7.5% as the gain to expect.
+:::
+
+## Favorable draw
+
+- $n = 100$: ridge has the lower MSE in 72% of the samples and a higher one in 28%; its average MSE is 3.7% below least squares
+- $n = 300$: ridge has the lower MSE in 44% of the samples and a higher one in 56%; its average MSE is 0.2% above least squares
+
+::: notes
+This training sample is a favorable draw. Over the 500 samples of 100 pool orders, the same procedure, lambda by 10-fold cross-validation and then a refit, has a lower MSE at the evaluation orders than least squares in 72% of the samples and a higher one in 28%. Its average MSE is 3.7% below that of least squares; the 7.5% gain on the test orders is 2.0 times as large. The median gain over the samples is 2.9%, 90% of the gains lie between -9.9% and 15.4%, and 25.6% of the samples gain at least as much as this one, which puts it at about the 74th percentile. The average gain is less than the 5.9% of the best fixed lambda, because cross-validation chooses lambda from noisy estimates. With samples of 300 orders, ridge regression has the lower MSE in only 44% of the samples and a higher one in 56%, and its average MSE is 0.2% above that of least squares. On these data, shrinkage helps modestly with 100 training orders and not at all with 300.
+:::
+
+# Ridge coefficients
+
+::: notes
+The ridge coefficients of the delivery model, from the training orders and the lambda chosen by cross-validation, against those of least squares.
+:::
+
+## Coefficient comparison
+
+![](../_freeze/06-regularization/20-ridge-regression/figure-html/coef-compare-figure-1.png){height=540}
+
+::: notes
+The figure compares the ridge coefficients, on the original scale, with the least squares coefficients, both fit to the 100 training orders. The next slide reads them in order.
+:::
+
+## Interpretation
+
+- Intercept, original scale: $\widehat\beta_0 = -4.8$ minutes, for a Monday order at hour 0, distance 0, no items
+- Hour: 1.46 minutes per hour (least squares: 1.87)
+- Distance: 2.19 minutes per mile (least squares: 2.79)
+- Day: difference from an otherwise identical Monday order
+- Items: minutes per additional unit of the item
+
+::: {.fragment}
+- No coefficient is zero: all 35 features are kept
+- `lm()` standard errors and $p$-values do not apply
+:::
+
+::: notes
+Read in order. Intercept: on the original scale, beta-hat_0 = -4.8 minutes is the predicted time of a Monday order placed at hour 0, at distance 0, with no items, far outside the data. (The standardized-scale intercept is y-bar = 26.7 minutes, the prediction at the feature means.) It sets the level: a Monday order with no items at the training orders' mean hour, 16.2, and mean distance, 3.05 miles, has predicted time 25.6 minutes. Hour and distance: each hour later in the day adds 1.46 minutes (least squares: 1.87), and each mile adds 2.19 minutes (least squares: 2.79), holding the other features fixed. Day: each day coefficient is the predicted difference from an otherwise identical order on Monday, the reference. Ridge regression lowers all 6 of them, by 2.4 to 3.7 minutes, which mostly moves Monday rather than the other days relative to each other: Saturday minus Tuesday is 7.5 minutes under least squares and 6.5 under ridge. Lowering all the day coefficients by the same amount, and raising the intercept by it, changes only the predictions of Monday orders, so it shortens the coefficient vector at the cost of fitting just 4 training orders less well. Wed, Thu and Sun, slower than Monday under least squares, are faster under ridge regression, the sign changes of the coefficient path; comparisons with Monday are poorly determined by either method. Items: each additional unit of an item changes the predicted time by its coefficient; the items that slow deliveries most are item_12, item_01 and item_03, at 2.23, 1.50 and 1.37 minutes per item. The item coefficient that changes most is that of item_20, in 1 training order: -4.62 minutes per item under least squares and -1.38 under ridge regression.
+
+The coefficients are shrunken as a whole: the vector of standardized coefficients has length 4.86, against 6.90 for least squares. None is zero; ridge regression keeps all 35 features. Because the shrinkage makes every coefficient a biased estimate, the standard errors, t-statistics and p-values that lm() reports, which assume unbiased least squares estimates, do not apply, and glmnet() reports none.
+:::
+
+## Conclusion
+
+- Ridge penalizes the squared coefficients, not the intercept
+- Standardize the features, inside every fold
+- Ridge trades bias for variance; no coefficient reaches zero
+- The gain over least squares is largest for small training samples
+- Choose $\lambda$ by cross-validation, evaluate once on test data
+- Ridge can lose to least squares on a particular training sample
+
+::: notes
+Ridge regression can lose to least squares on a particular training sample even where it wins on average. The next lecture, the lasso, replaces the squared penalty with lambda times the sum of the absolute values of the coefficients, which sets some coefficients exactly to zero, and compares the two on the same training and test orders. Standard errors and p-values from lm() do not apply to ridge coefficients.
+:::
