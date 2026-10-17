@@ -232,13 +232,15 @@ deck should be rebuilt rather than trusted as still matching.
   The first is a written-page aside; the second is explicitly out of scope
   for this course. If the instructor wants either live in class, that's a
   choice they make in the room, not something the deck decides for them.
-- **Closing slide**: it mirrors the `## Today` outline item for item (same
-  nesting, same order) and under each item states the most important result
-  or takeaway of that part, drawn from the chapter's own `## Conclusion`,
-  as a short phrase: what the audience should leave remembering (for
-  example "Training error always falls with flexibility" or "k = 5 or 10
-  balances bias and variance"). Not bare concept names, not recap sentences,
-  and no restated example numbers.
+- **Closing slide**: the main takeaways of the lecture, not a recap of every
+  slide. A flat list of three to six short phrases, in the order of the
+  lecture, each a result the audience should leave remembering (for example
+  "Training error always falls with flexibility" or "k = 5 or 10 balances
+  bias and variance"), drawn from the chapter's own `## Conclusion`. It does
+  not repeat the `## Today` outline item for item, it uses no nesting (never an
+  item whose only child is a single sub-item), it is not a list of concept
+  names, and it restates no example numbers. If the slide needs a smaller
+  font or two columns to fit, it has too many items: cut items instead.
 
 ## Linking from the notes chapter
 
