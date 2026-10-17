@@ -475,44 +475,11 @@ The simulation keeps the features of the 804 cars but replaces log price with in
 
 ## Conclusion
 
-::: {.columns .closing style="font-size: 0.5em"}
-::: {.column width="52%"}
-- Used car prices
-  - Subset selection chooses which of $p$ features a model uses
-- Best subset selection
-  - Algorithm
-    - Best model of each size, then choose among sizes
-  - Fitting
-    - Within one size, the training RSS compares fairly
-  - Training RSS
-    - RSS and $R^2$ always choose the largest model
-  - Computational cost
-    - The number of fits doubles with every feature
-- Stepwise selection
-  - Forward stepwise
-    - Add one feature at a time
-  - Backward stepwise
-    - Remove one feature at a time; needs $n > p$
-  - Path comparison
-    - Greedy paths need not contain the best model of each size
-:::
-::: {.column width="48%"}
-- Model size
-  - Penalized criteria
-    - The BIC favors smaller models; adjusted $R^2$ charges least
-  - Likelihood criteria
-    - For Gaussian least squares, AIC and $C_p$ choose the same size
-  - Within-fold cross-validation
-    - Repeat the best subset search inside every fold
-  - Chosen sizes
-    - Criteria and cross-validation disagree where estimated error is flat
-- Selected model
-  - Coefficients
-    - Dropping a dummy variable merges its level into the reference
-  - Optimistic inference
-    - Standard errors and $p$-values ignore the selection: $\widehat\sigma$ too small, features kept for large $|t|$
-:::
-:::
+- Training error always falls as features are added, so it cannot choose model size
+- Best subset selection searches every model; stepwise selection is cheaper but greedy
+- $C_p$, AIC, BIC and adjusted $R^2$ penalize model size
+- Cross-validation chooses model size too, with the search repeated inside every fold
+- Selection makes standard errors and $p$-values optimistic
 
 ::: notes
 Optional; the lecture may end here if time allows. The next lecture, ridge regression, keeps all p features and instead shrinks their coefficients toward zero by penalizing their size, with the amount of shrinkage chosen by cross-validation.
