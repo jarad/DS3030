@@ -391,21 +391,21 @@ The figure compares the ridge coefficients, on the original scale, with the leas
 - Items: minutes per additional unit of the item
 
 ::: {.fragment}
-- No coefficient is zero: all 35 features are kept
+- No estimate is zero: all 35 features are kept
 - `lm()` standard errors and $p$-values do not apply
 :::
 
 ::: notes
 Read in order. Intercept: on the original scale, beta-hat_0 = -4.8 minutes is the predicted time of a Monday order placed at hour 0, at distance 0, with no items, far outside the data. (The standardized-scale intercept is y-bar = 26.7 minutes, the prediction at the feature means.) It sets the level: a Monday order with no items at the training orders' mean hour, 16.2, and mean distance, 3.05 miles, has predicted time 25.6 minutes. Hour and distance: each hour later in the day adds 1.46 minutes (least squares: 1.87), and each mile adds 2.19 minutes (least squares: 2.79), holding the other features fixed. Day: each day coefficient is the predicted difference from an otherwise identical order on Monday, the reference. Ridge regression lowers all 6 of them, by 2.4 to 3.7 minutes, which mostly moves Monday rather than the other days relative to each other: Saturday minus Tuesday is 7.5 minutes under least squares and 6.5 under ridge. Lowering all the day coefficients by the same amount, and raising the intercept by it, changes only the predictions of Monday orders, so it shortens the coefficient vector at the cost of fitting just 4 training orders less well. Wed, Thu and Sun, slower than Monday under least squares, are faster under ridge regression, the sign changes of the coefficient path; comparisons with Monday are poorly determined by either method. Items: each additional unit of an item changes the predicted time by its coefficient; the items that slow deliveries most are item_12, item_01 and item_03, at 2.23, 1.50 and 1.37 minutes per item. The item coefficient that changes most is that of item_20, in 1 training order: -4.62 minutes per item under least squares and -1.38 under ridge regression.
 
-The coefficients are shrunken as a whole: the vector of standardized coefficients has length 4.86, against 6.90 for least squares. None is zero; ridge regression keeps all 35 features. Because the shrinkage makes every coefficient a biased estimate, the standard errors, t-statistics and p-values that lm() reports, which assume unbiased least squares estimates, do not apply, and glmnet() reports none.
+The coefficients are shrunken as a whole: the vector of standardized coefficients has length 4.86, against 6.90 for least squares. No estimate is zero; ridge regression keeps all 35 features. Because the shrinkage makes every coefficient a biased estimate, the standard errors, t-statistics and p-values that lm() reports, which assume unbiased least squares estimates, do not apply, and glmnet() reports none.
 :::
 
 ## Conclusion
 
 - Ridge penalizes the squared coefficients, not the intercept
 - Standardize the features, inside every fold
-- Ridge trades bias for variance; no coefficient reaches zero
+- Ridge trades bias for variance; no estimate reaches zero
 - The gain over least squares is largest for small training samples
 - Choose $\lambda$ by cross-validation, evaluate once on test data
 - Ridge can lose to least squares on a particular training sample

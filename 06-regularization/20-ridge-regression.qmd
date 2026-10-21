@@ -587,7 +587,7 @@ path_plot
 At the left the coefficients are those of least squares. The largest are
 `r and_list(paste0(code(top_std), " (", fmt(path_small[top_std], 1), ")"))`
 minutes per standard deviation, and `r sum(abs(path_small) < 1)` of the
-`r p` are within a minute of zero. As $\lambda$ grows the coefficients move
+`r p` are within a minute of zero. As $\lambda$ grows the estimates move
 toward zero smoothly, and none reaches it: at
 $\lambda = `r big_math(max(lambda_grid))`$ the hour coefficient is still
 `r fmt(path_large[["hour"]])`. The length of the vector of standardized
@@ -1132,7 +1132,7 @@ that changes most is that of `r code(most_changed)`, in
 
 The coefficients are shrunken as a whole: the vector of standardized
 coefficients has length `r fmt(vector_length(b_ridge))`, against
-`r fmt(vector_length(b_ls))` for least squares. None is zero; ridge regression
+`r fmt(vector_length(b_ls))` for least squares. No estimate is zero; ridge regression
 keeps all `r p` features. Because the shrinkage makes every coefficient a
 biased estimate, the standard errors, $t$-statistics, and $p$-values that
 `lm()` reports, which assume unbiased least squares estimates, do not apply,
@@ -1178,8 +1178,8 @@ $\lambda = n\lambda_{\text{glmnet}}/s_y$.
 The penalty is not scale equivariant, so the features are standardized before
 fitting, and because standardization uses the data it is repeated inside
 every cross-validation fold. As $\lambda$ grows the length of the coefficient
-vector shrinks smoothly toward zero, though correlated coefficients can
-change sign on the way, and no coefficient reaches zero. The ridge estimate is
+vector shrinks smoothly toward zero, though correlated estimates can
+change sign on the way, and no estimate reaches zero. The ridge estimate is
 biased toward zero, but for every $\lambda > 0$ its variance is smaller than
 that of least squares. Over repeated training samples, the squared bias of
 the predictions rises with $\lambda$ and their variance falls, and the test

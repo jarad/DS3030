@@ -210,7 +210,7 @@ ridge_smallest <- ridge_path |> filter(lambda == max(lambda_grid), str_starts(fe
 ridge_path_plot
 ```
 
-The coefficients shrink toward zero as $\lambda$ grows, but at every one of
+The ridge estimates shrink toward zero as $\lambda$ grows, but at every one of
 the `r length(lambda_grid)` values of $\lambda$ on the grid
 `r if (ridge_min_nonzero == p) paste("all", p, "are") else paste("at least", ridge_min_nonzero, "of the", p, "are")`
 nonzero. At

@@ -1050,7 +1050,7 @@ distinguish standardized-scale from original-scale coefficients. The penalty is
 not scale equivariant, so features are standardized, and the standardization is
 repeated inside each cross-validation fold. `glmnet()`'s $\lambda$ converts to
 the chapter's by $\lambda = n\lambda_{\text{glmnet}}/s_y$. The coefficient path
-shrinks smoothly and no coefficient reaches zero. Over repeated training
+shrinks smoothly and no estimate reaches zero. Over repeated training
 samples the prediction error splits into the best linear predictor's error plus
 squared bias plus variance; shrinkage helps at $n = 100$ and not at $n = 300$.
 $\lambda$ is chosen by 10-fold cross-validation on the training data (the
