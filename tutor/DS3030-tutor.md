@@ -1070,21 +1070,21 @@ test orders and cross-validation folds as the ridge lecture. The **lasso**
 minimizes $RSS + \lambda\sum_{j=1}^p|\beta_j|$ on standardized features with an
 unpenalized intercept; its constrained form $\sum_j|\beta_j| \le s$ is
 contrasted with ridge's disk. The constraint-region figure (drawn from two real
-features) shows why corners give exact zeros: for each corner of the diamond a
-wedge of least squares estimates lands on it, whereas ridge's zeros happen only
+features) shows why corners give exact zero estimates: for each corner of the diamond a
+wedge of least squares estimates lands on it, whereas a zero ridge estimate happens only
 by coincidence. $\lambda_{\max}$ is where the fit becomes the null model; best
 subset selection is the $\ell_0$ version and the lasso is its convex
 relaxation. For orthogonal features the lasso is soft thresholding of the least
 squares estimate, compared with ridge's proportional shrinkage; `glmnet`'s
 $\lambda$ converts to the chapter's by $\lambda = 2n\lambda_{\text{glmnet}}$
 (no $s_y$, unlike ridge). Reading the coefficient path and the number of nonzero
-coefficients against $\lambda$. $\lambda$ is chosen by 10-fold cross-validation
+estimates against $\lambda$. $\lambda$ is chosen by 10-fold cross-validation
 on the training data, the model is refit and evaluated once on test data, and
 lasso, ridge and least squares are compared by test MSE and by the features
 kept; the cross-validation estimates exceed the test MSEs and the smallest
 estimate is optimistic. Over repeated training samples the lasso helps at
 $n = 100$ and not at $n = 300$, this sample is a favorable draw, the selected
-set is unstable, and the nonzero coefficients are biased toward zero; `lm()`
+set is unstable, and the nonzero lasso estimates are biased toward zero; `lm()`
 standard errors and $p$-values do not apply after selection. A
 `Beyond this course` callout (the Laplace prior, elastic net, the
 one-standard-error rule, the group lasso, inference after selection) is not
@@ -1179,6 +1179,18 @@ cross-validation result; a true/false conceptual review touching what an
 exponentiated Poisson coefficient measures, leave-one-out variability, how
 k-fold cross-validation uses each observation, shared folds when comparing
 methods, and when a flexible classifier wins.
+
+**Homework 8** (subset selection, ridge regression, the lasso): a derivation of
+how the two penalties treat a pair of correlated or duplicated features, checked
+numerically; on real data with many correlated features, comparing least
+squares, stepwise selection with the size chosen by a penalized criterion and by
+cross-validation, ridge regression, and the lasso by held-out error, including
+standardization, coefficient paths, interpreting shrunken coefficients, and the
+stability of the selected features, with a critique of an overstated
+conclusion; a simulation contrasting the two penalties under different patterns
+of true coefficients, with a squared bias and variance decomposition across the
+tuning parameter; judging the soundness of each step of a described regularized
+regression analysis.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable

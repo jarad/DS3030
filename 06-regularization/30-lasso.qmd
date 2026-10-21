@@ -45,20 +45,20 @@ After this lecture you should be able to
 and its constrained form, **contrast** them with ridge regression's, and
 **state** the fits as $\lambda \to 0$ and for $\lambda \ge \lambda_{\max}$,
 - **explain**, using the constraint regions $\sum_j\left|\beta_j\right| \le s$
-and $\sum_j\beta_j^2 \le s$ drawn over the RSS contours, why the lasso sets
-some coefficients exactly to zero and ridge regression, except by
-coincidence, does not,
+and $\sum_j\beta_j^2 \le s$ drawn over the RSS contours, why some lasso
+estimates are exactly zero and ridge estimates, except by coincidence, are
+not,
 - **derive** the lasso estimate for orthogonal standardized features as soft
 thresholding of the least squares estimate, and **compare** it with ridge
 regression's proportional shrinkage,
 - **read** a lasso coefficient path: which features enter first, and how many
-coefficients are nonzero at each $\lambda$,
+estimates are nonzero at each $\lambda$,
 - **choose** $\lambda$ by $k$-fold cross-validation on the training data,
 evaluate the chosen model once on test data, and **compare** the lasso, ridge
 regression, and least squares by test MSE and by the features they keep, and
 - **explain**, from repeated training samples, why the set of features the
-lasso selects is unstable and why its nonzero coefficients are biased toward
-zero, and **explain** why `lm()`'s standard errors and $p$-values do not apply
+lasso selects is unstable and why the nonzero lasso estimates are biased
+toward zero, and **explain** why `lm()`'s standard errors and $p$-values do not apply
 to them.
 :::
 
@@ -214,7 +214,7 @@ The ridge estimates shrink toward zero as $\lambda$ grows, but at every one of
 the `r length(lambda_grid)` values of $\lambda$ on the grid
 `r if (ridge_min_nonzero == p) paste("all", p, "are") else paste("at least", ridge_min_nonzero, "of the", p, "are")`
 nonzero. At
-$\lambda = `r big_math(max(lambda_grid))`$ the item coefficient closest to
+$\lambda = `r big_math(max(lambda_grid))`$ the item estimate closest to
 zero, that of `r code(ridge_smallest$feature)`, is still
 $`r sci(ridge_smallest$coefficient)`$ minutes per standard deviation.
 
@@ -286,12 +286,12 @@ is $\hat\beta_0 = \bar y$, the mean delivery time of the training orders; take
 $\beta_0 = \bar y$. At $\beta = 0$, changing one coefficient $\beta_j$ to $t$
 then changes the RSS by
 $-2t\sum_i\tilde x_{ij}\left(y_i - \bar y\right) + nt^2$ and the penalty by
-$\lambda\left|t\right|$, so no coefficient can leave zero when
+$\lambda\left|t\right|$, so no estimate can leave zero when
 
 $$\lambda \ge \lambda_{\max} = \max_{j}\, 2\left|\sum_{i=1}^n\tilde x_{ij}\left(y_i - \bar y\right)\right|,$$
 
 and, because the criterion is convex and the penalty is a sum over $j$, every
-slope is zero and every prediction is $\hat\beta_0 = \bar y$, the null model.
+slope estimate is zero and every prediction is $\hat\beta_0 = \bar y$, the null model.
 
 ```{r lambda-max}
 X_std <- sweep(sweep(X_train, 2, colMeans(X_train)), 2, x_scale, "/")
@@ -440,11 +440,11 @@ The least squares estimate,
 $\left(`r fmt(b_two[1])`, `r fmt(b_two[2])`\right)$, lies outside both
 regions, so each constrained estimate is on the boundary. With budget
 $s = `r s_budget`$ the smallest contour touches the diamond at its corner
-$\left(`r fmt(b_lasso2[1])`, `r fmt(b_lasso2[2])`\right)$: the coefficient of
-`r two_names[-first]` is exactly zero. The disk
+$\left(`r fmt(b_lasso2[1])`, `r fmt(b_lasso2[2])`\right)$: the estimate of the
+`r two_names[-first]` coefficient is exactly zero. The disk
 $\beta_1^2 + \beta_2^2 \le `r s_budget`^2$, through the same corners, is
 touched at $\left(`r fmt(b_ridge2[1])`, `r fmt(b_ridge2[2])`\right)$, where
-neither coefficient is zero.
+neither estimate is zero.
 
 Which point of the boundary is touched depends on where the least squares
 estimate $\hat\beta$ is. Write $\mathbf{A} = \tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}$,
@@ -469,19 +469,19 @@ The last tab draws both for $s = `r s_budget`$. The ray is tilted
 `r fmt(180 / pi * ray_angle, 1)` degrees from the `r two_names[first]` axis.
 With uncorrelated features $\mathbf{A}$ would be $n\mathbf{I}_2$ and the ray
 would run along the axis, so that only a least squares estimate on the axis
-would give a zero coefficient. Either way the ray has no area, and a zero ridge
-coefficient is a coincidence. The wedge has area, and the least squares
+would give a zero estimate. Either way the ray has no area, and a zero ridge
+estimate is a coincidence. The wedge has area, and the least squares
 estimate of the training orders falls inside it, near its edge
-($u = `r fmt(wedge_u)`$): the lasso keeps `r two_names[-first]` at zero for
+($u = `r fmt(wedge_u)`$): the lasso keeps the `r two_names[-first]` estimate at zero for
 every budget below $s = `r fmt(s_enter)`$.
 
 The figure shows one budget and two nearly uncorrelated features; it
 illustrates the mechanism but does not show how often it acts. In $p$
 dimensions the region $\sum_j\left|\beta_j\right| \le s$ has corners and
-edges on which many coefficients are zero at once, and the least squares
+edges on which many $\beta_j$ are zero at once, and the least squares
 estimates whose lasso estimate lies on one of them fill a set of positive
 volume. For ridge regression the least squares estimates that give some
-coefficient exactly zero fill a set of zero volume.
+ridge estimate exactly zero fill a set of zero volume.
 
 [Best subset selection](10-subset-selection.qmd) is the same problem with the
 budget $\sum_j\mathrm{I}\left(\beta_j \ne 0\right) \le s$ on the number of
@@ -610,7 +610,7 @@ regression's conversion must not be carried over: the analogous
 $\lambda = 2n\lambda_{\text{glmnet}}/s_y$ would supply
 $\lambda_{\text{glmnet}} = `r fmt(s_y * orth_threshold)`$,
 $s_y = `r fmt(s_y)`$ times as large, and `glmnet()` would then set
-`r if (all(orth_wrong == 0)) paste("all", p, "coefficients") else paste(sum(orth_wrong == 0), "of the", p, "coefficients")`
+`r if (all(orth_wrong == 0)) paste("all", p, "estimates") else paste(sum(orth_wrong == 0), "of the", p, "estimates")`
 to zero, against the `r sum(orth_lasso == 0)` of soft thresholding at
 $\lambda = `r lambda_orth`$.
 
@@ -646,7 +646,7 @@ nonzero_plot <- tibble(lambda = lasso_grid, Lasso = lasso_path_fit$df, Ridge = p
   log_lambda +
   scale_color_manual(values = okabe_ito[c(4, 5)]) +
   scale_linetype_manual(values = c("dashed", "solid")) +
-  labs(x = expression(lambda ~ "(log scale)"), y = "Nonzero coefficients",
+  labs(x = expression(lambda ~ "(log scale)"), y = "Nonzero estimates",
        color = NULL, linetype = NULL, title = paste(n_train, "training orders")) +
   theme(legend.position = "bottom")
 # Largest lambda on the grid at which each feature is nonzero.
@@ -665,9 +665,9 @@ small_diff <- max(abs(coef(lasso_path_fit)[-1, length(lasso_grid)] - coef(ls_fit
 ```
 :::
 
-The tabs plot the standardized coefficients of the lasso fit to the training
-orders against $\lambda$, from $`r min(lasso_grid)`$ to
-$`r big_math(max(lasso_grid))`$, and the number of nonzero coefficients,
+The tabs plot the lasso estimates of the standardized coefficients, fit to the
+training orders, against $\lambda$, from $`r min(lasso_grid)`$ to
+$`r big_math(max(lasso_grid))`$, and the number of nonzero estimates,
 with ridge regression's for comparison.
 
 ::: {.panel-tabset}
@@ -679,7 +679,7 @@ with ridge regression's for comparison.
 lasso_path_plot
 ```
 
-#### Nonzero coefficients
+#### Nonzero estimates
 ```{r nonzero-figure}
 #| echo: false
 #| fig-width: 7
@@ -689,16 +689,16 @@ nonzero_plot
 :::
 
 Read from the right. At $\lambda = `r big_math(max(lasso_grid))`$, above
-$\lambda_{\max} = `r fmt(lambda_max, 1)`$, every coefficient is zero. As
+$\lambda_{\max} = `r fmt(lambda_max, 1)`$, every estimate is zero. As
 $\lambda$ decreases the first features to enter are
 `r and_list(code(entry$feature[1:3]))`. `r code(entry$feature[1])` enters at
 $\lambda_{\max}$ itself. The grid does not contain the points of entry; the
 largest grid values of $\lambda$ at which the three are nonzero are
-`r and_list(fmt(entry$lambda[1:3], 0))`. Each coefficient leaves zero
+`r and_list(fmt(entry$lambda[1:3], 0))`. Each estimate leaves zero
 continuously rather than jumping to its least squares value. At
-$\lambda = 100$, `r df_at(100)` of the `r p` coefficients are nonzero; at
-$\lambda = 10$, `r df_at(10)`. `r if (n_left == 0) "On this path no coefficient returns to zero once it has entered." else paste(n_left, "coefficients return to zero after entering.")`
-A coefficient can return to zero when features are correlated; the largest
+$\lambda = 100$, `r df_at(100)` of the `r p` estimates are nonzero; at
+$\lambda = 10$, `r df_at(10)`. `r if (n_left == 0) "On this path no estimate returns to zero once it has entered." else paste(n_left, "estimates return to zero after entering.")`
+An estimate can return to zero when features are correlated; the largest
 absolute correlation between two of the `r p` training features is
 `r fmt(max_cor)`. At $\lambda = `r min(lasso_grid)`$ all
 `r lasso_path_fit$df[length(lasso_grid)]` are nonzero, within
@@ -729,7 +729,7 @@ lambda_cv_ridge <- cv_ridge$lambda.min * n_train / s_y
 #| output: false
 # The ridge lecture's ridge estimate for many lambdas at once, from the
 # singular value decomposition of the standardized features. A feature absent
-# from a sample gets coefficient 0, which at lambda = 0 is least squares on
+# from a sample gets estimate 0, which at lambda = 0 is least squares on
 # the rest; this is the ridge lecture's least squares in every fold and sample.
 ridge_path <- function(X, y, lambdas) {
   center <- colMeans(X)
@@ -799,8 +799,8 @@ cv_plot
 The estimate is smallest, `r fmt(cv_min)`, at
 $\lambda = `r fmt(lambda_cv, 1)`$
 ($\lambda_{\text{glmnet}} = `r fmt(cv_lasso$lambda.min, 3)`$), where
-`r nonzero_cv` coefficients are nonzero, against `r fmt(cv_ls)` for least
-squares and `r fmt(min(cv_ridge$cvm))` for ridge regression at
+the lasso estimates of `r nonzero_cv` coefficients are nonzero, against
+`r fmt(cv_ls)` for least squares and `r fmt(min(cv_ridge$cvm))` for ridge regression at
 $\lambda = `r fmt(lambda_cv_ridge, 1)`$.^[Each fold is fit to
 `r n_train - fold_size[1]` orders, so by $\lambda = 2n\lambda_{\text{glmnet}}$
 the $\lambda$ a fold applies is `r fmt((n_train - fold_size[1]) / n_train)`
@@ -811,8 +811,8 @@ $\lambda = `r fmt(lasso_grid[which.min(cv_exact)], 1)`$; no conclusion below
 changes.] The minimum is shallow: from
 $\lambda = `r fmt(min(cv_lambda[near_min]), 0)`$ to
 `r fmt(max(cv_lambda[near_min]), 0)`, with `r max(cv_lasso$nzero[near_min])`
-down to `r min(cv_lasso$nzero[near_min])` nonzero coefficients, the estimate
-is within 5% of its smallest value.
+down to `r min(cv_lasso$nzero[near_min])` nonzero lasso estimates, the
+cross-validation estimate is within 5% of its smallest value.
 
 These estimates are uncertain. Plus or minus one standard error is
 `r fmt(cv_lasso$cvlo[i_min])` to `r fmt(cv_lasso$cvup[i_min])` for the lasso
@@ -854,7 +854,7 @@ test_table <- tibble(
   kept = c(p, p, nonzero_cv),
   train = fmt(train_mse), cv = fmt(c(cv_ls, min(cv_ridge$cvm), cv_min)),
   test = fmt(test_mse)) |>
-  knitr::kable(col.names = c("Method", "$\\lambda$", "Nonzero coefficients", "Training MSE",
+  knitr::kable(col.names = c("Method", "$\\lambda$", "Nonzero estimates", "Training MSE",
                              paste0(n_folds, "-fold CV estimate"), "Test MSE"),
                align = "lrrrrr")
 # Paired comparison over the test orders: ridge squared error minus lasso's.
@@ -956,7 +956,7 @@ least squares, ridge regression shrinks the two by
 the lasso by
 `r and_list(pct(1 - b_lasso[c("hour", "distance")] / b_ls[c("hour", "distance")], 0))`.
 - **Day.** The lasso keeps the dummies for
-`r and_list(str_remove(kept_days, "day"))`, with coefficients
+`r and_list(str_remove(kept_days, "day"))`, with estimates
 `r and_list(fmt(b_lasso[kept_days], 1))` minutes, and drops those for
 `r and_list(dropped_days)`. As in the
 [Subset Selection](10-subset-selection.qmd) lecture, a dropped dummy merges
@@ -970,14 +970,14 @@ orders like otherwise identical Monday orders.
 `r and_list(fmt(abs(items_neg)))` minutes. The other
 `r length(item_names) - length(kept_items)` items do not affect the
 prediction. These signs are read with care: `r code(names(items_neg)[1])`,
-with the most negative item coefficient, is in only
+with the most negative item estimate, is in only
 `r orders_with[[names(items_neg)[1]]]` of the training orders, and the
 repeated samples below show how much the kept items depend on the training
 sample.
 
-Of the `r length(kept)` nonzero lasso coefficients, `r n_shrunk` are smaller
+Of the `r length(kept)` nonzero lasso estimates, `r n_shrunk` are smaller
 in absolute value than their least squares counterparts. Nonzero lasso
-coefficients are shrunken toward zero, by $\lambda/(2n)$ in the orthogonal
+estimates are shrunken toward zero, by $\lambda/(2n)$ in the orthogonal
 case, so they are biased; the repeated samples below show the bias. And because the features were selected using the
 same data, the standard errors, $t$-statistics, and $p$-values that `lm()`
 would report, for the lasso fit or for least squares refit to the selected
@@ -1159,20 +1159,20 @@ selected sets. With $n = `r n_large`$ it keeps more, a median of
 
 The selected items are not the only items that slow deliveries. Outside the
 workflow, least squares fit to the `r big(n_eval)` evaluation orders gives
-`r sum(eval_slow)` of the `r length(item_names)` items a positive coefficient
+`r sum(eval_slow)` of the `r length(item_names)` items a positive estimate
 with $p$-value below 0.05, a median of
 `r fmt(median(eval_coefs[, "Estimate"]), 1)` minutes per item, the largest
 for `r and_list(code(eval_top))`, `r if (setequal(eval_top, top_share)) "the two items the lasso keeps most often" else paste("while the lasso keeps", and_list(code(top_share)), "most often")`;
 even `r code(top_item)` is kept in only `r pct(max(item_share), 0)` of the
 samples. The lasso fit to the training orders
 `r if (b_lasso[[top_item]] == 0) "drops" else "keeps"` `r code(top_item)`
-and gives `r code(neg_item)` its most negative item coefficient,
+and gives `r code(neg_item)` its most negative item estimate,
 `r fmt(b_lasso[[neg_item]])` minutes, where least squares on the evaluation
 orders gives `r fmt(eval_coefs[neg_item, "Estimate"])`
 ($p$-value `r fmt(eval_coefs[neg_item, "Pr(>|t|)"])`). Of the
-`r length(items_neg)` items with negative coefficients in the lasso fit to
+`r length(items_neg)` items with negative estimates in the lasso fit to
 the training orders, `r sum(eval_slow[names(items_neg)])` have a positive
-coefficient with $p$-value below 0.05 on the evaluation orders. Almost every
+estimate with $p$-value below 0.05 on the evaluation orders. Almost every
 item slows deliveries a little; with `r n_train` orders those small effects
 are estimated with large error, and which of them clear the threshold
 depends on the noise in the sample. A dropped item is not shown to have no
@@ -1209,15 +1209,15 @@ bias_plot <- ggplot(coef_reps, aes(x = fit, y = estimate)) +
   facet_wrap(~ feature, scales = "free_y",
              labeller = as_labeller(c(hour = "hour (minutes per hour)",
                                       distance = "distance (minutes per mile)"))) +
-  labs(x = NULL, y = "Coefficient", title = paste(n_samples, "samples of", n_train, "pool orders"),
+  labs(x = NULL, y = "Estimate", title = paste(n_samples, "samples of", n_train, "pool orders"),
        caption = paste("Lines = quartiles and median; diamond = mean;",
                        "dashed line = least squares on the evaluation orders."))
 ```
 :::
 
-The figure plots the hour and distance coefficients, on the original scale,
-of the three fits to each sample of `r n_train` pool orders, with the least
-squares coefficients from the `r big(n_eval)` evaluation orders as dashed
+The figure plots the estimates of the hour and distance coefficients, on the
+original scale, from the three fits to each sample of `r n_train` pool orders,
+with the least squares estimates from the `r big(n_eval)` evaluation orders as dashed
 lines.
 
 ```{r bias-figure}
@@ -1233,16 +1233,16 @@ Over the samples, least squares averages
 evaluation orders' `r and_list(fmt(eval_ls))`. The lasso averages
 `r fmt(cmean("hour", "Lasso"))` and `r fmt(cmean("distance", "Lasso"))`
 (zeros included), `r and_list(pct(avg_shrink("Lasso"), 0))` below the least
-squares averages: its nonzero coefficients are biased toward zero. Ridge
+squares averages: the nonzero lasso estimates are biased toward zero. Ridge
 regression averages `r fmt(cmean("hour", "Ridge"))` and
 `r fmt(cmean("distance", "Ridge"))`, `r and_list(pct(avg_shrink("Ridge"), 0))`
 below.
 
 The lasso plausibly predicts better than ridge regression on these data for
-two reasons. It drops item coefficients too poorly estimated to help the
+two reasons. It sets to zero the item estimates too noisy to help the
 predictions. And ridge regression has one $\lambda$ for all `r p`
-coefficients: a $\lambda$ large enough to shrink the noisy item coefficients
-also shrinks the large hour and distance coefficients more than the lasso
+coefficients: a $\lambda$ large enough to shrink the noisy item estimates
+also shrinks the large hour and distance estimates more than the lasso
 does, in the fit to the training orders and on average over the samples.
 Neither reason has been isolated from the other here.
 
@@ -1260,9 +1260,9 @@ whose mode and mean coincide.
 penalties, keeping some of the lasso's zeros while sharing weight among
 correlated features as ridge regression does.
 - **One-standard-error rule.** `cv.glmnet()`'s `lambda.1se`, the largest
-$\lambda$ whose estimate is within one standard error of the smallest, here
+$\lambda$ whose cross-validation estimate is within one standard error of the smallest, here
 $\lambda = `r fmt(to_chapter(cv_lasso$lambda.1se), 1)`$ with
-`r cv_lasso$nzero[[cv_lasso$index["1se", 1]]]` nonzero coefficients,
+`r cv_lasso$nzero[[cv_lasso$index["1se", 1]]]` nonzero lasso estimates,
 chooses a smaller model where the curve is flat.
 - **Group lasso.** The lasso treats the `r length(day_names)` day dummies as
 separate features, so it can keep some and drop others, as it did here. The
@@ -1279,22 +1279,22 @@ The lasso estimates the coefficients of standardized features by minimizing
 $RSS + \lambda\sum_{j=1}^p\left|\beta_j\right|$, with the intercept
 unpenalized. Equivalently, it minimizes the RSS within the budget
 $\sum_j\left|\beta_j\right| \le s$, a region with corners and edges on which
-some coefficients are zero. A set of least squares estimates with positive
-volume leads to each of them, so some lasso coefficients are exactly zero.
+some $\beta_j$ are zero. A set of least squares estimates with positive
+volume leads to each of them, so some lasso estimates are exactly zero.
 Ridge regression's disk $\sum_j\beta_j^2 \le s$ has no corners, the least
-squares estimates that give a zero ridge coefficient form a set of zero
-volume, and its coefficients are shrunken but, except by coincidence, not
+squares estimates that give a zero ridge estimate form a set of zero
+volume, and its estimates are shrunken but, except by coincidence, not
 zero. Best subset selection is the same problem with a budget on the number
 of nonzero coefficients, the $\ell_0$ penalty; the lasso is its convex
 relaxation.
 
 The lasso has no closed form in general. For orthogonal standardized features
-it soft-thresholds the least squares estimate, moving each coefficient toward
+it soft-thresholds the least squares estimate, moving each estimate toward
 zero by $\lambda/(2n)$ and setting to zero those within that distance, where
 ridge regression multiplies each by $n/(n + \lambda)$; in general it is
 computed by coordinate descent, one soft-thresholding step per coefficient.
 Its coefficient path starts from the null model at $\lambda_{\max}$ and adds
-features as $\lambda$ decreases, and the number of nonzero coefficients plays
+features as $\lambda$ decreases, and the number of nonzero estimates plays
 the role of the model size $d$ of subset selection. `glmnet()`'s $\lambda$
 converts to this one by $\lambda = 2n\lambda_{\text{glmnet}}$.
 
@@ -1307,7 +1307,7 @@ regression or least squares depends on the data and the training sample size,
 and is best judged over repeated samples rather than one. The set of features
 it selects can change from sample to sample, especially when many features
 have small effects of similar size, so a dropped feature is not shown to have
-no effect. The nonzero coefficients are shrunken toward zero, so biased, and
+no effect. The nonzero lasso estimates are shrunken toward zero, so biased, and
 `lm()`'s standard errors and $p$-values do not apply to them.
 
 The next lecture begins dimension reduction with principal components:
