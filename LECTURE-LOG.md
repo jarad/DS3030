@@ -28,6 +28,7 @@ takes more or fewer days than planned.
 | 2026-10-12 | Mon | `04-classification/55-classifier-evaluation.qmd`, `04-classification/60-qda-naive-bayes.qmd`, `04-classification/70-generalized-linear-models.qmd` | First 20 minutes reviewing classifiers and classifier evaluation. Then the Comparing methods content from Friday's `60-qda-naive-bayes_slides.qmd`, and Poisson regression from `70-generalized-linear-models_slides.qmd`. The general GLM slides (three components, special cases, variance function, transforming the mean) were skipped. |
 | 2026-10-14 | Wed | `05-resampling/10-cross-validation.qmd` | Covered every slide in `10-cross-validation_slides.qmd` except the Classification section (Credit card default data, Cross-validation error rate, Neighbor count), which moved to Friday 2026-10-16. |
 | 2026-10-16 | Fri | Class cancelled | No class meeting. The planned lecture (the Classification slides held over from Wednesday, then `05-resampling/15-cv-in-practice.qmd` and its small-group activity `15-cv-in-practice_activity.R`) was not taught. The next class (Monday 2026-10-19) moves on to the next topic, so the cross-validation Classification section and Cross-Validation in Practice were not presented in class; both stay in the book. |
+| 2026-10-19 | Mon | `06-regularization/10-subset-selection.qmd` | Covered most of the slides in `10-subset-selection_slides.qmd` (best subset selection, stepwise selection, choosing model size by the penalized criteria and the chosen-sizes comparison, interpreting the selected model); the within-fold cross-validation slides and the optimism slides (Training error optimism and Optimistic inference) were skipped. |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -49,7 +50,6 @@ shifted.
 | ---- | --- | -------------- | ----- |
 | 2026-09-30 | Wed | **Exam 1 review** | Consider a Simpson's Paradox example here, connecting back to the `student`/`balance` sign-reversal example in `04-classification/20-multiple-logistic-regression.qmd` |
 | 2026-10-02 | Fri | **Exam 1** | |
-| 2026-10-19 | Mon | `06-regularization/10-subset-selection.qmd` | Subset selection (ISLR2 6.1), example data `modeldata::car_prices`: why select; best subset and forward/backward stepwise; choosing model size with C_p/AIC/BIC/adjusted R² and cross-validation |
 | 2026-10-21 | Wed | `06-regularization/20-ridge-regression.qmd` | Ridge regression (ISLR2 6.2.1), example data `modeldata::deliveries` (shared with the lasso lecture): penalized criterion and its closed form, shrinkage, standardizing features, bias-variance tradeoff in λ, choosing λ by cross-validation |
 | 2026-10-23 | Fri | `06-regularization/30-lasso.qmd` | Lasso (ISLR2 6.2.2-6.2.3), example data `modeldata::deliveries` (same as ridge): L1 penalty and exact zeros, ridge versus lasso, Bayesian view as a short aside, choosing λ by cross-validation |
 | 2026-10-26 | Mon | `06-regularization/40-principal-components.qmd` (to be written) | Principal components (ISLR2 6.3): directions of maximum variance, loadings and scores, scaling, proportion of variance explained (PCA is formally Chapter 12, after Exam 2) |
