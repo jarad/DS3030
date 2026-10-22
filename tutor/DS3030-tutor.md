@@ -1212,16 +1212,23 @@ k-fold cross-validation uses each observation, shared folds when comparing
 methods, and when a flexible classifier wins.
 
 **Homework 8** (subset selection, ridge regression, the lasso): a derivation of
-how the two penalties treat a pair of correlated or duplicated features, checked
-numerically, and what a zero lasso estimate does and does not show; on real
-data with many correlated features, comparing least squares, stepwise
-selection with the size chosen by a penalized criterion and by
-cross-validation, ridge regression, and the lasso by held-out error, including
-standardization, coefficient paths, and interpreting shrunken estimates; a
-simulation contrasting the two penalties under different patterns of true
-coefficients, with a derived expression for test error and its behavior across
-the tuning parameter; judging the soundness of each step of a described
-regularized regression analysis.
+how least squares and ridge regression treat a pair of correlated or
+duplicated standardized features (variances of the sum and difference of the
+estimates, shrinkage factors, the exactly duplicated case), checked
+numerically, including which of several equally good lasso solutions
+`glmnet()` returns and what that does and does not show about a feature; on
+real data with many correlated features, comparing least squares, forward
+stepwise selection with the size chosen by a penalized criterion and by
+cross-validation repeated inside each fold, ridge regression, and the lasso by
+held-out error, including standardizing with training-set statistics, estimate
+paths, and a paired comparison of two methods with its standard error; a
+simulation contrasting the two penalties when few or all features matter, with
+a derived expression for test error and a predicted best tuning parameter;
+judging the soundness of each step of a described regularized regression
+analysis, touching test-set discipline, where feature screening belongs
+relative to cross-validation, standardization, comparing methods on shared
+folds, uncertainty about the selected set, tuning on the test set, what a zero
+estimate does and does not show, and inference after selection.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable
@@ -1250,6 +1257,38 @@ point; VIF as the collinearity metric and what multicollinearity actually
 does and does not do; the definition of KNN regression; when a parametric
 approach should beat a nonparametric one; the definition of the curse of
 dimensionality.
+
+**Chapter 4 quiz, sections 1-3** (logistic regression): the possible types of a
+classification response; the Bayes classifier; problems with using linear
+regression for a categorical response; why the relationship between the
+features and the probability is not linear and which transformation is;
+interpreting a coefficient as a change in the log odds and as an odds
+multiplier; converting a probability to odds; maximum likelihood as the
+estimation method and its intuition; confounding between a single-feature and
+a multiple-feature fit; multinomial logistic regression, with a baseline class
+or softmax coding.
+
+**Chapter 4 quiz, sections 4-6** (generative classifiers, classifier
+evaluation, Poisson regression): which classifiers are generative and how that
+differs from modeling the posterior directly; what LDA assumes and how its
+class prior is estimated; sensitivity; the ROC curve; why a threshold might be
+lowered; when QDA is preferred to LDA; naive Bayes assumptions, categorical
+features, and its practical performance; what LDA and logistic regression have
+in common; characteristics of KNN and when it beats LDA and logistic
+regression; why linear regression is inappropriate for counts; the Poisson
+mean-variance relationship; interpreting a Poisson regression coefficient as a
+multiplier of the mean; the log link; the special cases and components of a
+generalized linear model.
+
+**Chapter 5 quiz** (resampling): valid uses of cross-validation; variability of
+the validation set approach and how it compares with $k$-fold cross-validation;
+the leverage shortcut for leave-one-out cross-validation and which methods it
+covers; how $k$-fold cross-validation proceeds; reading an estimated test MSE
+curve; the bias and variance of leave-one-out versus $k$-fold cross-validation
+and why $k = 5$ or $10$ is typical; choosing $K$ in KNN by cross-validation;
+the leave-one-out error for classification; advantages of the bootstrap and
+how a bootstrap sample is drawn (optional reading in this course, as noted
+above); setting a seed for reproducibility.
 
 ## A note on your own limits
 
