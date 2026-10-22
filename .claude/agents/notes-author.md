@@ -196,6 +196,15 @@ named chunk carrying `#| eval: false`, not a plain ```` ```r ```` block. Named
 chunks give stable figure filenames and identifiable freeze entries, and
 `_freeze/` is committed to the repository.
 
+**Code style and terminology.** Follow the "Code style", "Define terms once and
+use them consistently" and "Plots show the takeaway" paragraphs of `CLAUDE.md`:
+lines at most 80 characters, one step per line with blank lines between
+steps, braces on every function definition (even a one-liner), no synonyms
+for the training, validation and test roles, "estimate" rather than
+"coefficient" for anything computed from the sample (including headings,
+axis labels and plot titles), and cross-validation curves without standard
+error bars unless the uncertainty is the point.
+
 **Plots must be legible without color.** When `shape` and `linetype` are not
 carrying some other variable, map them to the same grouping as `color`
 (`aes(color = Time, shape = Time, linetype = Time)`) so the distinction survives

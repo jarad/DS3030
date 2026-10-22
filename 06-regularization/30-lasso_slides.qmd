@@ -45,13 +45,13 @@ execute:
   - Penalized criterion
   - Constraint regions
   - Soft thresholding
-  - Coefficient path
+  - Estimate path
 :::
 ::: {.column width="50%"}
 - Tuning parameter selection
   - Cross-validation
   - Test evaluation
-  - Lasso coefficients
+  - Lasso estimates
 - Repeated training samples
   - Test MSE
   - Selected sets
@@ -59,9 +59,9 @@ execute:
 :::
 
 ::: notes
-Distilled from the chapter's six learning objectives and the slides this deck spends time on: the lasso criterion and its contrast with ridge; why the L1 constraint region gives exact zeros; soft thresholding of the least squares estimate for orthogonal features; reading the coefficient path and the number of nonzero estimates; choosing lambda by cross-validation, one test evaluation, and the comparison of lasso, ridge and least squares; the instability of the selected set and the bias of the nonzero lasso estimates. The derivation of soft thresholding, the argument for lambda-max, the coordinate descent paragraph, the glmnet conversion of lambda (optional slide), the l0 budget of best subset selection (optional slide), the Coefficient bias figure (optional slide), the Beyond this course callout and the hand-off to principal components are in the notes and not in the agenda. This lecture is the sequel to the ridge lecture on the same data, the same split and the same folds, and the question it opens from is what ridge left open: all 35 ridge estimates are nonzero. Delivery times has no transition slide of its own and Coefficient path, a chapter section of its own, is shown inside the Lasso part; the other three parts each have one transition.
+Distilled from the chapter's six learning objectives and the slides this deck spends time on: the lasso criterion and its contrast with ridge; why the L1 constraint region gives exact zeros; soft thresholding of the least squares estimate for orthogonal features; reading the estimate path and the number of nonzero estimates; choosing lambda by cross-validation, one test evaluation, and the comparison of lasso, ridge and least squares; the instability of the selected set and the bias of the lasso estimator. The derivation of soft thresholding, the argument for lambda-max, the coordinate descent paragraph, the glmnet conversion of lambda (optional slide), the l0 budget of best subset selection (optional slide), the Estimator bias figure (optional slide), the Beyond this course callout and the hand-off to principal components are in the notes and not in the agenda. This lecture is the sequel to the ridge lecture on the same data, the same split and the same folds, and the question it opens from is what ridge left open: all 35 ridge estimates are nonzero. Delivery times has no transition slide of its own and Estimate path, a chapter section of its own, is shown inside the Lasso part; the other three parts each have one transition.
 
-Timing: one 50-minute period; the core slides come to about 38 minutes. The Conclusion is the closing slide. If time is short, drop in this order: glmnet scaling (say that glmnet's lambda differs from this chapter's by the factor 2n, with no s_y), Best subset selection (say that best subset selection is the same problem with a budget on the number of nonzero coefficients), Data (the Delivery times slide already names the variables), Coefficient bias (say that the lasso's and ridge's average estimates are below least squares'), then the extra tabs of Constraint regions, two features (show "+ Lasso" and "+ Ridge").
+Timing: one 50-minute period; the core slides come to about 38 minutes. The Conclusion is the closing slide. If time is short, drop in this order: glmnet scaling (say that glmnet's lambda differs from this chapter's by the factor 2n, with no s_y), Best subset selection (say that best subset selection is the same problem with a budget on the number of nonzero coefficients), Data (the Delivery times slide already names the variables), Estimator bias (say that the lasso's and ridge's average estimates are below least squares'), then the extra tabs of Constraint regions, two features (show "+ Lasso" and "+ Ridge").
 :::
 
 ## Delivery times
@@ -89,12 +89,12 @@ The figure plots, for each of the 27 items, the delivery times of the training o
 Optional: third in the drop order; if time is short, skip this slide.
 :::
 
-## Ridge coefficients
+## Ridge estimates
 
 ![](../_freeze/06-regularization/30-lasso/figure-html/ridge-path-figure-1.png){height=540}
 
 ::: notes
-The figure repeats the ridge lecture's coefficient path, each standardized coefficient of ridge regression fit to the training orders against lambda. The ridge estimates shrink toward zero as lambda grows, but at every one of the 101 values of lambda on the grid all 35 are nonzero. At lambda = 1,000 the item estimate closest to zero, that of item_23, is still 4.0 x 10^-3 minutes per standard deviation.
+The figure repeats the ridge lecture's estimate path: the ridge estimate of each standardized coefficient, fit to the training orders, against lambda. The ridge estimates shrink toward zero as lambda grows, but at every one of the 101 values of lambda on the grid all 35 are nonzero. At lambda = 1,000 the item estimate closest to zero, that of item_23, is still 4.0 x 10^-3 minutes per standard deviation.
 :::
 
 # Lasso
@@ -284,11 +284,11 @@ glmnet::glmnet() with alpha = 1 fits the lasso, with the documented criterion in
 Optional: first in the drop order (say that glmnet's lambda differs from this chapter's by the factor 2n).
 :::
 
-## Coefficient path
+## Estimate path
 
 ::: {.panel-tabset}
 
-### Coefficient path
+### Estimate path
 
 ![](../_freeze/06-regularization/30-lasso/figure-html/lasso-path-figure-1.png)
 
@@ -313,7 +313,9 @@ Lambda is chosen like any tuning parameter: by k-fold cross-validation on the tr
 ![](../_freeze/06-regularization/30-lasso/figure-html/cv-figure-1.png){height=540}
 
 ::: notes
-cv.glmnet() computes the 10-fold cross-validation estimate CV_(10)(lambda) on the grid of the path, with the ridge lecture's folds; inside each fold glmnet() standardizes from the other 9 folds only. Ridge regression is cross-validated on the same folds and grid as in the ridge lecture. The figure plots the estimate for the lasso, with the estimates for least squares and for ridge regression at its chosen lambda as horizontal lines. The estimate is smallest, 20.20, at lambda = 89.1 (lambda_glmnet = 0.446), where the lasso estimates of 14 coefficients are nonzero, against 29.23 for least squares and 24.57 for ridge regression at lambda = 28.2. The minimum is shallow: from lambda = 50 to 158, with 20 down to 6 nonzero lasso estimates, the cross-validation estimate is within 5% of its smallest value. These estimates are uncertain: plus or minus one standard error is 16.65 to 23.76 for the lasso at its minimum and 23.51 to 34.95 for least squares, intervals that overlap only from 23.51 to 23.76. The difference, 9.03, is 1.6 times the least squares standard error and 2.5 times the lasso's. For ridge regression at its minimum the interval is 19.62 to 29.52, which covers 58% of the lasso's.
+cv.glmnet() computes the 10-fold cross-validation estimate CV_(10)(lambda) on the grid of the path, with the ridge lecture's folds; inside each fold glmnet() standardizes from the other 9 folds only. Ridge regression is cross-validated on the same folds and grid as in the ridge lecture. The figure plots the estimate for the lasso and for ridge regression, each against its own lambda, with the least squares estimate (lambda = 0) as a dashed line and each chosen lambda marked. The estimate is smallest, 20.20, at lambda = 89.1 (lambda_glmnet = 0.446), where the lasso estimates of 14 coefficients are nonzero, against 29.23 for least squares and 24.57 for ridge regression at lambda = 28.2. The minimum is shallow: from lambda = 50 to 158, with 20 down to 6 nonzero lasso estimates, the cross-validation estimate is within 5% of its smallest value.
+
+Plus or minus one standard error over the folds, the estimate is 16.65 to 23.76 for the lasso at its minimum, 19.62 to 29.52 for ridge regression at its minimum, and 23.51 to 34.95 for least squares, so the lasso and least squares intervals overlap only from 23.51 to 23.76.
 
 Optional footnote of the chapter: each fold is fit to 90 orders, so by lambda = 2n lambda_glmnet the lambda a fold applies is 0.90 times the plotted value, which uses all 100 training orders. Applying this chapter's lambda exactly in every fold gives a smallest estimate of 20.21 at lambda = 79.4; no conclusion below changes.
 :::
@@ -334,12 +336,12 @@ All three cross-validation estimates are above the test MSEs, by factors of 1.19
 The 23.0% is the gain on this one training sample, not the gain to expect; the repeated samples show it, so do not quote it as such.
 :::
 
-## Lasso coefficients
+## Lasso estimates
 
 ![](../_freeze/06-regularization/30-lasso/figure-html/coef-figure-1.png){height=540}
 
 ::: notes
-The figure compares the coefficients of the three fits, on the original scale, all fit to the 100 training orders. The lasso keeps 14 of the 35 features and its other estimates are exactly zero. The next slide reads them in order.
+The figure compares the estimates of the three fits, on the original scale, all fit to the 100 training orders. The lasso keeps 14 of the 35 features and its other estimates are exactly zero. The next slide reads them in order.
 :::
 
 ## Interpretation
@@ -351,20 +353,20 @@ The figure compares the coefficients of the three fits, on the original scale, a
 - Items: keeps 9 of 27, minutes per additional unit of the item
 
 ::: {.fragment}
-- Nonzero lasso estimates are shrunken toward zero, so biased
+- Nonzero lasso estimates are shrunken toward zero
 - `lm()` standard errors and $p$-values do not apply
 :::
 
 ::: notes
-Read in order. Intercept: on the original scale, beta-hat_0 = −10.5 minutes is the predicted time of a Monday order placed at hour 0, at distance 0, with no items, far outside the data. (The standardized-scale intercept is y-bar = 26.7 minutes.) A Monday order with no items at the training orders' mean hour, 16.2, and mean distance, 3.05 miles, has predicted time 25.3 minutes. Hour and distance: each hour later adds 1.76 minutes (ridge 1.46, least squares 1.87), and each mile adds 2.37 minutes (ridge 2.19, least squares 2.79), holding the other features fixed. Relative to least squares, ridge regression shrinks the two by 22% and 21%, the lasso by 6% and 15%. Day: the lasso keeps the dummies for Tue, Fri and Sat, with estimates −1.1, 2.0 and 4.4 minutes, and drops those for Wed, Thu and Sun. As in the Subset Selection lecture, a dropped dummy merges its day into the reference: the model predicts Wed, Thu and Sun orders like otherwise identical Monday orders. Items: the lasso keeps 9 of the 27 items. Each unit of item_01, item_03, item_27 and item_07 raises the predicted time, by 1.00, 0.41, 0.28 and 0.13 minutes, and each unit of item_16, item_26, item_08, item_18 and item_11 lowers it, by 1.55, 0.60, 0.30, 0.27 and 0.23 minutes. The other 18 items do not affect the prediction. Read these signs with care: item_16, with the most negative item estimate, is in only 3 of the training orders, and the repeated samples below show how much the kept items depend on the training sample. (From Selected sets: its lasso estimate is −1.55, but least squares on the evaluation orders gives 0.27 with p-value 0.28, so it is not shown to slow deliveries; the lasso fit also drops item_10, the most often selected item.)
+Read in order. Intercept: on the original scale, beta-hat_0 = −10.5 minutes is the predicted time of a Monday order placed at hour 0, at distance 0, with no items, far outside the data. (The standardized-scale intercept is y-bar = 26.7 minutes.) A Monday order with no items at the training orders' mean hour, 16.2, and mean distance, 3.05 miles, has predicted time 25.3 minutes. Hour and distance: each hour later adds 1.76 minutes (ridge 1.46, least squares 1.87), and each mile adds 2.37 minutes (ridge 2.19, least squares 2.79), holding the other features fixed. Relative to least squares, ridge regression shrinks the two by 22% and 21%, the lasso by 6% and 15%. Day: the lasso keeps the dummies for Tue, Fri and Sat, with estimates −1.1, 2.0 and 4.4 minutes, and drops those for Wed, Thu and Sun. As in the Subset Selection lecture, a dropped dummy merges its day into the reference: the model predicts Wed, Thu and Sun orders like otherwise identical Monday orders. Items: the lasso keeps 9 of the 27 items. Each unit of item_01, item_03, item_27 and item_07 raises the predicted time, by 1.00, 0.41, 0.28 and 0.13 minutes, and each unit of item_16, item_26, item_08, item_18 and item_11 lowers it, by 1.55, 0.60, 0.30, 0.27 and 0.23 minutes. The other 18 items do not affect the prediction. Read these signs with care: item_16, with the most negative item estimate, is in only 3 of the training orders, and the repeated samples below show how much the kept items depend on the training sample. (From Selected sets: its lasso estimate is −1.55, but the least squares fit to the 4,000 test orders gives 0.27 with p-value 0.28, so it is not shown to slow deliveries; the lasso fit also drops item_10, the most often selected item.)
 
-Of the 14 nonzero lasso estimates, 13 are smaller in absolute value than their least squares counterparts. Nonzero lasso estimates are shrunken toward zero, by lambda/(2n) in the orthogonal case, so they are biased; the repeated samples below show the bias. And because the features were selected using the same data, the standard errors, t-statistics and p-values that lm() would report, for the lasso fit or for least squares refit to the selected features, do not apply, as in the subset selection lecture. glmnet() reports none.
+Of the 14 nonzero lasso estimates, 13 are smaller in absolute value than their least squares counterparts. Nonzero lasso estimates are shrunken toward zero, by lambda/(2n) in the orthogonal case, so the lasso estimator, the rule that turns a training sample into an estimate, is biased toward zero for a nonzero coefficient, as the repeated samples below show. And because the features were selected using the same data, the standard errors, t-statistics and p-values that lm() would report, for the lasso fit or for least squares refit to the selected features, do not apply, as in the subset selection lecture. glmnet() reports none.
 :::
 
 # Repeated training samples
 
 ::: notes
-The ridge lecture divided the test orders into 4,000 evaluation orders and a pool of 5,912 and drew 500 samples of n pool orders. The next random draws here are the same, so the samples, and the folds drawn within each, are the ridge lecture's. In each sample lambda is chosen by 10-fold cross-validation, for the lasso and for ridge regression on the same folds, each is refit, and its MSE at the evaluation orders is compared with that of least squares fit to the same sample, for n = 100 and n = 300.
+As in the ridge lecture, 4,000 of the 9,912 test orders are the test orders at which every prediction is made, and the remaining 5,912 test orders are the orders from which the repeated training samples are drawn: M = 500 samples of n of the remaining test orders. The next random draws here are the ridge lecture's, so the samples, and the folds drawn within each, are the ridge lecture's. In each sample lambda is chosen by 10-fold cross-validation, for the lasso and for ridge regression on the same folds, each is refit, and its MSE at the 4,000 test orders is compared with that of least squares fit to the same sample, for n = 100 and n = 300.
 :::
 
 ## Test MSE
@@ -372,7 +374,7 @@ The ridge lecture divided the test orders into 4,000 evaluation orders and a poo
 ![](../_freeze/06-regularization/30-lasso/figure-html/rep-figure-1.png){height=540}
 
 ::: notes
-The figure plots, for each sample, the percent change in MSE relative to least squares, in violins with quartile lines and the median; below 0 is better than least squares. The facts to read off the violins are on the next slide.
+The figure plots, for each sample, the percent change in MSE at the 4,000 test orders relative to least squares, in violins with quartile lines and the median; below 0 is better than least squares. The facts to read off the violins are on the next slide.
 :::
 
 ## Average over samples
@@ -391,15 +393,15 @@ With n = 100 the average MSE is 19.19 for the lasso, 21.74 for ridge regression 
 ::: notes
 The figure plots how often the lasso kept each feature over the samples. With n = 100, hour and distance are kept in 100.0% and 99.8% of the samples and each item in between 35% and 53%. The lasso keeps a median of 16 features, from 4 to 35, and the 500 samples give 494 different selected sets. With n = 300 it keeps more, a median of 29, and each item in more samples.
 
-The selected items are not the only items that slow deliveries. Outside the workflow, least squares fit to the 4,000 evaluation orders gives 25 of the 27 items a positive estimate with p-value below 0.05, a median of 0.6 minutes per item, the largest for item_01 and item_10, the two items the lasso keeps most often; even item_10 is kept in only 53% of the samples. The lasso fit to the training orders drops item_10 and gives item_16 its most negative item estimate, −1.55 minutes, where least squares on the evaluation orders gives 0.27 (p-value 0.28). Of the 5 items with negative estimates in the lasso fit to the training orders, 4 have a positive estimate with p-value below 0.05 on the evaluation orders. Almost every item slows deliveries a little; with 100 orders those small effects are estimated with large error, and which of them clear the threshold depends on the noise in the sample. The lasso predicts better here by setting to zero estimates too noisy to help the predictions, not by finding the items whose effect is zero. A dropped item is not shown to have no effect.
+The selected items are not the only items that slow deliveries. The least squares fit to the 4,000 test orders uses test orders to fit a model, so it is a reference outside the workflow and not a test of anything. It gives 25 of the 27 items a positive estimate with p-value below 0.05, a median of 0.6 minutes per item, the largest for item_01 and item_10, the two items the lasso keeps most often; even item_10 is kept in only 53% of the samples. The lasso fit to the training orders drops item_10 and gives item_16 its most negative item estimate, −1.55 minutes, where the least squares fit to the 4,000 test orders gives 0.27 (p-value 0.28). Of the 5 items with negative estimates in the lasso fit to the training orders, 4 have a positive estimate with p-value below 0.05 in the least squares fit to the 4,000 test orders. Almost every item slows deliveries a little; with 100 orders those small effects are estimated with large error, and which of them clear the threshold depends on the noise in the sample. A dropped item is not shown to have no effect.
 :::
 
-## Coefficient bias
+## Estimator bias
 
 ![](../_freeze/06-regularization/30-lasso/figure-html/bias-figure-1.png){height=540}
 
 ::: notes
-The figure plots the estimates of the hour and distance coefficients, on the original scale, from the three fits to each of the 500 samples of 100 pool orders, in violins with quartile lines and the mean (diamond), with the least squares estimates from the 4,000 evaluation orders as dashed lines. Over the samples, least squares averages 1.79 minutes per hour and 2.70 per mile, close to the evaluation orders' 1.73 and 2.82. The lasso averages 1.63 and 2.34 (zeros included), 9% and 13% below the least squares averages: the nonzero lasso estimates are biased toward zero. Ridge regression averages 1.50 and 2.30, 16% and 15% below.
+Bias is a property of an estimator, the rule that turns a training sample into estimates, not of the estimates from one sample: it is the difference between the average of the estimates over repeated training samples and the coefficient they estimate. The figure plots the estimates of the hour and distance coefficients, on the original scale, from the three fits to each of the 500 training samples of 100 of the remaining test orders, in violins with quartile lines and the mean (diamond). The dashed lines are the estimates of the least squares fit to the 4,000 test orders, the reference outside the workflow. Over the samples, least squares averages 1.79 minutes per hour and 2.70 per mile, close to the 1.73 and 2.82 of the least squares fit to the 4,000 test orders. The lasso averages 1.63 and 2.34 (zeros included), 9% and 13% below the least squares averages: the lasso estimators of the hour and distance coefficients are biased toward zero. Ridge regression averages 1.50 and 2.30, 16% and 15% below.
 
 The lasso plausibly predicts better than ridge regression on these data for two reasons. It sets to zero the item estimates too noisy to help the predictions. And ridge regression has one lambda for all 35 coefficients: a lambda large enough to shrink the noisy item estimates also shrinks the large hour and distance estimates more than the lasso does, in the fit to the training orders and on average over the samples. Neither reason has been isolated from the other here.
 
@@ -412,8 +414,8 @@ Optional: fourth in the drop order; if time is short, skip this slide and say th
 - Soft thresholding shrinks estimates and zeroes the small ones
 - Choose $\lambda$ by cross-validation; evaluate once on test data
 - The lasso's gain depends on the data and the sample size
-- The selected set is unstable and the nonzero lasso estimates are biased
+- The selected set is unstable and the lasso estimator is biased toward zero
 
 ::: notes
-The lasso's geometry gives exact zeros, where ridge regression's estimates are shrunken but, except by coincidence, not zero. The smallest cross-validation estimate is optimistic as an estimate of the chosen model's error, because lambda was chosen to make it small. Whether the lasso predicts better than ridge regression or least squares depends on the data and the training sample size, and is best judged over repeated samples rather than one. The set of features it selects can change from sample to sample, especially when many features have small effects of similar size, so a dropped feature is not shown to have no effect. The nonzero lasso estimates are shrunken toward zero, so biased. The lm() standard errors and p-values do not apply to the nonzero lasso estimates. The next lecture begins dimension reduction with principal components: directions of maximum variance in the features, their loadings and scores, and the proportion of variance each explains.
+The lasso's geometry gives exact zeros, where ridge regression's estimates are shrunken but, except by coincidence, not zero. The smallest cross-validation estimate is optimistic as an estimate of the chosen model's error, because lambda was chosen to make it small. Whether the lasso predicts better than ridge regression or least squares depends on the data and the training sample size, and is best judged over repeated samples rather than one. The set of features it selects can change from sample to sample, especially when many features have small effects of similar size, so a dropped feature is not shown to have no effect. The nonzero lasso estimates are shrunken toward zero, the lasso estimator of a nonzero coefficient is biased toward zero, and lm()'s standard errors and p-values do not apply to the lasso estimates. The next lecture begins dimension reduction with principal components: directions of maximum variance in the features, their loadings and scores, and the proportion of variance each explains.
 :::

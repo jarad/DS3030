@@ -40,6 +40,7 @@ book:
       - 06-regularization/10-subset-selection.qmd
       - 06-regularization/20-ridge-regression.qmd
       - 06-regularization/30-lasso.qmd
+      - 06-regularization/40-principal-components.qmd
 
 format:
   html:

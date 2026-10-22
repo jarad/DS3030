@@ -152,7 +152,10 @@ convention.
   standardized scale ($\beta_j$ equals $s_j$ times the original-scale
   coefficient); the chapter says which scale is meant wherever it matters. The
   number of repeated training samples is $M$ (indexed $m$), never $R$, which
-  would collide with $R^2$ and $B$ is reserved for bootstrap samples.
+  would collide with $R^2$ and $B$ is reserved for bootstrap samples. The
+  test orders at which the repeated-sample predictions are made are the set
+  $\mathcal{T}$ (for test; the course names no separate "evaluation" role),
+  and the samples are drawn from "the remaining test orders."
 - **In the lasso chapter (`06-regularization/30-lasso.qmd`)**, the penalty is
   $\lambda\sum_j|\beta_j|$ with $\hat\beta^L_{\lambda j}$ the lasso and
   $\hat\beta^R_{\lambda j}$ the ridge estimate, $\lambda_{\max}$ the smallest
@@ -160,6 +163,15 @@ convention.
   the constrained form (as in the textbook; unrelated to $s_j$ and $s_y$, the
   standard deviations of a feature and of the response). The lasso chapter
   reuses the ridge chapter's seed, split and notation.
+- **In the principal components chapter
+  (`06-regularization/40-principal-components.qmd`)**, $M$ is the number of
+  components kept (as in the textbook; it is the number of repeated training
+  samples in the ridge and lasso chapters), $\phi_{jm}$ the loadings and
+  $z_{im}$ the scores (the symbol $\phi$ is the dispersion parameter in the
+  generalized linear models chapter), $v_m$ the variance of the $m$th component
+  (never $\lambda$, the ridge and lasso tuning parameter), and $\mathbf{R}$ the
+  correlation matrix, a matrix unrelated to the coefficient of determination
+  $R^2$.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

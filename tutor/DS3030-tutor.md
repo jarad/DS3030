@@ -1045,20 +1045,27 @@ small training sample of 100 orders and all other orders as test data.
 features with an unpenalized intercept; $\lambda \to 0$ gives least squares and
 $\lambda \to \infty$ the null model. Students derive the closed form
 $(\tilde X^\top\tilde X + \lambda I)^{-1}\tilde X^\top(y - \bar y\mathbf{1})$,
-its mean and variance (the variance is no larger than least squares'), and
-distinguish standardized-scale from original-scale coefficients. The penalty is
+the mean and variance of the ridge **estimator** (the rule that turns a
+training sample into an estimate; bias and variance belong to the estimator,
+not to one sample's estimate): the ridge estimator is biased toward zero and
+its variance is no larger than the least squares estimator's. Students also
+distinguish standardized-scale from original-scale estimates. The penalty is
 not scale equivariant, so features are standardized, and the standardization is
 repeated inside each cross-validation fold. `glmnet()`'s $\lambda$ converts to
-the chapter's by $\lambda = n\lambda_{\text{glmnet}}/s_y$. The coefficient path
-shrinks smoothly and no estimate reaches zero. Over repeated training
-samples the prediction error splits into the best linear predictor's error plus
-squared bias plus variance; shrinkage helps at $n = 100$ and not at $n = 300$.
-$\lambda$ is chosen by 10-fold cross-validation on the training data (the
-`cv.glmnet` curve), the model is refit, and the chosen model is evaluated once
-on test data; this sample's 7.5% test gain is a favorable draw, about twice the
-average gain, and ridge loses to least squares on a substantial share of
-samples. Interpretation reads $\beta_0$ first, then the shrunken coefficients;
-`lm()` standard errors and $p$-values do not apply. A `Beyond this course`
+the chapter's by $\lambda = n\lambda_{\text{glmnet}}/s_y$. The estimate path
+shrinks smoothly and no estimate reaches zero. For repeated training samples,
+4,000 of the test orders are the test orders at which every prediction is made
+and the training samples are drawn from the remaining test orders; at those
+4,000 test orders the test MSE equals the best linear predictor's error plus
+squared bias plus variance (the figure plots variance plus squared bias);
+shrinkage helps at $n = 100$ and not at $n = 300$. $\lambda$ is chosen by
+10-fold cross-validation on the training data (the `cv.glmnet` curve against
+$\lambda$, below the least squares value at the chosen $\lambda$), the model is
+refit, and the chosen model is evaluated once on test data; this sample's 7.5%
+test gain is a favorable draw, about twice the average gain, and ridge loses to
+least squares on a substantial share of samples. Interpretation reads
+$\beta_0$ first, then the shrunken estimates; `lm()` standard errors and
+$p$-values do not apply. A `Beyond this course`
 callout (the Bayesian view, effective degrees of freedom, the
 one-standard-error rule) is not assessed.
 
@@ -1077,18 +1084,42 @@ subset selection is the $\ell_0$ version and the lasso is its convex
 relaxation. For orthogonal features the lasso is soft thresholding of the least
 squares estimate, compared with ridge's proportional shrinkage; `glmnet`'s
 $\lambda$ converts to the chapter's by $\lambda = 2n\lambda_{\text{glmnet}}$
-(no $s_y$, unlike ridge). Reading the coefficient path and the number of nonzero
+(no $s_y$, unlike ridge). Reading the estimate path and the number of nonzero
 estimates against $\lambda$. $\lambda$ is chosen by 10-fold cross-validation
 on the training data, the model is refit and evaluated once on test data, and
 lasso, ridge and least squares are compared by test MSE and by the features
 kept; the cross-validation estimates exceed the test MSEs and the smallest
 estimate is optimistic. Over repeated training samples the lasso helps at
 $n = 100$ and not at $n = 300$, this sample is a favorable draw, the selected
-set is unstable, and the nonzero lasso estimates are biased toward zero; `lm()`
+set is unstable, and the nonzero lasso estimates are shrunken toward zero, so
+the lasso estimator of a nonzero coefficient is biased toward zero (bias is a
+property of the estimator, not of the estimates from one sample); `lm()`
 standard errors and $p$-values do not apply after selection. A
 `Beyond this course` callout (the Laplace prior, elastic net, the
 one-standard-error rule, the group lasso, inference after selection) is not
 assessed.
+
+### 23. Principal Components (Exam 2)
+<https://jarad.github.io/DS3030/06-regularization/40-principal-components.html>
+
+Principal component analysis of the six numeric `ggplot2::diamonds` variables
+(carat, depth, table, x, y, z) after removing impossible or extreme dimensions;
+depth percentage is computed from x, y and z, so the six variables carry five
+measurements. The features are standardized and $\phi_1$ is the unit vector that
+maximizes the sample variance of the scores $z_{i1} = \tilde x_i\phi_1$. A
+Lagrange multiplier shows it is the leading eigenvector of the sample
+correlation matrix $\mathbf{R}$, with the eigenvalue as the score variance; these
+estimate the population eigenstructure. The same line minimizes the mean
+squared distance to the data (the two sum to $p$). Later components are
+orthogonal eigenvectors with uncorrelated scores and variances summing to $p$;
+the proportion of variance explained is $v_m/p$, and the number of components
+$M$ is chosen by a scree-plot elbow or a cumulative threshold, as a judgment.
+Standardizing matters because unstandardized components follow the units.
+Interpretation covers the loadings (size, depth against table), the arbitrary
+sign, and the scores. PCA is unsupervised and not variable selection: a
+low-variance component (PC4) can correlate with price more than PC2 or PC3, and
+every component uses every feature. A `Beyond this course` callout (SVD, best
+rank-$M$ approximation, sparse, kernel and robust PCA) is not assessed.
 
 ## What has already been assessed
 
@@ -1182,15 +1213,15 @@ methods, and when a flexible classifier wins.
 
 **Homework 8** (subset selection, ridge regression, the lasso): a derivation of
 how the two penalties treat a pair of correlated or duplicated features, checked
-numerically; on real data with many correlated features, comparing least
-squares, stepwise selection with the size chosen by a penalized criterion and by
+numerically, and what a zero lasso estimate does and does not show; on real
+data with many correlated features, comparing least squares, stepwise
+selection with the size chosen by a penalized criterion and by
 cross-validation, ridge regression, and the lasso by held-out error, including
-standardization, coefficient paths, interpreting shrunken coefficients, and the
-stability of the selected features, with a critique of an overstated
-conclusion; a simulation contrasting the two penalties under different patterns
-of true coefficients, with a squared bias and variance decomposition across the
-tuning parameter; judging the soundness of each step of a described regularized
-regression analysis.
+standardization, coefficient paths, and interpreting shrunken estimates; a
+simulation contrasting the two penalties under different patterns of true
+coefficients, with a derived expression for test error and its behavior across
+the tuning parameter; judging the soundness of each step of a described
+regularized regression analysis.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable

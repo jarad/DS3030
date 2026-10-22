@@ -7,34 +7,68 @@
 library("tidyverse")
 library("glmnet")
 theme_set(theme_bw())
+
 # The ridge lecture's seed, reused so that the split and folds are identical.
 set.seed(20261017)
 
-# Fixed decimals with thousands separators, and percentages, for prose; a
-# negative value prints with a minus sign (the HTML entity) rather than a
-# hyphen. Inside $...$ use fmt_math, whose hyphen MathJax sets as a minus.
+# Fixed decimals with thousands separators, for use inside $...$, whose
+# hyphen MathJax sets as a minus sign.
 fmt_math <- function(x, digits = 2) {
   formatC(x, format = "f", digits = digits, big.mark = ",")
 }
-fmt <- function(x, digits = 2) sub("^-", "&minus;", fmt_math(x, digits))
-pct <- function(x, digits = 1) paste0(fmt(100 * x, digits), "%")
-big <- function(x) format(x, big.mark = ",")
-# The same inside $...$, where MathJax reads % as a comment and spaces a bare comma.
-big_math <- function(x) format(x, big.mark = "{,}")
+
+# The same for prose: a negative value prints with a minus sign (the HTML
+# entity) rather than a hyphen.
+fmt <- function(x, digits = 2) {
+  sub("^-", "&minus;", fmt_math(x, digits))
+}
+
+# Percentages for prose.
+pct <- function(x, digits = 1) {
+  paste0(fmt(100 * x, digits), "%")
+}
+
+# Counts with thousands separators for prose.
+big <- function(x) {
+  format(x, big.mark = ",")
+}
+
+# The same inside $...$, where MathJax reads % as a comment and spaces a bare
+# comma.
+big_math <- function(x) {
+  format(x, big.mark = "{,}")
+}
+
 # A number in LaTeX scientific notation for use inside $...$.
 sci <- function(x, digits = 1) {
-  e <- floor(log10(abs(x)))
-  sprintf("%s \\times 10^{%d}", formatC(x / 10^e, format = "f", digits = digits), e)
+  magnitude <- abs(x)
+  e <- floor(log10(magnitude))
+  mantissa <- formatC(x / 10^e, format = "f", digits = digits)
+  sprintf("%s \\times 10^{%d}", mantissa, e)
 }
+
 # "a", "a and b", "a, b, and c".
 and_list <- function(x) {
-  if (length(x) == 1) x else if (length(x) == 2) paste(x, collapse = " and ") else
-    paste0(paste(x[-length(x)], collapse = ", "), ", and ", x[length(x)])
+  n <- length(x)
+  if (n == 1) {
+    return(x)
+  }
+  if (n == 2) {
+    return(paste(x, collapse = " and "))
+  }
+  paste0(paste(x[-n], collapse = ", "), ", and ", x[n])
 }
-code <- function(x) paste0("`", x, "`")
-okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#0072B2", "#CC79A7")
-log_lambda <- scale_x_log10(breaks = 10^(-2:3),
-                            labels = scales::label_number(big.mark = ",", drop0trailing = TRUE))
+
+# Code formatting for a feature name in prose.
+code <- function(x) {
+  paste0("`", x, "`")
+}
+
+# Okabe-Ito colors, and a log-scale lambda axis with plain labels.
+okabe_ito <- c("#E69F00", "#56B4E9", "#009E73", "#D55E00", "#0072B2",
+               "#CC79A7")
+lambda_labels <- scales::label_number(big.mark = ",", drop0trailing = TRUE)
+log_lambda <- scale_x_log10(breaks = 10^(-2:3), labels = lambda_labels)
 ```
 
 ::: {.callout-tip}
@@ -51,15 +85,15 @@ not,
 - **derive** the lasso estimate for orthogonal standardized features as soft
 thresholding of the least squares estimate, and **compare** it with ridge
 regression's proportional shrinkage,
-- **read** a lasso coefficient path: which features enter first, and how many
+- **read** a lasso estimate path: which features enter first, and how many
 estimates are nonzero at each $\lambda$,
 - **choose** $\lambda$ by $k$-fold cross-validation on the training data,
 evaluate the chosen model once on test data, and **compare** the lasso, ridge
 regression, and least squares by test MSE and by the features they keep, and
 - **explain**, from repeated training samples, why the set of features the
-lasso selects is unstable and why the nonzero lasso estimates are biased
-toward zero, and **explain** why `lm()`'s standard errors and $p$-values do not apply
-to them.
+lasso selects is unstable and why the lasso estimator of a nonzero
+coefficient is biased toward zero, and **explain** why `lm()`'s standard
+errors and $p$-values do not apply to the lasso estimates.
 :::
 
 ## Delivery times
@@ -76,17 +110,22 @@ features predict delivery times better than one that uses all of them?
 `item_01`, ..., `item_27` of each menu item.
 
 ```{r delivery-split}
+# The orders, and the two training sample sizes.
 deliveries <- modeldata::deliveries
 n_orders <- nrow(deliveries)
 n_train <- 100
 n_large <- 300
+
+# Split the orders into training and test orders.
 train_id <- sample(n_orders, n_train)
 train <- deliveries[train_id, ]
 test <- deliveries[-train_id, ]
 n_test <- nrow(test)
+
 # Folds for 10-fold cross-validation of the training orders.
 n_folds <- 10
-fold_id <- sample(rep(seq_len(n_folds), length.out = n_train))
+fold_labels <- rep(seq_len(n_folds), length.out = n_train)
+fold_id <- sample(fold_labels)
 ```
 
 These are the first random draws after the ridge lecture's
@@ -95,32 +134,50 @@ These are the first random draws after the ridge lecture's
 the chosen model is evaluated. As there, the training sample is deliberately
 small relative to the
 `r ncol(model.matrix(time_to_delivery ~ ., data = train))` coefficients of the
-model, so that they are poorly determined; the repeated samples at the end
-also use `r n_large` training orders. The figure plots, for each item, the
-delivery times of the training orders that contain it.
+model, so that their estimates are poorly determined; the repeated samples at
+the end also use `r n_large` training orders. The figure plots, for each item,
+the delivery times of the training orders that contain it.
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r item-eda}
 #| output: false
+# Number of training orders containing each item, and the median time.
 item_names <- sprintf("item_%02d", 1:27)
 orders_with <- colSums(train[item_names] > 0)
 time_median <- median(train$time_to_delivery)
+
+# One row per training order and item it contains, item_01 at the top.
+item_levels <- rev(item_names)
 item_long <- train |>
-  pivot_longer(all_of(item_names), names_to = "item", values_to = "count") |>
+  pivot_longer(all_of(item_names),
+               names_to = "item",
+               values_to = "count") |>
   filter(count > 0) |>
-  mutate(item = factor(item, levels = rev(item_names)))
+  mutate(item = factor(item, levels = item_levels))
 item_medians <- tapply(item_long$time_to_delivery, item_long$item, median)
+
+# Delivery times by item, with the median for each item.
+item_labels <- paste0(rev(item_names), " (", rev(orders_with), ")")
 item_plot <- ggplot(item_long, aes(x = time_to_delivery, y = item)) +
-  geom_vline(xintercept = time_median, linetype = "dashed", color = "grey50") +
+  geom_vline(xintercept = time_median,
+             linetype = "dashed",
+             color = "grey50") +
   geom_point(position = position_jitter(width = 0, height = 0.15, seed = 1),
-             size = 0.9, alpha = 0.6) +
-  stat_summary(fun = median, fun.min = median, fun.max = median,
-               geom = "crossbar", width = 0.7, color = "#D55E00") +
-  scale_y_discrete(labels = paste0(rev(item_names), " (", rev(orders_with), ")")) +
-  labs(x = "Delivery time (minutes)", y = "Item (number of training orders containing it)",
+             size = 0.9,
+             alpha = 0.6) +
+  stat_summary(fun = median,
+               fun.min = median,
+               fun.max = median,
+               geom = "crossbar",
+               width = 0.7,
+               color = "#D55E00") +
+  scale_y_discrete(labels = item_labels) +
+  labs(x = "Delivery time (minutes)",
+       y = "Item (number of training orders containing it)",
        title = paste(n_train, "training orders"),
-       caption = "Bars = median for orders with the item; dashed line = median of all training orders.")
+       caption = paste("Bars = median for orders with the item;",
+                       "dashed line = median of all training orders."))
 ```
 :::
 
@@ -139,67 +196,119 @@ of the orders containing any one item vary widely. These orders also differ
 in distance, hour, and day, which the ridge lecture showed matter, so a
 difference between items here need not be an effect of the items.
 
-### Ridge coefficients
+### Ridge estimates
 
 ```{r features}
-model_matrix <- function(data) model.matrix(time_to_delivery ~ ., data = data)[, -1]
+# Model matrix of the features, without the column of ones.
+model_matrix <- function(data) {
+  X <- model.matrix(time_to_delivery ~ ., data = data)
+  X[, -1]
+}
+
+# Features and responses of the training and test orders.
 X_train <- model_matrix(train)
 y_train <- train$time_to_delivery
 X_test <- model_matrix(test)
 y_test <- test$time_to_delivery
 p <- ncol(X_train)
-mse <- function(y, y_hat) mean((y - y_hat)^2)
-sd_n <- function(v) sqrt(mean((v - mean(v))^2))
+
+# Mean squared error.
+mse <- function(y, y_hat) {
+  mean((y - y_hat)^2)
+}
+
+# Standard deviation with divisor n.
+sd_n <- function(v) {
+  deviations <- v - mean(v)
+  sqrt(mean(deviations^2))
+}
+
+# Standard deviations of the training responses and of each feature.
 s_y <- sd_n(y_train)
 x_scale <- apply(X_train, 2, sd_n)
 ```
 
 As in the ridge lecture, `day` enters as `r nlevels(train$day) - 1` dummy
 variables with Monday as the reference, so there are $p = `r p`$ features.
-The figure repeats that lecture's coefficient path: each standardized
-coefficient of ridge regression fit to the training orders, against
-$\lambda$.
+The figure repeats that lecture's estimate path: the ridge estimate of each
+standardized coefficient, fit to the training orders, against $\lambda$.
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r ridge-path}
 #| output: false
+# Grid of lambda values, and the ridge lecture's conversion of lambda to
+# glmnet()'s scale.
 lambda_grid <- 10^seq(3, -2, length.out = 101)
-# The ridge lecture's conversion of lambda to glmnet()'s scale.
-to_glmnet_ridge <- function(lambda) lambda * s_y / n_train
-group_levels <- c("distance", "hour", paste0("day (", nlevels(train$day) - 1, " dummies)"),
-                  paste0("items (", length(item_names), ")"))
-# Standardized coefficients of a glmnet() path, one row per feature and lambda.
+to_glmnet_ridge <- function(lambda) {
+  lambda * s_y / n_train
+}
+
+# Feature groups for the legend.
+day_group <- paste0("day (", nlevels(train$day) - 1, " dummies)")
+item_group <- paste0("items (", length(item_names), ")")
+group_levels <- c("distance", "hour", day_group, item_group)
+
+# The group of each feature name.
+feature_group <- function(feature) {
+  is_numeric <- feature %in% c("distance", "hour")
+  is_day <- str_starts(feature, "day")
+  case_when(is_numeric ~ feature,
+            is_day ~ day_group,
+            TRUE ~ item_group)
+}
+
+# Standardized estimates of a glmnet() path, one row per feature and lambda.
 path_data <- function(fit, lambdas) {
   stopifnot(length(fit$lambda) == length(lambdas))
-  as_tibble(as.matrix(coef(fit))[-1, ] * x_scale, rownames = "feature") |>
-    pivot_longer(-feature, values_to = "coefficient") |>
+  b <- as.matrix(coef(fit))[-1, ] * x_scale
+  as_tibble(b, rownames = "feature") |>
+    pivot_longer(-feature, values_to = "estimate") |>
     mutate(lambda = rep(lambdas, times = p),
-           group = case_when(feature %in% c("distance", "hour") ~ feature,
-                             str_starts(feature, "day") ~ group_levels[3],
-                             TRUE ~ group_levels[4]),
+           group = feature_group(feature),
            group = factor(group, levels = group_levels))
 }
+
+# Standardized estimates against lambda, one line per feature.
 path_plot <- function(path, title) {
-  ggplot(path, aes(x = lambda, y = coefficient, group = feature,
-                   color = group, linetype = group)) +
+  ggplot(path,
+         aes(x = lambda,
+             y = estimate,
+             group = feature,
+             color = group,
+             linetype = group)) +
     geom_hline(yintercept = 0, color = "grey50") +
     geom_line() +
     log_lambda +
     scale_color_manual(values = okabe_ito[c(4, 5, 3, 1)]) +
-    scale_linetype_manual(values = c("solid", "longdash", "dotdash", "dotted")) +
+    scale_linetype_manual(values = c("solid", "longdash", "dotdash",
+                                     "dotted")) +
     labs(x = expression(lambda ~ "(log scale)"),
-         y = "Standardized coefficient\n(minutes per standard deviation)",
-         color = NULL, linetype = NULL, title = title) +
+         y = "Standardized estimate\n(minutes per standard deviation)",
+         color = NULL,
+         linetype = NULL,
+         title = title) +
     theme(legend.position = "bottom")
 }
-ridge_path_fit <- glmnet(X_train, y_train, alpha = 0, lambda = to_glmnet_ridge(lambda_grid),
+
+# Ridge path fit to the training orders.
+ridge_path_fit <- glmnet(X_train,
+                         y_train,
+                         alpha = 0,
+                         lambda = to_glmnet_ridge(lambda_grid),
                          thresh = 1e-12)
-ridge_path <- path_data(ridge_path_fit, lambda_grid)
-ridge_path_plot <- path_plot(ridge_path, paste("Ridge coefficient path,", n_train, "training orders"))
-ridge_min_nonzero <- min(colSums(as.matrix(coef(ridge_path_fit))[-1, ] != 0))
-ridge_smallest <- ridge_path |> filter(lambda == max(lambda_grid), str_starts(feature, "item")) |>
-  slice_min(abs(coefficient), n = 1)
+ridge_path_data <- path_data(ridge_path_fit, lambda_grid)
+ridge_title <- paste("Ridge estimate path,", n_train, "training orders")
+ridge_path_plot <- path_plot(ridge_path_data, ridge_title)
+
+# Fewest nonzero ridge estimates at any lambda on the grid.
+ridge_estimates <- as.matrix(coef(ridge_path_fit))[-1, ]
+ridge_min_nonzero <- min(colSums(ridge_estimates != 0))
+
+# The item estimate closest to zero at the largest lambda.
+ridge_smallest <- ridge_path_data |>
+  filter(lambda == max(lambda_grid), str_starts(feature, "item")) |>
+  slice_min(abs(estimate), n = 1)
 ```
 :::
 
@@ -216,7 +325,7 @@ the `r length(lambda_grid)` values of $\lambda$ on the grid
 nonzero. At
 $\lambda = `r big_math(max(lambda_grid))`$ the item estimate closest to
 zero, that of `r code(ridge_smallest$feature)`, is still
-$`r sci(ridge_smallest$coefficient)`$ minutes per standard deviation.
+$`r sci(ridge_smallest$estimate)`$ minutes per standard deviation.
 
 ## Lasso
 
@@ -227,17 +336,25 @@ hour of the training orders. The figure plots the delivery time against each.
 ### Code
 ```{r two-feature-eda}
 #| output: false
+# Standardize distance and hour with the training means and standard
+# deviations.
 two_names <- c("distance", "hour")
-Z2 <- sweep(sweep(X_train[, two_names], 2, colMeans(X_train[, two_names])), 2,
-            x_scale[two_names], "/")
-two_plot <- as_tibble(Z2) |>
+X_two <- X_train[, two_names]
+X_two_centered <- sweep(X_two, 2, colMeans(X_two))
+Z2 <- sweep(X_two_centered, 2, x_scale[two_names], "/")
+
+# Delivery time against each standardized feature.
+two_long <- as_tibble(Z2) |>
   mutate(time = y_train) |>
-  pivot_longer(-time, names_to = "feature") |>
-  ggplot(aes(x = value, y = time)) +
+  pivot_longer(-time, names_to = "feature")
+two_plot <- ggplot(two_long, aes(x = value, y = time)) +
   geom_point(size = 1) +
   facet_wrap(~ paste("Standardized", feature)) +
-  labs(x = "Standard deviations from the training mean", y = "Delivery time (minutes)",
+  labs(x = "Standard deviations from the training mean",
+       y = "Delivery time (minutes)",
        title = paste(n_train, "training orders"))
+
+# Correlation of the two standardized features.
 two_cor <- cor(Z2)[1, 2]
 ```
 :::
@@ -294,8 +411,15 @@ and, because the criterion is convex and the penalty is a sum over $j$, every
 slope estimate is zero and every prediction is $\hat\beta_0 = \bar y$, the null model.
 
 ```{r lambda-max}
-X_std <- sweep(sweep(X_train, 2, colMeans(X_train)), 2, x_scale, "/")
-lambda_scores <- 2 * abs(drop(crossprod(X_std, y_train - mean(y_train))))
+# Standardized training features.
+X_centered <- sweep(X_train, 2, colMeans(X_train))
+X_std <- sweep(X_centered, 2, x_scale, "/")
+
+# Twice the absolute sum of each standardized feature times the centered
+# responses; the largest is lambda_max.
+y_centered <- y_train - mean(y_train)
+feature_sums <- drop(crossprod(X_std, y_centered))
+lambda_scores <- 2 * abs(feature_sums)
 lambda_max <- max(lambda_scores)
 ```
 
@@ -321,84 +445,180 @@ constrained estimate is where the smallest contour touches the region.
 ### Code
 ```{r geometry}
 #| output: false
-yc <- y_train - mean(y_train)
+# Least squares estimate for the two standardized features; the RSS is a
+# quadratic in (b1, b2) centered there.
 A2 <- crossprod(Z2)
-b_two <- drop(solve(A2, crossprod(Z2, yc)))
+Z2_y <- crossprod(Z2, y_centered)
+b_two <- drop(solve(A2, Z2_y))
+rss_min <- sum((y_centered - Z2 %*% b_two)^2)
 rss_two <- function(b1, b2) {
   d1 <- b1 - b_two[1]
   d2 <- b2 - b_two[2]
-  sum((yc - Z2 %*% b_two)^2) + A2[1, 1] * d1^2 + 2 * A2[1, 2] * d1 * d2 + A2[2, 2] * d2^2
+  rss_min + A2[1, 1] * d1^2 + 2 * A2[1, 2] * d1 * d2 + A2[2, 2] * d2^2
 }
+
 # While only the first feature to enter is nonzero, the lasso keeps the other
 # at zero; that holds for every budget below s_enter.
-a <- drop(crossprod(Z2, yc)) / n_train
+a <- drop(Z2_y) / n_train
 first <- which.max(abs(a))
-s_enter <- (abs(a[first]) - abs(a[-first])) / (1 - two_cor * sign(a[first]) * sign(a[-first]))
+sign_product <- sign(a[first]) * sign(a[-first])
+s_enter <- (abs(a[first]) - abs(a[-first])) / (1 - two_cor * sign_product)
+
+# The budget drawn. The prose writes the corner as (0, s): hour enters first.
 s_budget <- 1.5
-# The prose writes the corner as (0, s): hour enters first.
 stopifnot(s_budget < s_enter, first == 2)
+
+# Lasso estimate at this budget: the corner on the first feature's axis.
 b_lasso2 <- replace(c(0, 0), first, sign(a[first]) * s_budget)
-# Ridge with sum of squares s_budget^2: the disk through the diamond's corners.
-ridge2 <- function(l) drop(solve(A2 + l * diag(2), crossprod(Z2, yc)))
-b_ridge2 <- ridge2(uniroot(\(l) sqrt(sum(ridge2(l)^2)) - s_budget, c(0, 1e5))$root)
-grid <- expand_grid(b1 = seq(-2, 5, length.out = 281), b2 = seq(-2, 6, length.out = 321)) |>
+
+# Ridge estimate with sum of squares s_budget^2, on the disk through the
+# diamond's corners: solve for the lambda that puts it there.
+ridge2 <- function(l) {
+  lhs <- A2 + l * diag(2)
+  drop(solve(lhs, Z2_y))
+}
+ridge2_excess <- function(l) {
+  b <- ridge2(l)
+  sqrt(sum(b^2)) - s_budget
+}
+l_budget <- uniroot(ridge2_excess, c(0, 1e5))$root
+b_ridge2 <- ridge2(l_budget)
+
+# Grid of (b1, b2) values for the RSS contours.
+grid <- expand_grid(b1 = seq(-2, 5, length.out = 281),
+                    b2 = seq(-2, 6, length.out = 321)) |>
   mutate(rss = rss_two(b1, b2))
-diamond <- tibble(b1 = c(s_budget, 0, -s_budget, 0), b2 = c(0, s_budget, 0, -s_budget))
-disk <- tibble(t = seq(0, 2 * pi, length.out = 361), b1 = s_budget * cos(t), b2 = s_budget * sin(t))
+
+# The lasso region (a diamond) and the ridge region (a disk).
+diamond <- tibble(b1 = c(s_budget, 0, -s_budget, 0),
+                  b2 = c(0, s_budget, 0, -s_budget))
+disk <- tibble(t = seq(0, 2 * pi, length.out = 361),
+               b1 = s_budget * cos(t),
+               b2 = s_budget * sin(t))
+
+# RSS contours and the least squares estimate.
+contour_breaks <- rss_two(b_two[1], b_two[2]) + 200 * (1:6)^2
+geometry_title <- paste(n_train,
+                        "training orders; grey ellipses = RSS contours")
 geometry_base <- ggplot(grid, aes(x = b1, y = b2)) +
   geom_hline(yintercept = 0, color = "grey70") +
   geom_vline(xintercept = 0, color = "grey70") +
-  geom_contour(aes(z = rss), breaks = rss_two(b_two[1], b_two[2]) + 200 * (1:6)^2,
-               color = "grey60", linewidth = 0.3) +
-  annotate("point", x = b_two[1], y = b_two[2], shape = 4, size = 3, stroke = 1.3) +
-  annotate("text", x = b_two[1], y = b_two[2], label = "Least squares", vjust = -1, size = 3.5) +
+  geom_contour(aes(z = rss),
+               breaks = contour_breaks,
+               color = "grey60",
+               linewidth = 0.3) +
+  annotate("point",
+           x = b_two[1],
+           y = b_two[2],
+           shape = 4,
+           size = 3,
+           stroke = 1.3) +
+  annotate("text",
+           x = b_two[1],
+           y = b_two[2],
+           label = "Least squares",
+           vjust = -1,
+           size = 3.5) +
   coord_equal(xlim = c(-2, 5), ylim = c(-2, 6)) +
   labs(x = expression(beta[1] ~ "(standardized distance)"),
        y = expression(beta[2] ~ "(standardized hour)"),
-       title = paste(n_train, "training orders; grey ellipses = RSS contours"))
+       title = geometry_title)
+
+# Add a constraint region, the contour through its estimate, and the
+# estimate.
 add_region <- function(region, b, color, linetype, label) {
   geometry_base +
-    geom_polygon(data = region, fill = color, alpha = 0.25, color = color) +
-    geom_contour(aes(z = rss), breaks = rss_two(b[1], b[2]), color = color,
-                 linetype = linetype, linewidth = 0.9) +
-    annotate("point", x = b[1], y = b[2], shape = 16, size = 3, color = color) +
+    geom_polygon(data = region,
+                 fill = color,
+                 alpha = 0.25,
+                 color = color) +
+    geom_contour(aes(z = rss),
+                 breaks = rss_two(b[1], b[2]),
+                 color = color,
+                 linetype = linetype,
+                 linewidth = 0.9) +
+    annotate("point",
+             x = b[1],
+             y = b[2],
+             shape = 16,
+             size = 3,
+             color = color) +
     labs(caption = label)
 }
+
 # Least squares estimates whose constrained estimate at this budget is the
-# corner b_lasso2: b_lasso2 + mu * solve(A2) %*% g, mu >= 0, with g a normal to
-# the region there. The diamond has normals g = (u, 1), |u| <= 1, a wedge; the
-# disk has the single normal b_lasso2, a ray.
+# corner b_lasso2: b_lasso2 + mu * solve(A2) %*% g, mu >= 0, with g a normal
+# to the region there. The diamond has normals g = (u, 1), |u| <= 1, a wedge;
+# the disk has the single normal b_lasso2, a ray.
 A2_inv <- solve(A2)
-normal <- function(u) replace(c(u, u), first, sign(a[first]))
-unit <- function(v) v / sqrt(sum(v^2))
+normal <- function(u) {
+  replace(c(u, u), first, sign(a[first]))
+}
+unit <- function(v) {
+  v / sqrt(sum(v^2))
+}
 far <- 50
-wedge <- as_tibble(rbind(b_lasso2,
-                         b_lasso2 + far * unit(drop(A2_inv %*% normal(-1))),
-                         b_lasso2 + far * unit(drop(A2_inv %*% normal(1)))),
-                   .name_repair = \(x) c("b1", "b2"))
-ray_end <- b_lasso2 + far * unit(drop(A2_inv %*% b_lasso2))
-ray_angle <- atan2(abs(ray_end[-first] - b_lasso2[-first]), abs(ray_end[first] - b_lasso2[first]))
-# Inside the wedge: A2 (b_two - corner) = mu * (u, 1) with |u| <= 1.
-wedge_u <- drop(A2 %*% (b_two - b_lasso2))
-wedge_u <- wedge_u[-first] / wedge_u[first]
+
+# The wedge: the corner and a far point along each of its two edges.
+normal_low <- normal(-1)
+normal_high <- normal(1)
+edge_low <- unit(drop(A2_inv %*% normal_low))
+edge_high <- unit(drop(A2_inv %*% normal_high))
+wedge_points <- rbind(b_lasso2,
+                      b_lasso2 + far * edge_low,
+                      b_lasso2 + far * edge_high)
+wedge <- as_tibble(wedge_points, .name_repair = \(x) c("b1", "b2"))
+
+# The ray, and its angle from the first feature's axis.
+ray_direction <- unit(drop(A2_inv %*% b_lasso2))
+ray_end <- b_lasso2 + far * ray_direction
+ray_rise <- abs(ray_end[-first] - b_lasso2[-first])
+ray_run <- abs(ray_end[first] - b_lasso2[first])
+ray_angle <- atan2(ray_rise, ray_run)
+
+# Where the least squares estimate lies in the wedge:
+# A2 (b_two - corner) = mu * (u, 1) with |u| <= 1.
+wedge_normal <- drop(A2 %*% (b_two - b_lasso2))
+wedge_u <- wedge_normal[-first] / wedge_normal[first]
+
+# The wedge and the ray at the corner.
+corner_caption <- paste0(
+  "Budget ", s_budget,
+  ". Shaded: least squares estimates whose lasso estimate is the corner;\n",
+  "dashed line: those whose ridge estimate is that point."
+)
 corner_plot <- geometry_base +
   geom_polygon(data = wedge, fill = okabe_ito[5], alpha = 0.25) +
   geom_polygon(data = diamond, fill = NA, color = okabe_ito[5]) +
   geom_path(data = disk, color = okabe_ito[4]) +
-  annotate("segment", x = b_lasso2[1], y = b_lasso2[2], xend = ray_end[1], yend = ray_end[2],
-           color = okabe_ito[4], linetype = "dashed", linewidth = 0.9) +
-  annotate("point", x = b_lasso2[1], y = b_lasso2[2], shape = 16, size = 3) +
-  labs(caption = paste0("Budget ", s_budget, ". Shaded: least squares estimates whose lasso estimate is the corner;\n",
-                        "dashed line: those whose ridge estimate is that point."))
+  annotate("segment",
+           x = b_lasso2[1],
+           y = b_lasso2[2],
+           xend = ray_end[1],
+           yend = ray_end[2],
+           color = okabe_ito[4],
+           linetype = "dashed",
+           linewidth = 0.9) +
+  annotate("point",
+           x = b_lasso2[1],
+           y = b_lasso2[2],
+           shape = 16,
+           size = 3) +
+  labs(caption = corner_caption)
+
+# The four tabs.
+lasso_caption <- bquote("Lasso region" ~ abs(beta[1]) + abs(beta[2]) <=
+                          .(s_budget) *
+                          "; solid ellipse = contour through the estimate")
+ridge_caption <- bquote("Ridge region" ~ beta[1]^2 + beta[2]^2 <=
+                          .(s_budget)^2 *
+                          "; dashed ellipse = contour through the estimate")
 geometry_plots <- list(
   geometry_base,
-  add_region(diamond, b_lasso2, okabe_ito[5], "solid",
-             bquote("Lasso region" ~ abs(beta[1]) + abs(beta[2]) <= .(s_budget) *
-                      "; solid ellipse = contour through the estimate")),
-  add_region(disk, b_ridge2, okabe_ito[4], "dashed",
-             bquote("Ridge region" ~ beta[1]^2 + beta[2]^2 <= .(s_budget)^2 *
-                      "; dashed ellipse = contour through the estimate")),
-  corner_plot)
+  add_region(diamond, b_lasso2, okabe_ito[5], "solid", lasso_caption),
+  add_region(disk, b_ridge2, okabe_ito[4], "dashed", ridge_caption),
+  corner_plot
+)
 ```
 :::
 
@@ -529,32 +749,65 @@ thresholding** at $\lambda/(2n)$.
 ### Code
 ```{r soft-threshold}
 #| output: false
-soft <- function(b, t) sign(b) * pmax(abs(b) - t, 0)
+# Soft thresholding of b at t.
+soft <- function(b, t) {
+  sign(b) * pmax(abs(b) - t, 0)
+}
+
+# Orthogonalized features: sqrt(n) times an orthonormal basis for the span of
+# the standardized training features, and their least squares estimates.
 Z_orth <- sqrt(n_train) * qr.Q(qr(X_std))
-b_orth <- drop(crossprod(Z_orth, y_train - mean(y_train))) / n_train
+b_orth <- drop(crossprod(Z_orth, y_centered)) / n_train
+
+# The lasso at lambda = 150 by glmnet(), supplied lambda / (2n).
 lambda_orth <- 150
 orth_threshold <- lambda_orth / (2 * n_train)
-orth_lasso <- coef(glmnet(Z_orth, y_train, alpha = 1, lambda = orth_threshold,
-                          thresh = 1e-14))[-1, 1]
-orth_diff <- max(abs(orth_lasso - soft(b_orth, orth_threshold)))
+orth_fit <- glmnet(Z_orth,
+                   y_train,
+                   alpha = 1,
+                   lambda = orth_threshold,
+                   thresh = 1e-14)
+orth_lasso <- coef(orth_fit)[-1, 1]
+
+# Largest difference between the glmnet() estimates and soft thresholding.
+orth_soft <- soft(b_orth, orth_threshold)
+orth_diff <- max(abs(orth_lasso - orth_soft))
+
 # The same fit with the s_y of ridge regression's conversion carried over.
-orth_wrong <- coef(glmnet(Z_orth, y_train, alpha = 1, lambda = s_y * orth_threshold,
-                          thresh = 1e-14))[-1, 1]
+orth_wrong_fit <- glmnet(Z_orth,
+                         y_train,
+                         alpha = 1,
+                         lambda = s_y * orth_threshold,
+                         thresh = 1e-14)
+orth_wrong <- coef(orth_wrong_fit)[-1, 1]
+
+# Least squares, ridge, and lasso estimates as functions of the least squares
+# estimate.
 rule_labels <- c("Least squares", "Ridge", "Lasso")
-soft_plot <- tibble(b = seq(-1.1, 1.1, length.out = 401) * max(abs(b_orth))) |>
-  mutate(`Least squares` = b, Ridge = n_train / (n_train + lambda_orth) * b,
+b_range <- seq(-1.1, 1.1, length.out = 401) * max(abs(b_orth))
+rules <- tibble(b = b_range) |>
+  mutate(`Least squares` = b,
+         Ridge = n_train / (n_train + lambda_orth) * b,
          Lasso = soft(b, lambda_orth / (2 * n_train))) |>
   pivot_longer(-b, names_to = "rule", values_to = "estimate") |>
-  mutate(rule = factor(rule, levels = rule_labels)) |>
-  ggplot(aes(x = b, y = estimate)) +
+  mutate(rule = factor(rule, levels = rule_labels))
+
+# The rules as lines, the glmnet() estimates as circles.
+orth_points <- tibble(b = b_orth, estimate = orth_lasso)
+soft_title <- bquote(lambda == .(lambda_orth) * ", n =" ~ .(n_train))
+soft_plot <- ggplot(rules, aes(x = b, y = estimate)) +
   geom_line(aes(color = rule, linetype = rule), linewidth = 0.9) +
-  geom_point(data = tibble(b = b_orth, estimate = orth_lasso), shape = 1, size = 2) +
+  geom_point(data = orth_points, shape = 1, size = 2) +
   scale_color_manual(values = okabe_ito[c(1, 4, 5)]) +
   scale_linetype_manual(values = c("dotted", "dashed", "solid")) +
   coord_equal() +
-  labs(x = "Least squares estimate (orthogonalized feature)", y = "Estimate",
-       color = NULL, linetype = NULL, title = bquote(lambda == .(lambda_orth) * ", n =" ~ .(n_train)),
-       caption = "Circles: glmnet() lasso estimates for the orthogonalized training features.") +
+  labs(x = "Least squares estimate (orthogonalized feature)",
+       y = "Estimate",
+       color = NULL,
+       linetype = NULL,
+       title = soft_title,
+       caption = paste("Circles: glmnet() lasso estimates for the",
+                       "orthogonalized training features.")) +
   theme(legend.position = "bottom")
 ```
 :::
@@ -615,53 +868,106 @@ to zero, against the `r sum(orth_lasso == 0)` of soft thresholding at
 $\lambda = `r lambda_orth`$.
 
 ```{r glmnet-conversion}
-to_glmnet <- function(lambda, n = n_train) lambda / (2 * n)
-to_chapter <- function(lambda_glmnet, n = n_train) 2 * n * lambda_glmnet
+# This chapter's lambda to glmnet()'s, for a fit to n orders.
+to_glmnet <- function(lambda, n = n_train) {
+  lambda / (2 * n)
+}
+
+# glmnet()'s lambda to this chapter's.
+to_chapter <- function(lambda_glmnet, n = n_train) {
+  2 * n * lambda_glmnet
+}
 ```
 
 `glmnet()` minimizes the criterion by **coordinate descent**: it cycles
 through the coefficients, minimizing over one at a time with the others
 fixed. With the others fixed, the problem in $\beta_j$ is the one-coefficient
-problem above, with $\hat\beta_j$ replaced by the least squares coefficient
-of the partial residuals $y_i - \bar y - \sum_{j' \ne j}\beta_{j'}\tilde x_{ij'}$
-on $\tilde x_{ij}$, so each step is a soft thresholding. From here on
-$\lambda$ is this chapter's, converted where `glmnet()` is used.
+problem above, with $\hat\beta_j$ replaced by the least squares estimate from
+regressing the partial residuals
+$y_i - \bar y - \sum_{j' \ne j}\beta_{j'}\tilde x_{ij'}$ on $\tilde x_{ij}$,
+so each step is a soft thresholding. From here on $\lambda$ is this
+chapter's, converted where `glmnet()` is used.
 
-## Coefficient path
+## Estimate path
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r lasso-path}
 #| output: false
+# Lasso path fit to the training orders.
 lasso_grid <- 10^seq(3, -1, length.out = 81)
-lasso_path_fit <- glmnet(X_train, y_train, alpha = 1, lambda = to_glmnet(lasso_grid),
+lasso_path_fit <- glmnet(X_train,
+                         y_train,
+                         alpha = 1,
+                         lambda = to_glmnet(lasso_grid),
                          thresh = 1e-12)
-lasso_path <- path_data(lasso_path_fit, lasso_grid)
-lasso_path_plot <- path_plot(lasso_path, paste("Lasso coefficient path,", n_train, "training orders"))
-nonzero_plot <- tibble(lambda = lasso_grid, Lasso = lasso_path_fit$df, Ridge = p) |>
+lasso_path_data <- path_data(lasso_path_fit, lasso_grid)
+lasso_title <- paste("Lasso estimate path,", n_train, "training orders")
+lasso_path_plot <- path_plot(lasso_path_data, lasso_title)
+
+# Number of nonzero estimates against lambda, lasso and ridge regression.
+ridge_lasso <- c("Ridge", "Lasso")
+nonzero_counts <- tibble(lambda = lasso_grid,
+                         Lasso = lasso_path_fit$df,
+                         Ridge = p) |>
   pivot_longer(-lambda, names_to = "method", values_to = "n") |>
-  mutate(method = factor(method, levels = c("Ridge", "Lasso"))) |>
-  ggplot(aes(x = lambda, y = n, color = method, linetype = method)) +
+  mutate(method = factor(method, levels = ridge_lasso))
+nonzero_plot <- ggplot(nonzero_counts,
+                       aes(x = lambda,
+                           y = n,
+                           color = method,
+                           linetype = method)) +
   geom_step(direction = "mid", linewidth = 0.9) +
   log_lambda +
   scale_color_manual(values = okabe_ito[c(4, 5)]) +
   scale_linetype_manual(values = c("dashed", "solid")) +
-  labs(x = expression(lambda ~ "(log scale)"), y = "Nonzero estimates",
-       color = NULL, linetype = NULL, title = paste(n_train, "training orders")) +
+  labs(x = expression(lambda ~ "(log scale)"),
+       y = "Nonzero estimates",
+       color = NULL,
+       linetype = NULL,
+       title = paste(n_train, "training orders")) +
   theme(legend.position = "bottom")
+
 # Largest lambda on the grid at which each feature is nonzero.
-entry <- lasso_path |> filter(coefficient != 0) |> group_by(feature) |>
-  summarize(lambda = max(lambda)) |> arrange(desc(lambda))
+entry <- lasso_path_data |>
+  filter(estimate != 0) |>
+  group_by(feature) |>
+  summarize(lambda = max(lambda)) |>
+  arrange(desc(lambda))
+first_entry <- names(which.max(lambda_scores))
+stopifnot(entry$feature[1] == first_entry)
+
+# Whether an estimate, along the path from the largest lambda, returns to
+# zero after entering.
+returns_to_zero <- function(estimate) {
+  is_nonzero <- estimate != 0
+  any(diff(is_nonzero) < 0)
+}
+
 # Features that return to zero after entering, as lambda decreases.
-n_left <- lasso_path |> arrange(feature, desc(lambda)) |> group_by(feature) |>
-  summarize(left = any(diff(coefficient != 0) < 0)) |> pull(left) |> sum()
-stopifnot(entry$feature[1] == names(which.max(lambda_scores)))
-df_at <- function(l) lasso_path_fit$df[which.min(abs(lasso_grid - l))]
+n_left <- lasso_path_data |>
+  arrange(feature, desc(lambda)) |>
+  group_by(feature) |>
+  summarize(left = returns_to_zero(estimate)) |>
+  pull(left) |>
+  sum()
+
+# Number of nonzero estimates at the grid value of lambda nearest l.
+df_at <- function(l) {
+  lasso_path_fit$df[which.min(abs(lasso_grid - l))]
+}
+
 # Largest absolute correlation between two features in the training orders.
 feature_cor <- cor(X_train)
-max_cor <- max(abs(feature_cor[upper.tri(feature_cor)]))
+feature_cors <- feature_cor[upper.tri(feature_cor)]
+max_cor <- max(abs(feature_cors))
+
+# Least squares, and its largest standardized difference from the lasso at
+# the smallest lambda.
 ls_fit <- lm(time_to_delivery ~ ., data = train)
-small_diff <- max(abs(coef(lasso_path_fit)[-1, length(lasso_grid)] - coef(ls_fit)[-1]) * x_scale)
+ls_slopes <- coef(ls_fit)[-1]
+lasso_smallest <- coef(lasso_path_fit)[-1, length(lasso_grid)]
+small_diff <- max(abs(lasso_smallest - ls_slopes) * x_scale)
 ```
 :::
 
@@ -671,7 +977,7 @@ $`r big_math(max(lasso_grid))`$, and the number of nonzero estimates,
 with ridge regression's for comparison.
 
 ::: {.panel-tabset}
-#### Coefficient path
+#### Estimate path
 ```{r lasso-path-figure}
 #| echo: false
 #| fig-width: 8
@@ -715,11 +1021,22 @@ Ridge regression is cross-validated on the same folds and grid as in the
 ridge lecture.
 
 ```{r cv-lasso}
-cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1, lambda = to_glmnet(lasso_grid),
-                      foldid = fold_id, thresh = 1e-12)
+# Lasso cross-validated on the training folds.
+cv_lasso <- cv.glmnet(X_train,
+                      y_train,
+                      alpha = 1,
+                      lambda = to_glmnet(lasso_grid),
+                      foldid = fold_id,
+                      thresh = 1e-12)
 lambda_cv <- to_chapter(cv_lasso$lambda.min)
-cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0, lambda = to_glmnet_ridge(lambda_grid),
-                      foldid = fold_id, thresh = 1e-12)
+
+# Ridge regression cross-validated on the same folds.
+cv_ridge <- cv.glmnet(X_train,
+                      y_train,
+                      alpha = 0,
+                      lambda = to_glmnet_ridge(lambda_grid),
+                      foldid = fold_id,
+                      thresh = 1e-12)
 lambda_cv_ridge <- cv_ridge$lambda.min * n_train / s_y
 ```
 
@@ -732,67 +1049,140 @@ lambda_cv_ridge <- cv_ridge$lambda.min * n_train / s_y
 # from a sample gets estimate 0, which at lambda = 0 is least squares on
 # the rest; this is the ridge lecture's least squares in every fold and sample.
 ridge_path <- function(X, y, lambdas) {
+  # Standardize the features, leaving a constant feature unscaled.
   center <- colMeans(X)
   scale <- apply(X, 2, sd_n)
   scale[scale == 0] <- 1
-  sv <- svd(sweep(sweep(X, 2, center), 2, scale, "/"))
+  X_c <- sweep(X, 2, center)
+  Z <- sweep(X_c, 2, scale, "/")
+
+  # Shrink each singular direction, one column per lambda.
+  sv <- svd(Z)
   shrink <- outer(sv$d, lambdas, \(d, l) ifelse(d > 1e-8, d / (d^2 + l), 0))
-  b <- (sv$v %*% (shrink * drop(crossprod(sv$u, y - mean(y))))) / scale
+  y_centered <- y - mean(y)
+  u_y <- drop(crossprod(sv$u, y_centered))
+  b <- (sv$v %*% (shrink * u_y)) / scale
+
+  # Intercept, then slopes, on the original scale.
   rbind(`(Intercept)` = mean(y) - colSums(b * center), b)
 }
-fold_size <- tabulate(fold_id)
-ls_fold_mse <- map_dbl(seq_len(n_folds), \(l) {
+
+# Least squares MSE on the orders left out of fold l.
+ls_fold <- function(l) {
   out <- fold_id == l
-  mse(y_train[out], cbind(1, X_train[out, ]) %*% ridge_path(X_train[!out, ], y_train[!out], 0))
-})
+  b <- ridge_path(X_train[!out, ], y_train[!out], 0)
+  y_hat <- cbind(1, X_train[out, ]) %*% b
+  mse(y_train[out], y_hat)
+}
+
+# Least squares cross-validation estimate over the same folds.
+fold_size <- tabulate(fold_id)
+ls_fold_mse <- map_dbl(seq_len(n_folds), ls_fold)
 cv_ls <- weighted.mean(ls_fold_mse, fold_size)
+
 # One standard error over the folds, computed as cv.glmnet() computes it.
-ls_se <- sqrt(weighted.mean((ls_fold_mse - cv_ls)^2, fold_size) / (n_folds - 1))
+ls_var <- weighted.mean((ls_fold_mse - cv_ls)^2, fold_size)
+ls_se <- sqrt(ls_var / (n_folds - 1))
+
+# Smallest lasso and ridge cross-validation estimates.
 cv_lambda <- to_chapter(cv_lasso$lambda)
 cv_min <- min(cv_lasso$cvm)
 i_min <- which.min(cv_lasso$cvm)
 i_min_ridge <- which.min(cv_ridge$cvm)
-# Share of the lasso's one-standard-error interval covered by ridge regression's.
-ridge_overlap <- max(0, min(cv_lasso$cvup[i_min], cv_ridge$cvup[i_min_ridge]) -
-                       max(cv_lasso$cvlo[i_min], cv_ridge$cvlo[i_min_ridge])) /
-  (cv_lasso$cvup[i_min] - cv_lasso$cvlo[i_min])
 nonzero_cv <- cv_lasso$nzero[[cv_lasso$index["min", 1]]]
+
+# Grid values whose estimate is within 5% of the smallest.
 near_min <- cv_lasso$cvm < 1.05 * cv_min
-# Cross-validation with this chapter's lambda applied exactly in every fold.
-cv_exact <- rowSums(sapply(seq_len(n_folds), \(l) {
+
+# Sums of squared errors on the orders left out of fold l, with this
+# chapter's lambda applied exactly to the orders the fold is fit to.
+fold_sse <- function(l) {
   out <- fold_id == l
-  fit <- glmnet(X_train[!out, ], y_train[!out], alpha = 1,
-                lambda = to_glmnet(lasso_grid, sum(!out)), thresh = 1e-12)
-  colSums((y_train[out] - predict(fit, X_train[out, ]))^2)
-})) / n_train
-ref_labels <- c("Least squares", "Ridge, smallest estimate")
-cv_plot <- ggplot(tibble(lambda = cv_lambda, cv = cv_lasso$cvm, low = cv_lasso$cvlo,
-                         high = cv_lasso$cvup), aes(x = lambda, y = cv)) +
-  geom_linerange(aes(ymin = low, ymax = high), color = "grey70") +
-  geom_line() +
-  geom_hline(data = tibble(fit = factor(ref_labels, levels = ref_labels),
-                           cv = c(cv_ls, min(cv_ridge$cvm))),
-             aes(yintercept = cv, color = fit, linetype = fit), linewidth = 0.7) +
-  geom_vline(xintercept = lambda_cv, linetype = "dotted", color = okabe_ito[5]) +
-  scale_color_manual(values = okabe_ito[c(1, 4)]) +
-  scale_linetype_manual(values = c("dashed", "dotdash")) +
+  n_in <- sum(!out)
+  fit <- glmnet(X_train[!out, ],
+                y_train[!out],
+                alpha = 1,
+                lambda = to_glmnet(lasso_grid, n_in),
+                thresh = 1e-12)
+  y_hat <- predict(fit, X_train[out, ])
+  colSums((y_train[out] - y_hat)^2)
+}
+
+# Cross-validation with this chapter's lambda applied exactly in every fold.
+fold_sse_all <- sapply(seq_len(n_folds), fold_sse)
+cv_exact <- rowSums(fold_sse_all) / n_train
+
+# Cross-validation estimates against lambda, lasso and ridge regression.
+method_levels <- c("Lasso", "Ridge regression")
+lasso_curve <- tibble(method = method_levels[1],
+                      lambda = cv_lambda,
+                      cv = cv_lasso$cvm)
+ridge_curve <- tibble(method = method_levels[2],
+                      lambda = cv_ridge$lambda * n_train / s_y,
+                      cv = cv_ridge$cvm)
+cv_curves <- bind_rows(lasso_curve, ridge_curve) |>
+  mutate(method = factor(method, levels = method_levels))
+
+# The chosen lambda of each, and its estimate, labeled (as plotmath) in the
+# empty lower left of each panel.
+panel_left <- c(min(lasso_curve$lambda), min(ridge_curve$lambda))
+cv_min_ridge <- min(cv_ridge$cvm)
+cv_chosen <- tibble(method = factor(method_levels, levels = method_levels),
+                    lambda = c(lambda_cv, lambda_cv_ridge),
+                    cv = c(cv_min, cv_min_ridge))
+chosen_lambda_text <- fmt(cv_chosen$lambda, 1)
+chosen_cv_text <- fmt(cv_chosen$cv)
+chosen_text <- paste0("'Chosen'~lambda == '", chosen_lambda_text,
+                      "'*', estimate ", chosen_cv_text, "'")
+chosen_label <- cv_chosen |>
+  mutate(label = chosen_text,
+         lambda = panel_left,
+         cv = cv_min)
+
+# Least squares, lambda = 0, labeled above its line at the left of each panel.
+ls_cv_text <- fmt(cv_ls)
+ls_label <- tibble(method = factor(method_levels, levels = method_levels),
+                   lambda = panel_left,
+                   cv = cv_ls,
+                   label = paste0("'Least squares'~(lambda == 0)*': ",
+                                  ls_cv_text, "'"))
+
+# The two curves, the least squares value, and the chosen lambdas.
+cv_plot <- ggplot(cv_curves, aes(x = lambda, y = cv)) +
+  geom_hline(yintercept = cv_ls, linetype = "dashed") +
+  geom_line(linewidth = 0.8) +
+  geom_vline(data = cv_chosen,
+             aes(xintercept = lambda),
+             linetype = "dotted") +
+  geom_point(data = cv_chosen, size = 2.5) +
+  geom_text(data = chosen_label,
+            aes(label = label),
+            parse = TRUE,
+            hjust = 0,
+            vjust = 0,
+            size = 3.5) +
+  geom_text(data = ls_label,
+            aes(label = label),
+            parse = TRUE,
+            hjust = 0,
+            vjust = -0.6,
+            size = 3.5) +
+  facet_wrap(~ method, scales = "free_x") +
   log_lambda +
-  labs(x = expression("Lasso" ~ lambda ~ "(log scale)"),
-       y = paste0(n_folds, "-fold CV estimate of test MSE"), color = NULL, linetype = NULL,
-       title = paste(n_train, "training orders; dotted line = smallest lasso estimate"),
-       caption = "Grey bars: plus and minus one standard error over the folds.") +
-  theme(legend.position = "bottom")
+  labs(x = expression(lambda ~ "(log scale)"),
+       y = paste0(n_folds, "-fold CV estimate of test MSE"),
+       title = paste(n_train, "training orders"))
 ```
 :::
 
-The figure plots $\text{CV}_{(`r n_folds`)}(\lambda)$ for the lasso, with
-the estimates for least squares and for ridge regression at its chosen
-$\lambda$ as horizontal lines.
+The figure plots $\text{CV}_{(`r n_folds`)}(\lambda)$ for the lasso and for
+ridge regression, each against its own $\lambda$, with the least squares
+estimate ($\lambda = 0$) as a dashed line and each chosen $\lambda$ marked.
 
 ```{r cv-figure}
 #| echo: false
-#| fig-width: 7
-#| fig-height: 4.6
+#| fig-width: 8
+#| fig-height: 4.2
 cv_plot
 ```
 
@@ -814,18 +1204,13 @@ $\lambda = `r fmt(min(cv_lambda[near_min]), 0)`$ to
 down to `r min(cv_lasso$nzero[near_min])` nonzero lasso estimates, the
 cross-validation estimate is within 5% of its smallest value.
 
-These estimates are uncertain. Plus or minus one standard error is
+Plus or minus one standard error over the folds, the estimate is
 `r fmt(cv_lasso$cvlo[i_min])` to `r fmt(cv_lasso$cvup[i_min])` for the lasso
-at its minimum and `r fmt(cv_ls - ls_se)` to `r fmt(cv_ls + ls_se)` for least
-squares, intervals that
+at its minimum, `r fmt(cv_ridge$cvlo[i_min_ridge])` to
+`r fmt(cv_ridge$cvup[i_min_ridge])` for ridge regression at its minimum, and
+`r fmt(cv_ls - ls_se)` to `r fmt(cv_ls + ls_se)` for least squares, so the
+lasso and least squares intervals
 `r if (cv_lasso$cvup[i_min] > cv_ls - ls_se) paste0("overlap only from ", fmt(cv_ls - ls_se), " to ", fmt(cv_lasso$cvup[i_min])) else "do not overlap"`.
-The difference, `r fmt(cv_ls - cv_min)`, is
-`r fmt((cv_ls - cv_min) / ls_se, 1)` times the least squares standard error
-and `r fmt((cv_ls - cv_min) / cv_lasso$cvsd[i_min], 1)` times the lasso's.
-For ridge regression at its minimum the interval is
-`r fmt(cv_ridge$cvlo[i_min_ridge])` to `r fmt(cv_ridge$cvup[i_min_ridge])`,
-which covers
-`r pct(ridge_overlap, 0)` of the lasso's.
 
 ### Test evaluation
 
@@ -834,10 +1219,14 @@ predicting with `s = "lambda.min"` uses the refit. The three chosen models
 are evaluated once on the `r big(n_test)` test orders.
 
 ```{r test-evaluation}
+# Predictions of the three chosen models at the test orders.
 lasso_test_pred <- drop(predict(cv_lasso, X_test, s = "lambda.min"))
 ridge_test_pred <- drop(predict(cv_ridge, X_test, s = "lambda.min"))
 ls_test_pred <- predict(ls_fit, test)
-test_mse <- c(ls = mse(y_test, ls_test_pred), ridge = mse(y_test, ridge_test_pred),
+
+# Test MSE of each.
+test_mse <- c(ls = mse(y_test, ls_test_pred),
+              ridge = mse(y_test, ridge_test_pred),
               lasso = mse(y_test, lasso_test_pred))
 ```
 
@@ -845,22 +1234,38 @@ test_mse <- c(ls = mse(y_test, ls_test_pred), ridge = mse(y_test, ridge_test_pre
 ### Code
 ```{r test-table}
 #| output: false
-train_mse <- c(mse(y_train, fitted(ls_fit)),
-               mse(y_train, predict(cv_ridge, X_train, s = "lambda.min")),
-               mse(y_train, predict(cv_lasso, X_train, s = "lambda.min")))
-test_table <- tibble(
-  Method = c("Least squares", "Ridge", "Lasso"),
-  lambda = c("0", fmt(lambda_cv_ridge, 1), fmt(lambda_cv, 1)),
-  kept = c(p, p, nonzero_cv),
-  train = fmt(train_mse), cv = fmt(c(cv_ls, min(cv_ridge$cvm), cv_min)),
-  test = fmt(test_mse)) |>
-  knitr::kable(col.names = c("Method", "$\\lambda$", "Nonzero estimates", "Training MSE",
-                             paste0(n_folds, "-fold CV estimate"), "Test MSE"),
-               align = "lrrrrr")
+# Training MSE of the three chosen models.
+ridge_train_pred <- predict(cv_ridge, X_train, s = "lambda.min")
+lasso_train_pred <- predict(cv_lasso, X_train, s = "lambda.min")
+ls_train_pred <- fitted(ls_fit)
+train_mse <- c(mse(y_train, ls_train_pred),
+               mse(y_train, ridge_train_pred),
+               mse(y_train, lasso_train_pred))
+
+# Table of lambda, number of nonzero estimates, and the three error
+# estimates.
+cv_estimates <- c(cv_ls, cv_min_ridge, cv_min)
+lambda_text <- c("0", fmt(lambda_cv_ridge, 1), fmt(lambda_cv, 1))
+test_columns <- c("Method",
+                  "$\\lambda$",
+                  "Nonzero estimates",
+                  "Training MSE",
+                  paste0(n_folds, "-fold CV estimate"),
+                  "Test MSE")
+test_table <- tibble(Method = c("Least squares", "Ridge", "Lasso"),
+                     lambda = lambda_text,
+                     kept = c(p, p, nonzero_cv),
+                     train = fmt(train_mse),
+                     cv = fmt(cv_estimates),
+                     test = fmt(test_mse)) |>
+  knitr::kable(col.names = test_columns, align = "lrrrrr")
+
 # Paired comparison over the test orders: ridge squared error minus lasso's.
 sq_diff <- (y_test - ridge_test_pred)^2 - (y_test - lasso_test_pred)^2
-# Cross-validation estimate over test MSE, for least squares, ridge, and lasso.
-cv_over_test <- c(cv_ls, min(cv_ridge$cvm), cv_min) / test_mse
+
+# Cross-validation estimate over test MSE, for least squares, ridge, and
+# lasso.
+cv_over_test <- cv_estimates / test_mse
 stopifnot(all(cv_over_test > 1))
 ```
 :::
@@ -891,49 +1296,78 @@ addition, each the smallest over a grid of $\lambda$ values, selected for
 being low, so as estimates of the chosen model's error they are optimistic.
 The least squares estimate involves no such choice.
 
-### Lasso coefficients
+### Lasso estimates
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r lasso-coefficients}
 #| output: false
+# Estimates of the three chosen models on the original scale.
 b_lasso <- coef(cv_lasso, s = "lambda.min")[, 1]
 b_ridge <- coef(cv_ridge, s = "lambda.min")[, 1]
 b_ls <- coef(ls_fit)
+
+# One row per feature and fit.
 feature_order <- colnames(X_train)
+feature_levels <- rev(feature_order)
 fit_labels <- c("Least squares", "Ridge", "Lasso")
-coef_plot <- tibble(feature = factor(rep(feature_order, 3), levels = rev(feature_order)),
-                    estimate = c(b_ls[feature_order], b_ridge[feature_order], b_lasso[feature_order]),
-                    fit = factor(rep(fit_labels, each = p), levels = fit_labels)) |>
-  ggplot(aes(x = estimate, y = feature, color = fit, shape = fit)) +
+feature_rep <- rep(feature_order, 3)
+fit_rep <- rep(fit_labels, each = p)
+fit_estimates <- tibble(
+  feature = factor(feature_rep, levels = feature_levels),
+  estimate = c(b_ls[feature_order],
+               b_ridge[feature_order],
+               b_lasso[feature_order]),
+  fit = factor(fit_rep, levels = fit_labels)
+)
+
+# The estimates of the three fits, feature by feature.
+estimate_plot <- ggplot(fit_estimates,
+                        aes(x = estimate,
+                            y = feature,
+                            color = fit,
+                            shape = fit)) +
   geom_vline(xintercept = 0, linetype = "dotted") +
   geom_point(size = 2, position = position_dodge(width = 0.7)) +
   scale_color_manual(values = okabe_ito[c(1, 4, 5)]) +
   scale_shape_manual(values = c(1, 17, 16)) +
-  labs(x = "Coefficient (minutes per unit of the feature)", y = NULL, color = NULL,
-       shape = NULL, title = paste(n_train, "training orders")) +
+  labs(x = "Estimate (minutes per unit of the feature)",
+       y = NULL,
+       color = NULL,
+       shape = NULL,
+       title = paste(n_train, "training orders")) +
   theme(legend.position = "bottom")
+
+# The features the lasso keeps, by kind.
 kept <- names(b_lasso)[-1][b_lasso[-1] != 0]
 kept_items <- intersect(kept, item_names)
 day_names <- feature_order[str_starts(feature_order, "day")]
 kept_days <- intersect(kept, day_names)
 dropped_days <- str_remove(setdiff(day_names, kept), "day")
-items_pos <- sort(b_lasso[kept_items][b_lasso[kept_items] > 0], decreasing = TRUE)
-items_neg <- sort(b_lasso[kept_items][b_lasso[kept_items] < 0])
-typical <- sum(b_lasso[c("(Intercept)", "hour", "distance")] *
-                 c(1, mean(train$hour), mean(train$distance)))
+
+# Kept items with positive and with negative estimates, largest first.
+b_items <- b_lasso[kept_items]
+items_pos <- sort(b_items[b_items > 0], decreasing = TRUE)
+items_neg <- sort(b_items[b_items < 0])
+
+# Predicted time of a Monday order with no items at the training orders'
+# mean hour and mean distance.
+typical_x <- c(1, mean(train$hour), mean(train$distance))
+typical <- sum(b_lasso[c("(Intercept)", "hour", "distance")] * typical_x)
+
+# Nonzero lasso estimates smaller in absolute value than least squares'.
 n_shrunk <- sum(abs(b_lasso[kept]) < abs(b_ls[kept]))
 ```
 :::
 
-The figure compares the coefficients of the three fits, on the original
+The figure compares the estimates of the three fits, on the original
 scale.
 
 ```{r coef-figure}
 #| echo: false
 #| fig-width: 7.5
 #| fig-height: 8.5
-coef_plot
+estimate_plot
 ```
 
 Read in order,
@@ -978,7 +1412,9 @@ sample.
 Of the `r length(kept)` nonzero lasso estimates, `r n_shrunk` are smaller
 in absolute value than their least squares counterparts. Nonzero lasso
 estimates are shrunken toward zero, by $\lambda/(2n)$ in the orthogonal
-case, so they are biased; the repeated samples below show the bias. And because the features were selected using the
+case, so the lasso **estimator**, the rule that turns a training sample into
+an estimate, is biased toward zero for a nonzero coefficient, as the repeated
+samples below show. And because the features were selected using the
 same data, the standard errors, $t$-statistics, and $p$-values that `lm()`
 would report, for the lasso fit or for least squares refit to the selected
 features, do not apply, as in the subset selection lecture. `glmnet()`
@@ -989,85 +1425,156 @@ reports none.
 ### Test MSE
 
 ```{r repeated-design}
+# Number of training samples of each size, and number of test orders at
+# which every prediction is made.
 n_samples <- 500
-n_eval <- 4000
+n_predict <- 4000
 ```
 
-The ridge lecture divided the test orders into `r big(n_eval)` evaluation
-orders and a pool of `r big(n_test - n_eval)`, and drew $M = `r n_samples`$
-samples of $n$ pool orders. The next random draws here are the same, so the
-samples, and the folds drawn within each, are the ridge lecture's. In each
-sample $\lambda$ is chosen by `r n_folds`-fold cross-validation, for the
-lasso and for ridge regression on the same folds, each is refit, and its MSE
-at the evaluation orders is compared with that of least squares fit to the
-same sample, for $n = `r n_train`$ and $n = `r n_large`$.
+As in the ridge lecture, `r big(n_predict)` of the `r big(n_test)` test
+orders are the test orders at which every prediction is made, and the
+remaining `r big(n_test - n_predict)` test orders are the orders from which
+the repeated training samples are drawn: $M = `r n_samples`$ samples of $n$
+of the remaining test orders. These random draws repeat, in the same order,
+those of the ridge lecture, so the samples and the folds drawn within each
+are identical in the two lectures. In each sample $\lambda$ is chosen by `r n_folds`-fold
+cross-validation, for the lasso and for ridge regression on the same folds,
+each is refit, and its MSE at the `r big(n_predict)` test orders is compared
+with that of least squares fit to the same sample, for $n = `r n_train`$ and
+$n = `r n_large`$.
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r repeated-samples}
 #| output: false
-eval_rows <- sample(n_test, n_eval)
-evaluation <- test[eval_rows, ]
-pool <- test[-eval_rows, ]
-X_eval <- model_matrix(evaluation)
-y_eval <- evaluation$time_to_delivery
-X_pool <- model_matrix(pool)
-y_pool <- pool$time_to_delivery
-sample_ids <- map(seq_len(n_samples), \(s) sample(nrow(pool), n_train))
-sample_ids_large <- map(seq_len(n_samples), \(s) sample(nrow(pool), n_large))
-procedure <- function(ids) {
-  map(ids, \(id) {
-    X <- X_pool[id, ]
-    y <- y_pool[id]
-    n <- length(y)
-    folds <- sample(rep(seq_len(n_folds), length.out = n))
-    cv_r <- cv.glmnet(X, y, alpha = 0, lambda = lambda_grid * sd_n(y) / n,
-                      foldid = folds, thresh = 1e-10)
-    cv_l <- cv.glmnet(X, y, alpha = 1, lambda = to_glmnet(lasso_grid, n),
-                      foldid = folds, thresh = 1e-10)
-    b_ls_s <- setNames(ridge_path(X, y, 0)[, 1], c("(Intercept)", colnames(X)))
-    b_lasso_s <- coef(cv_l, s = "lambda.min")[, 1]
-    b_ridge_s <- coef(cv_r, s = "lambda.min")[, 1]
-    tibble(n = n, ls = mse(y_eval, cbind(1, X_eval) %*% b_ls_s),
-           ridge = mse(y_eval, predict(cv_r, X_eval, s = "lambda.min")),
-           lasso = mse(y_eval, predict(cv_l, X_eval, s = "lambda.min")),
-           kept = list(b_lasso_s[-1] != 0),
-           coefs = list(tibble(feature = c("hour", "distance"),
-                               `Least squares` = b_ls_s[feature], Ridge = b_ridge_s[feature],
-                               Lasso = b_lasso_s[feature])))
-  }) |>
+# Divide the test orders: those at which every prediction is made, and the
+# remaining test orders, from which the training samples are drawn.
+predict_rows <- sample(n_test, n_predict)
+test_predict <- test[predict_rows, ]
+test_rest <- test[-predict_rows, ]
+X_predict <- model_matrix(test_predict)
+y_predict <- test_predict$time_to_delivery
+X_rest <- model_matrix(test_rest)
+y_rest <- test_rest$time_to_delivery
+
+# Training samples of n_train and of n_large of the remaining test orders.
+n_rest <- nrow(test_rest)
+sample_ids <- map(seq_len(n_samples), \(s) sample(n_rest, n_train))
+sample_ids_large <- map(seq_len(n_samples), \(s) sample(n_rest, n_large))
+
+# Fit least squares, ridge regression, and the lasso to one training sample,
+# with lambda chosen by cross-validation on the same folds for both
+# penalties, and compute each fit's MSE at the test orders.
+fit_sample <- function(id) {
+  # The training sample and its folds.
+  X <- X_rest[id, ]
+  y <- y_rest[id]
+  n <- length(y)
+  fold_labels <- rep(seq_len(n_folds), length.out = n)
+  folds <- sample(fold_labels)
+
+  # Ridge regression and the lasso, cross-validated.
+  cv_r <- cv.glmnet(X,
+                    y,
+                    alpha = 0,
+                    lambda = lambda_grid * sd_n(y) / n,
+                    foldid = folds,
+                    thresh = 1e-10)
+  cv_l <- cv.glmnet(X,
+                    y,
+                    alpha = 1,
+                    lambda = to_glmnet(lasso_grid, n),
+                    foldid = folds,
+                    thresh = 1e-10)
+
+  # Estimates of the three fits on the original scale.
+  ls_estimates <- ridge_path(X, y, 0)[, 1]
+  estimate_names <- c("(Intercept)", colnames(X))
+  b_ls_s <- setNames(ls_estimates, estimate_names)
+  b_lasso_s <- coef(cv_l, s = "lambda.min")[, 1]
+  b_ridge_s <- coef(cv_r, s = "lambda.min")[, 1]
+
+  # Predictions at the test orders.
+  ls_pred <- cbind(1, X_predict) %*% b_ls_s
+  ridge_pred <- predict(cv_r, X_predict, s = "lambda.min")
+  lasso_pred <- predict(cv_l, X_predict, s = "lambda.min")
+
+  # MSEs, the features the lasso keeps, and the hour and distance estimates.
+  two_estimates <- tibble(feature = c("hour", "distance"),
+                          `Least squares` = b_ls_s[feature],
+                          Ridge = b_ridge_s[feature],
+                          Lasso = b_lasso_s[feature])
+  tibble(n = n,
+         ls = mse(y_predict, ls_pred),
+         ridge = mse(y_predict, ridge_pred),
+         lasso = mse(y_predict, lasso_pred),
+         kept = list(b_lasso_s[-1] != 0),
+         estimates = list(two_estimates))
+}
+
+# Fit every training sample of one size, one row per sample.
+fit_samples <- function(ids) {
+  map(ids, fit_sample) |>
     list_rbind()
 }
-reps <- bind_rows(procedure(sample_ids), procedure(sample_ids_large))
-rep_summary <- reps |> group_by(n) |>
-  summarize(lasso_beats_ls = mean(lasso < ls), lasso_beats_ridge = mean(lasso < ridge),
+
+# Both sizes, in this order, so the folds are the ridge lecture's.
+reps_small <- fit_samples(sample_ids)
+reps_large <- fit_samples(sample_ids_large)
+reps <- bind_rows(reps_small, reps_large)
+
+# Share of samples in which one method beats another, and average MSEs.
+rep_summary <- reps |>
+  group_by(n) |>
+  summarize(lasso_beats_ls = mean(lasso < ls),
+            lasso_beats_ridge = mean(lasso < ridge),
             ridge_beats_ls = mean(ridge < ls),
-            mse_ls = mean(ls), mse_ridge = mean(ridge), mse_lasso = mean(lasso))
-rs <- function(size, col) rep_summary[[col]][rep_summary$n == size]
+            mse_ls = mean(ls),
+            mse_ridge = mean(ridge),
+            mse_lasso = mean(lasso))
+
+# One summary for one sample size.
+rs <- function(size, col) {
+  rep_summary[[col]][rep_summary$n == size]
+}
+
 # Per-sample gain over least squares with n = 100, and where this training
 # sample's test gain falls among them.
-sample_gain <- with(filter(reps, n == n_train), 1 - lasso / ls)
+reps_100 <- filter(reps, n == n_train)
+sample_gain <- 1 - reps_100$lasso / reps_100$ls
 test_gain <- 1 - test_mse[["lasso"]] / test_mse[["ls"]]
 gain_range <- quantile(sample_gain, c(0.05, 0.95))
+
+# Percent change in MSE relative to least squares, per sample.
 size_labels <- paste("n =", c(n_train, n_large))
-rep_plot <- reps |>
-  transmute(n = factor(paste("n =", n), levels = size_labels),
-            Ridge = 100 * (ridge / ls - 1), Lasso = 100 * (lasso / ls - 1)) |>
+rep_changes <- reps |>
+  mutate(size = paste("n =", n)) |>
+  transmute(n = factor(size, levels = size_labels),
+            Ridge = 100 * (ridge / ls - 1),
+            Lasso = 100 * (lasso / ls - 1)) |>
   pivot_longer(-n, names_to = "method", values_to = "change") |>
-  mutate(method = factor(method, levels = c("Ridge", "Lasso"))) |>
-  ggplot(aes(x = method, y = change)) +
+  mutate(method = factor(method, levels = ridge_lasso))
+
+# Their distribution for each method and sample size.
+rep_y <- paste0("Change in MSE at the ", big(n_predict), " test orders\n",
+                "relative to least squares (%)")
+rep_plot <- ggplot(rep_changes, aes(x = method, y = change)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
-  geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75),
+  geom_violin(fill = "grey90",
+              scale = "width",
+              quantiles = c(0.25, 0.5, 0.75),
               quantile.linetype = "solid") +
   facet_wrap(~ n) +
-  labs(x = NULL, y = "Change in MSE at the evaluation orders\nrelative to least squares (%)",
+  labs(x = NULL,
+       y = rep_y,
        title = paste(n_samples, "training samples of each size"),
-       caption = "Lines = quartiles and median; below 0 = better than least squares.")
+       caption = paste("Lines = quartiles and median;",
+                       "below 0 = better than least squares."))
 ```
 :::
 
-The figure plots, for each sample, the percent change in MSE relative to
-least squares.
+The figure plots, for each sample, the percent change in MSE at the
+`r big(n_predict)` test orders relative to least squares.
 
 ```{r rep-figure}
 #| echo: false
@@ -1112,30 +1619,60 @@ neither penalty improves on it on average.
 ### Code
 ```{r selection}
 #| output: false
-kept_100 <- do.call(rbind, filter(reps, n == n_train)$kept)
-kept_300 <- do.call(rbind, filter(reps, n == n_large)$kept)
-freq_plot <- tibble(feature = factor(rep(feature_order, 2), levels = rev(feature_order)),
-                    share = c(colMeans(kept_100), colMeans(kept_300)),
-                    n = factor(rep(size_labels, each = p), levels = size_labels)) |>
-  ggplot(aes(x = share, y = feature, color = n, shape = n)) +
+# Which features the lasso keeps, one row per training sample.
+reps_300 <- filter(reps, n == n_large)
+kept_100 <- do.call(rbind, reps_100$kept)
+kept_300 <- do.call(rbind, reps_300$kept)
+
+# Share of samples in which the lasso keeps each feature.
+share_100 <- colMeans(kept_100)
+share_300 <- colMeans(kept_300)
+share_features <- rep(feature_order, 2)
+size_rep <- rep(size_labels, each = p)
+keep_shares <- tibble(
+  feature = factor(share_features, levels = feature_levels),
+  share = c(share_100, share_300),
+  n = factor(size_rep, levels = size_labels)
+)
+
+# Feature labels, starred if the lasso fit to the training orders keeps them.
+mark_kept <- function(f) {
+  if_else(f %in% kept, paste0(f, " *"), f)
+}
+
+# The shares, one row per feature.
+freq_plot <- ggplot(keep_shares,
+                    aes(x = share,
+                        y = feature,
+                        color = n,
+                        shape = n)) +
   geom_point(size = 2) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
-  scale_y_discrete(labels = \(f) if_else(f %in% kept, paste0(f, " *"), f)) +
+  scale_y_discrete(labels = mark_kept) +
   scale_color_manual(values = okabe_ito[c(5, 4)]) +
   scale_shape_manual(values = c(16, 17)) +
-  labs(x = "Share of samples in which the lasso keeps the feature", y = NULL,
-       color = NULL, shape = NULL, title = paste(n_samples, "training samples of each size"),
+  labs(x = "Share of samples in which the lasso keeps the feature",
+       y = NULL,
+       color = NULL,
+       shape = NULL,
+       title = paste(n_samples, "training samples of each size"),
        caption = "* = kept by the lasso fit to the training orders.") +
   theme(legend.position = "bottom")
+
+# Number of features kept per sample, and the items kept most often.
 size_100 <- rowSums(kept_100)
 item_share <- colMeans(kept_100[, item_names])
 top_share <- names(sort(item_share, decreasing = TRUE))[1:2]
-# Outside the workflow, for illustration: least squares on the evaluation orders.
-eval_coefs <- summary(lm(time_to_delivery ~ ., data = evaluation))$coefficients[item_names, ]
-eval_slow <- eval_coefs[, "Estimate"] > 0 & eval_coefs[, "Pr(>|t|)"] < 0.05
-eval_top <- names(sort(eval_coefs[, "Estimate"], decreasing = TRUE))[1:2]
 top_item <- names(which.max(item_share))
 neg_item <- names(items_neg)[1]
+
+# A reference outside the workflow: the least squares fit to the test orders
+# at which every prediction is made. It uses test orders to fit a model, so
+# it tests nothing.
+ref_fit <- lm(time_to_delivery ~ ., data = test_predict)
+ref_coefs <- summary(ref_fit)$coefficients[item_names, ]
+ref_slow <- ref_coefs[, "Estimate"] > 0 & ref_coefs[, "Pr(>|t|)"] < 0.05
+ref_top <- names(sort(ref_coefs[, "Estimate"], decreasing = TRUE))[1:2]
 ```
 :::
 
@@ -1157,83 +1694,124 @@ and the `r n_samples` samples give `r nrow(unique(kept_100))` different
 selected sets. With $n = `r n_large`$ it keeps more, a median of
 `r median(rowSums(kept_300))`, and each item in more samples.
 
-The selected items are not the only items that slow deliveries. Outside the
-workflow, least squares fit to the `r big(n_eval)` evaluation orders gives
-`r sum(eval_slow)` of the `r length(item_names)` items a positive estimate
-with $p$-value below 0.05, a median of
-`r fmt(median(eval_coefs[, "Estimate"]), 1)` minutes per item, the largest
-for `r and_list(code(eval_top))`, `r if (setequal(eval_top, top_share)) "the two items the lasso keeps most often" else paste("while the lasso keeps", and_list(code(top_share)), "most often")`;
+The selected items are not the only items that slow deliveries. The least
+squares fit to the `r big(n_predict)` test orders uses test orders to fit a
+model, so it is a reference outside the workflow and not a test of anything.
+It gives `r sum(ref_slow)` of the
+`r length(item_names)` items a positive estimate with $p$-value below 0.05,
+a median of `r fmt(median(ref_coefs[, "Estimate"]), 1)` minutes per item,
+the largest for `r and_list(code(ref_top))`, `r if (setequal(ref_top, top_share)) "the two items the lasso keeps most often" else paste("while the lasso keeps", and_list(code(top_share)), "most often")`;
 even `r code(top_item)` is kept in only `r pct(max(item_share), 0)` of the
 samples. The lasso fit to the training orders
 `r if (b_lasso[[top_item]] == 0) "drops" else "keeps"` `r code(top_item)`
 and gives `r code(neg_item)` its most negative item estimate,
-`r fmt(b_lasso[[neg_item]])` minutes, where least squares on the evaluation
-orders gives `r fmt(eval_coefs[neg_item, "Estimate"])`
-($p$-value `r fmt(eval_coefs[neg_item, "Pr(>|t|)"])`). Of the
+`r fmt(b_lasso[[neg_item]])` minutes, where the least squares fit to the
+`r big(n_predict)` test orders gives `r fmt(ref_coefs[neg_item, "Estimate"])`
+($p$-value `r fmt(ref_coefs[neg_item, "Pr(>|t|)"])`). Of the
 `r length(items_neg)` items with negative estimates in the lasso fit to
-the training orders, `r sum(eval_slow[names(items_neg)])` have a positive
-estimate with $p$-value below 0.05 on the evaluation orders. Almost every
+the training orders, `r sum(ref_slow[names(items_neg)])` have a positive
+estimate with $p$-value below 0.05 in the least squares fit to the
+`r big(n_predict)` test orders. Almost every
 item slows deliveries a little; with `r n_train` orders those small effects
 are estimated with large error, and which of them clear the threshold
 depends on the noise in the sample. A dropped item is not shown to have no
 effect.
 
-### Coefficient bias
+### Estimator bias
 
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r coefficient-bias}
 #| output: false
+# Hour and distance estimates of the three fits to each training sample of
+# n_train orders.
 two_levels <- c("hour", "distance")
-coef_reps <- filter(reps, n == n_train)$coefs |>
+estimate_reps <- reps_100$estimates |>
   list_rbind() |>
   pivot_longer(-feature, names_to = "fit", values_to = "estimate") |>
-  mutate(fit = factor(fit, levels = fit_labels), feature = factor(feature, levels = two_levels))
-eval_ls <- coef(lm(time_to_delivery ~ ., data = evaluation))[two_levels]
-coef_means <- coef_reps |>
+  mutate(fit = factor(fit, levels = fit_labels),
+         feature = factor(feature, levels = two_levels))
+
+# The least squares fit to the test orders, a reference outside the workflow.
+ref_ls <- coef(ref_fit)[two_levels]
+
+# Average estimate of each fit, for hour and distance.
+estimate_means <- estimate_reps |>
   group_by(feature, fit) |>
   summarize(mean = mean(estimate), .groups = "drop")
-cmean <- function(f, m) coef_means$mean[coef_means$feature == f & coef_means$fit == m]
-# Average shrinkage relative to the least squares average, hour then distance.
-avg_shrink <- function(m) 1 - map_dbl(two_levels, \(f) cmean(f, m) / cmean(f, "Least squares"))
-# The prose says ridge regression shrinks both more than the lasso, on average
-# and in the fit to the training orders.
-stopifnot(all(avg_shrink("Ridge") > avg_shrink("Lasso")), all(avg_shrink("Lasso") > 0),
+cmean <- function(f, m) {
+  estimate_means$mean[estimate_means$feature == f & estimate_means$fit == m]
+}
+
+# Average shrinkage relative to the least squares average, hour then
+# distance.
+avg_shrink <- function(m) {
+  ratio <- map_dbl(two_levels, \(f) cmean(f, m) / cmean(f, "Least squares"))
+  1 - ratio
+}
+
+# The prose says ridge regression shrinks both more than the lasso, on
+# average and in the fit to the training orders.
+shrink_ridge <- avg_shrink("Ridge")
+shrink_lasso <- avg_shrink("Lasso")
+stopifnot(all(shrink_ridge > shrink_lasso),
+          all(shrink_lasso > 0),
           all(b_ridge[two_levels] < b_lasso[two_levels]))
-bias_plot <- ggplot(coef_reps, aes(x = fit, y = estimate)) +
-  geom_violin(fill = "grey90", scale = "width", quantiles = c(0.25, 0.5, 0.75),
+
+# The estimates over the samples, with the reference values as lines.
+ref_lines <- tibble(feature = factor(two_levels, levels = two_levels),
+                    estimate = ref_ls)
+feature_labels <- as_labeller(c(hour = "hour (minutes per hour)",
+                                distance = "distance (minutes per mile)"))
+bias_title <- paste(n_samples, "training samples of", n_train,
+                    "remaining test orders")
+bias_caption <- paste0("Lines = quartiles and median; diamond = mean;\n",
+                       "dashed line = least squares fit to the ",
+                       big(n_predict), " test orders.")
+bias_plot <- ggplot(estimate_reps, aes(x = fit, y = estimate)) +
+  geom_violin(fill = "grey90",
+              scale = "width",
+              quantiles = c(0.25, 0.5, 0.75),
               quantile.linetype = "solid") +
   stat_summary(fun = mean, geom = "point", shape = 18, size = 3) +
-  geom_hline(data = tibble(feature = factor(two_levels, levels = two_levels), estimate = eval_ls),
-             aes(yintercept = estimate), linetype = "dashed", color = okabe_ito[4]) +
-  facet_wrap(~ feature, scales = "free_y",
-             labeller = as_labeller(c(hour = "hour (minutes per hour)",
-                                      distance = "distance (minutes per mile)"))) +
-  labs(x = NULL, y = "Estimate", title = paste(n_samples, "samples of", n_train, "pool orders"),
-       caption = paste("Lines = quartiles and median; diamond = mean;",
-                       "dashed line = least squares on the evaluation orders."))
+  geom_hline(data = ref_lines,
+             aes(yintercept = estimate),
+             linetype = "dashed",
+             color = okabe_ito[4]) +
+  facet_wrap(~ feature, scales = "free_y", labeller = feature_labels) +
+  labs(x = NULL,
+       y = "Estimate",
+       title = bias_title,
+       caption = bias_caption)
 ```
 :::
 
-The figure plots the estimates of the hour and distance coefficients, on the
-original scale, from the three fits to each sample of `r n_train` pool orders,
-with the least squares estimates from the `r big(n_eval)` evaluation orders as dashed
-lines.
+Bias is a property of an estimator, not of the estimates from one sample: it
+is the difference
+between the average of the estimates over repeated training samples and the
+coefficient they estimate. The figure plots the estimates of the hour and
+distance coefficients, on the original scale, from the three fits to each of
+the `r n_samples` training samples of `r n_train` of the remaining test
+orders. The dashed lines are the estimates of the least squares fit to the
+`r big(n_predict)` test orders, the reference outside the workflow described
+in the previous subsection.
 
 ```{r bias-figure}
 #| echo: false
 #| fig-width: 7.5
-#| fig-height: 4.2
+#| fig-height: 4.4
 bias_plot
 ```
 
 Over the samples, least squares averages
 `r fmt(cmean("hour", "Least squares"))` minutes per hour and
 `r fmt(cmean("distance", "Least squares"))` per mile, close to the
-evaluation orders' `r and_list(fmt(eval_ls))`. The lasso averages
+`r and_list(fmt(ref_ls))` of the least squares fit to the `r big(n_predict)`
+test orders. The lasso averages
 `r fmt(cmean("hour", "Lasso"))` and `r fmt(cmean("distance", "Lasso"))`
 (zeros included), `r and_list(pct(avg_shrink("Lasso"), 0))` below the least
-squares averages: the nonzero lasso estimates are biased toward zero. Ridge
+squares averages: the lasso estimators of the hour and distance coefficients
+are biased toward zero. Ridge
 regression averages `r fmt(cmean("hour", "Ridge"))` and
 `r fmt(cmean("distance", "Ridge"))`, `r and_list(pct(avg_shrink("Ridge"), 0))`
 below.
@@ -1293,22 +1871,24 @@ it soft-thresholds the least squares estimate, moving each estimate toward
 zero by $\lambda/(2n)$ and setting to zero those within that distance, where
 ridge regression multiplies each by $n/(n + \lambda)$; in general it is
 computed by coordinate descent, one soft-thresholding step per coefficient.
-Its coefficient path starts from the null model at $\lambda_{\max}$ and adds
+Its estimate path starts from the null model at $\lambda_{\max}$ and adds
 features as $\lambda$ decreases, and the number of nonzero estimates plays
 the role of the model size $d$ of subset selection. `glmnet()`'s $\lambda$
 converts to this one by $\lambda = 2n\lambda_{\text{glmnet}}$.
 
 $\lambda$ is chosen by $k$-fold cross-validation on the training data, with
-the standardization repeated inside every fold, followed by a refit and a
-single evaluation on test data. The smallest cross-validation estimate is
+the standardization repeated inside every fold, followed by a refit, and the
+chosen model is evaluated once on test data. The smallest cross-validation
+estimate is
 optimistic as an estimate of the chosen model's error, because $\lambda$ was
 chosen to make it small. Whether the lasso predicts better than ridge
 regression or least squares depends on the data and the training sample size,
 and is best judged over repeated samples rather than one. The set of features
 it selects can change from sample to sample, especially when many features
 have small effects of similar size, so a dropped feature is not shown to have
-no effect. The nonzero lasso estimates are shrunken toward zero, so biased, and
-`lm()`'s standard errors and $p$-values do not apply to them.
+no effect. The nonzero lasso estimates are shrunken toward zero, the lasso
+estimator of a nonzero coefficient is biased toward zero, and `lm()`'s
+standard errors and $p$-values do not apply to the lasso estimates.
 
 The next lecture begins dimension reduction with principal components:
 directions of maximum variance in the features, their loadings and scores,

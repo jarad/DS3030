@@ -224,6 +224,43 @@ drift instead of relying on catching it after the fact. This also applies to
 values that look self-evident, like a sample size or a count of estimated
 parameters — compute them (`nrow(data)`, `length(coef(model))`) rather than
 counting by hand.
+
+**Code style.** There is no separate style guide in this repository; the
+baseline is the [tidyverse style guide](https://style.tidyverse.org), with the
+following firm rules, because students read this code and most of it sits in
+collapsed callouts:
+
+- **Lines are at most 80 characters.** Break a longer call after a comma, one
+  argument per line, and align the continuation lines; break a pipeline or a
+  `ggplot2` chain after every `|>` or `+`.
+- **One step per line, and room to breathe.** Put each step of a computation on
+  its own line, separate logical steps with a blank line, and head each step
+  with a short comment saying what it does, not how. Never pack several
+  statements or a nested call chain into one line. Space around `<-`, `=`,
+  and binary operators and after every comma.
+- **Every function definition uses braces, even a one-line function**:
+  `square <- function(x) {` with the body on its own line and the closing
+  `}` on its own line, never `square <- function(x) x^2` and never
+  `\(x) x^2` in a definition. (A short anonymous function passed as an argument
+  to `map()` or `sapply()` may stay inline.)
+- **Name intermediate objects** rather than nesting calls three deep, so a
+  reader can follow the computation by reading the object names.
+
+**Define terms once and use them consistently.** These notes are scientific
+writing: when a term is introduced (training, validation, and test data;
+estimate; sample), define it once and use that word every time afterward. Do
+not introduce a synonym ("evaluation", "holdout", "pool") for a role the course
+already names; if a new role is truly needed, define it explicitly where it
+first appears and say how it relates to the existing terms. Use *estimate*,
+not *coefficient*, for any statement about values computed from the sample, in
+headings, captions, axis labels and plot titles as well as prose (for example
+"Estimate path", not "Coefficient path").
+
+**Plots show the takeaway.** Draw only what the figure's point needs: a
+cross-validation curve against the tuning parameter is drawn without standard
+error bars or ribbons unless the uncertainty is the point; say the
+uncertainty in a sentence with the numbers computed inline.
+
 **Name every chunk**: ```` ```{r galileo-models} ````, never a bare
 ```` ```{r} ````. Illustrative code that only demonstrates `lm()` formula syntax
 is still a named chunk carrying `#| eval: false`, not a plain ```` ```r ````
