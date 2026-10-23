@@ -96,7 +96,7 @@ whose scores have the largest squared sample covariance with the response,
 **compute** it from the simple regression estimates, and **contrast** it with
 the first principal component and with the least squares direction,
 - **describe** how the later partial least squares directions are found from
-the residuals of the features, and **explain** why directions chosen with
+the residuals of the features, and **describe** why directions chosen with
 the response can lower the bias of a fit with $M$ directions but can add
 variance, and
 - **derive** the factor $v_m/(v_m + \lambda/n)$ by which ridge regression
@@ -222,10 +222,13 @@ price_plot <- response_plot("price", "Price (US dollars)") +
   scale_y_continuous(labels = scales::label_dollar())
 log_price_plot <- response_plot("log_price", "Log price, log(US dollars)")
 
-# Mean, median, and largest training price.
+# Mean, median, and largest training price, and the price of the heaviest
+# training diamond.
 price_summary <- c(mean = mean(train$price),
                    median = median(train$price),
                    max = max(train$price))
+heaviest <- which.max(train$carat)
+heaviest_price <- train$price[heaviest]
 ```
 :::
 
@@ -248,16 +251,16 @@ log_price_plot
 :::
 
 Price is right skewed: the mean training price,
-`r scales::dollar(price_summary[["mean"]])`, is above the median,
-`r scales::dollar(price_summary[["median"]])`, and the most expensive training
+`r scales::dollar(price_summary[["mean"]], accuracy = 1)`, is above the
+median, `r scales::dollar(price_summary[["median"]], accuracy = 1)`, and the most expensive training
 diamond costs `r fmt(price_summary[["max"]] / price_summary[["median"]], 1)`
 times the median. Price rises with carat and curves upward against the three
 dimensions, and its spread grows with size. Log price rises along a nearly
 straight line in `x`, `y`, and `z`, with a spread that does not grow, and
 bends against carat. Depth and table percentage show little relation to
 either response. The heaviest training diamond, at
-`r fmt(max(train$carat))` carats, costs
-`r scales::dollar(train$price[which.max(train$carat)])`, far less than the
+`r fmt(train$carat[heaviest])` carats, costs
+`r scales::dollar(heaviest_price, accuracy = 1)`, far less than the
 other large diamonds.
 
 The response is therefore the natural log of price,
@@ -399,7 +402,7 @@ correlation `r fmt(score_cor[1], 3)`. The second and third components explain
 their scores are nearly uncorrelated with log price (`r fmt(score_cor[2], 3)`
 and `r fmt(score_cor[3], 3)`). The fourth explains `r pct(pve[4], 2)`, and its
 scores have correlation `r fmt(score_cor[4], 3)`; the last two are flat. The
-training loadings of the first four components are within
+training loadings of the first `r length(first_four)` components are within
 `r fmt(loading_gap, 2)` of those computed from all `r big(n_kept)` diamonds,
 so the components keep the interpretations of the principal components
 lecture: PC1 is size, PC2 and PC3 combine depth and table percentage, and PC4
@@ -459,8 +462,6 @@ $z_m^\top\mathbf{1} = 0$, $\hat\theta_m = z_m^\top y/(nv_m)$, with
 
 $$E\left[\hat\theta_m\right] = \theta_m, \qquad Var\left[\hat\theta_m\right] = \frac{z_m^\top z_m\,\sigma^2}{\left(nv_m\right)^2} = \frac{\sigma^2}{nv_m}.$$
 
-The components with the least variance have the most variable estimates.
-
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r theta}
@@ -475,6 +476,11 @@ theta_diff <- max(abs(coef(scores_fit)[-1] - theta_hat))
 sigma_hat <- sigma(scores_fit)
 theta_se <- sigma_hat / sqrt(n_train * v)
 theta_ratio <- abs(theta_hat) / theta_se
+
+# The last component whose estimate is at least one standard error from
+# zero, and the earlier ones that are not.
+last_large <- max(which(theta_ratio >= 1))
+small_before <- which(theta_ratio[seq_len(last_large)] < 1)
 
 # Table of the variances, estimates, and standard errors.
 theta_tibble <- tibble(Component = paste0("PC", 1:p),
@@ -507,7 +513,7 @@ theta_table
 The intercept estimate, $\hat\theta_0 = \bar y = `r fmt_math(mean(y_train), 2)`$
 log dollars, is the predicted log price of a diamond with every score 0, one
 at the training means of all six explanatory variables, a price of
-`r scales::dollar(exp(mean(y_train)))`. The standard error of $\hat\theta_6$ is
+`r scales::dollar(exp(mean(y_train)), accuracy = 1)`. The standard error of $\hat\theta_6$ is
 `r fmt(theta_se[6] / theta_se[1], 0)` times that of $\hat\theta_1$, the
 square root of $v_1/v_6$. The estimates for PC5 and PC6 are
 `r and_list(fmt(theta_ratio[5:6], 1))` standard errors from zero, and the
@@ -548,7 +554,8 @@ $E\left[\hat\theta_m^2\right] = \theta_m^2 + Var\left[\hat\theta_m\right]$.
 With that caveat, the last column of the table is below 1 for
 `r and_list(paste0("PC", which(theta_ratio < 1)))`, so their terms look worth
 dropping. But PCR can drop only the components after the last one it keeps:
-keeping PC4 means keeping PC2 and PC3 as well.
+keeping PC`r last_large` means keeping
+`r and_list(paste0("PC", small_before))` as well.
 
 ### Standardized-scale estimates
 
@@ -624,9 +631,11 @@ path_plot <- ggplot(path_data,
        title = paste("PCR estimate path,", title_train)) +
   theme(legend.position = "bottom")
 
-# Size features' estimates at M = 3 and M = 4.
+# The first M at which the carat estimate is negative, and the size
+# features' estimates at the M before it.
 size_vars <- c("carat", "x", "y", "z")
-size_at_3 <- B_std[size_vars, 3]
+M_turn <- which(B_std["carat", ] < 0)[1]
+size_before <- B_std[size_vars, M_turn - 1]
 smallest_estimate <- min(abs(B_std))
 ```
 :::
@@ -641,11 +650,11 @@ the null model at $M = 0$ to least squares at $M = p$.
 path_plot
 ```
 
-Up to $M = 3$ the four size features have nearly equal estimates,
-`r fmt(min(size_at_3), 3)` to `r fmt(max(size_at_3), 3)`: the first component
-spreads the effect of size evenly over them, and PC2 and PC3 barely change
-it. At $M = 4$ the carat estimate turns negative, to
-`r fmt(B_std["carat", 4])`, and the estimates for `x`, `y`, and `z` rise:
+Up to $M = `r M_turn - 1`$ the four size features have nearly equal
+estimates, `r fmt(min(size_before), 3)` to `r fmt(max(size_before), 3)`: the
+first component spreads the effect of size evenly over them, and PC2 and PC3
+barely change it. At $M = `r M_turn`$ the carat estimate turns negative, to
+`r fmt(B_std["carat", M_turn])`, and the estimates for `x`, `y`, and `z` rise:
 PC4 separates weight from the dimensions. At $M = p$ the estimates are those
 of least squares, to within $`r sci(ls_gap)`$. No estimate is zero at any
 $M \ge 1$; the smallest in absolute value is
@@ -670,10 +679,8 @@ $$\hat y^R_\lambda = \bar y\mathbf{1} + \tilde{\mathbf{X}}\left(\tilde{\mathbf{X
 Ridge regression keeps every component and multiplies its least squares term
 $\hat\theta_mz_m$ by $v_m/(v_m + \lambda/n)$, a factor between 0 and 1 that is
 smallest for the components with the least variance. PCR multiplies the
-terms of the first $M$ components by 1 and the rest by 0. Both favor the
-high-variance directions: PCR keeps or drops each component, as subset
-selection keeps or drops each feature, and ridge regression shrinks every
-component continuously.
+terms of the first $M$ components by 1 and the rest by 0, keeping or
+dropping each component as subset selection keeps or drops each feature.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -744,8 +751,7 @@ $\lambda$.
 factor_plot
 ```
 
-The factors of ridge regression fall with the variance of the component. At
-$\lambda = `r lambda_show[2]`$ the PC4 term keeps
+At $\lambda = `r lambda_show[2]`$ the PC4 term keeps
 `r pct(ridge_factor(lambda_show[2])[4], 0)` of its least squares size, where
 PCR with $M = `r M_show`$ keeps all of it, while PCR keeps the PC2 and PC3
 terms in full although their estimates are small.
@@ -758,11 +764,11 @@ estimates into original-scale estimates, and is reused for PLS below.
 
 ```{r pcr-path}
 # Original-scale estimates for M = 1, ..., p, one column each, from the
-# directions (columns of R, whose scores are the standardized features
-# times R), the estimates theta, and the standardization.
-path_estimates <- function(R, theta, x_center, x_scale, y_bar) {
+# directions (columns of R_dir, whose scores are the standardized features
+# times R_dir), the estimates theta, and the standardization.
+path_estimates <- function(R_dir, theta, x_center, x_scale, y_bar) {
   # Standardized-scale estimates: cumulative sums of theta_m times r_m.
-  terms <- sweep(R, 2, theta, "*")
+  terms <- sweep(R_dir, 2, theta, "*")
   b_std <- t(apply(terms, 1, cumsum))
 
   # Back to the original scale.
@@ -812,7 +818,8 @@ sets of predictions differ by at most $`r sci(pcr_check)`$ log dollars.
 ### Components kept
 
 $M$ is chosen by `r n_folds`-fold cross-validation on the training diamonds,
-with the folds `fold_id` drawn with the split. The $k$-fold cross-validation
+using the fold assignment `fold_id` that the `split` chunk drew along with
+the training sample. The $k$-fold cross-validation
 estimate $\text{CV}_{(k)}(M)$, with $k = `r n_folds`$, is the mean squared
 error of the predictions of the held-out folds. The standardization and the
 principal components are computed from the data the model is fit to, so in
@@ -862,7 +869,8 @@ null_sse <- function(l) {
   out <- fold_id == l
   sum((y_train[out] - mean(y_train[!out]))^2)
 }
-cv_null <- sum(map_dbl(seq_len(n_folds), null_sse)) / n_train
+null_fold_sse <- map_dbl(seq_len(n_folds), null_sse)
+cv_null <- sum(null_fold_sse) / n_train
 
 # Cross-validation of the regression on the first M columns of scores Z_all,
 # computed once from all the training diamonds: held-out fold l.
@@ -945,25 +953,6 @@ the scores, changes the estimate by at most `r fmt(pcr_outside_gap, 5)` over
 the `r p` values of $M$. Principal components do not use the response, so
 the held-out fold's log prices never helped choose the directions they are
 predicted with; for PLS, below, they would.
-
-### PCR test MSE
-
-```{r pcr-test}
-# PCR with the chosen M, fit to all the training diamonds, and its test MSE.
-pcr_test_pred <- pcr_pred_hand[, M_pcr]
-pcr_test_mse <- mse(y_test, pcr_test_pred)
-pcr_train_mse <- mse(y_train, cbind(1, X_train) %*% B_pcr[, M_pcr])
-```
-
-PCR with $M = `r M_pcr`$, refit to all the training diamonds, has test MSE
-`r fmt(pcr_test_mse, 4)`, against `r fmt(ls_test_mse, 4)` for least squares,
-`r pct(abs(pcr_test_mse / ls_test_mse - 1), 2)`
-`r if (pcr_test_mse > ls_test_mse) "higher" else "lower"`. Dropping
-`r and_list(paste0("PC", (M_pcr + 1):p))` removed estimates that were
-smaller than their standard errors, but on
-this training sample their least squares terms happened to
-`r if (pcr_test_mse > ls_test_mse) "help slightly" else "hurt slightly"` on
-the test diamonds.
 
 ## Partial least squares
 
@@ -1061,8 +1050,9 @@ maximizes $s_a^2$ alone. The least squares fitted values maximize $R_a^2$
 alone: the simple regression of $y$ on $\tilde{\mathbf{X}}a$ is a model
 contained in the multiple regression on $\tilde{\mathbf{X}}$, so $R_a^2$ is
 at most the least squares $R^2$, attained by
-$a = \hat\beta/\left\|\hat\beta\right\|$, the **least squares
-direction**.
+$a = \hat\beta^{\text{LS}}/\left\|\hat\beta^{\text{LS}}\right\|$, the
+**least squares direction**, with $\hat\beta^{\text{LS}}$ the least squares
+estimate on the standardized scale (PCR with $M = p$).
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -1215,7 +1205,7 @@ pls_directions <- function(X, y) {
 
   # Directions, vectors r_m, and estimates, filled one direction at a time.
   W <- matrix(0, p, p)
-  R <- matrix(0, p, p)
+  R_dir <- matrix(0, p, p)
   theta <- numeric(p)
   X_m <- X_std
 
@@ -1231,7 +1221,7 @@ pls_directions <- function(X, y) {
 
     # The scores as a combination of the standardized features: they lie in
     # the column space of X_std, so least squares recovers r_m exactly.
-    R[, m] <- qr.solve(X_std, z)
+    R_dir[, m] <- qr.solve(X_std, z)
 
     # Replace each feature by its residuals from regressing it on z.
     feature_slopes <- drop(crossprod(X_m, z)) / sum(z^2)
@@ -1239,7 +1229,7 @@ pls_directions <- function(X, y) {
   }
 
   list(W = W,
-       R = R,
+       R_dir = R_dir,
        theta = theta,
        x_center = x_center,
        x_scale = x_scale,
@@ -1249,7 +1239,7 @@ pls_directions <- function(X, y) {
 # PLS estimates on the original scale for M = 1, ..., p.
 pls_path <- function(X, y) {
   d <- pls_directions(X, y)
-  path_estimates(d$R, d$theta, d$x_center, d$x_scale, d$y_bar)
+  path_estimates(d$R_dir, d$theta, d$x_center, d$x_scale, d$y_bar)
 }
 ```
 
@@ -1265,7 +1255,8 @@ pls_pred_pls <- predict(pls_fit, test, ncomp = 1:p)[, 1, ]
 pls_check <- max(abs(pls_pred_hand - pls_pred_pls))
 
 # Directions: plsr() calls them loading weights.
-weight_check <- max(abs(unclass(loading.weights(pls_fit)) - pls_d$W))
+pls_weights <- unclass(loading.weights(pls_fit))
+weight_check <- max(abs(pls_weights - pls_d$W))
 
 # PLS with M = p against least squares.
 pls_ls_gap <- max(abs(B_pls[, p] - coef(ls_fit)))
@@ -1284,7 +1275,7 @@ PLS estimates equal those of least squares to within $`r sci(pls_ls_gap)`$.
 #| output: false
 # Scores of the PLS directions, their variances, and the largest correlation
 # between two columns of them.
-Z_pls <- X_std %*% pls_d$R
+Z_pls <- X_std %*% pls_d$R_dir
 v_pls <- apply(Z_pls, 2, sd_n)^2
 pls_score_cors <- cor(Z_pls)[upper.tri(diag(p))]
 max_pls_score_cor <- max(abs(pls_score_cors))
@@ -1362,8 +1353,8 @@ r2_plot
 
 The principal component variances fall by construction. The PLS variances
 do not: the second PLS direction has variance `r fmt(v_pls[2], 3)`, against
-`r fmt(v[2], 3)` for PC2, and the third and fourth have more,
-`r and_list(fmt(v_pls[3:4], 3))`. PLS scores are uncorrelated too, the
+`r fmt(v[2], 3)` for PC2, and the third and fourth are larger than the
+second, `r and_list(fmt(v_pls[3:4], 3))`. PLS scores are uncorrelated too, the
 largest correlation between two columns being
 $`r sci(max_pls_score_cor)`$, and the squared correlations of log price with
 the second to fourth PLS scores,
@@ -1409,6 +1400,9 @@ pls_optimism <- cv_pls - cv_pls_outside
 M_optimism <- which.max(pls_optimism)
 M_pls_outside <- which.min(cv_pls_outside)
 
+# The M at which the PCR estimate exceeds the PLS estimate the most.
+M_gap <- which.max(cv_pcr - cv_pls)
+
 # Both curves, with the chosen M of each circled.
 cv_data <- tibble(method = factor(rep(method_levels, each = p),
                                   levels = method_levels),
@@ -1453,9 +1447,9 @@ $\text{CV}_{(`r n_folds`)}(M)$ for PCR and PLS.
 cv_plot
 ```
 
-At $M = 3$ the PLS estimate is `r fmt(cv_pls[3], 4)`, against
-`r fmt(cv_pcr[3], 4)` for PCR, because the second and third PLS directions
-carry part of what PC4 adds. PLS reaches its smallest estimate,
+At $M = `r M_gap`$, where the two curves differ most, the PLS estimate is
+`r fmt(cv_pls[M_gap], 4)`, against `r fmt(cv_pcr[M_gap], 4)` for PCR, because the PLS directions after the
+first carry part of what PC4 adds. PLS reaches its smallest estimate,
 `r fmt(cv_pls[M_pls], 4)`, at $M = `r M_pls`$, and PCR its smallest,
 `r fmt(cv_pcr[M_pcr], 4)`, at $M = `r M_pcr`$, both below the least squares
 estimate of `r fmt(cv_pcr[p], 4)`.
@@ -1470,19 +1464,6 @@ the estimate is optimistic. The size of the optimism depends on $M$: at the
 chosen $M = `r M_pls`$ it is only `r fmt(pls_optimism[M_pls], 4)`, and the
 estimates computed outside the folds would choose
 $M = `r M_pls_outside`$`r if (M_pls_outside == M_pls) ", the same value" else ", a different value"`.
-
-### PLS test MSE
-
-```{r pls-test}
-# PLS with the chosen M, fit to all the training diamonds, and its test MSE.
-pls_test_pred <- pls_pred_hand[, M_pls]
-pls_test_mse <- mse(y_test, pls_test_pred)
-pls_train_mse <- mse(y_train, cbind(1, X_train) %*% B_pls[, M_pls])
-```
-
-PLS with $M = `r M_pls`$, refit to all the training diamonds, has test MSE
-`r fmt(pls_test_mse, 4)`, against `r fmt(pcr_test_mse, 4)` for PCR and
-`r fmt(ls_test_mse, 4)` for least squares.
 
 ### Bias and variance
 
@@ -1502,18 +1483,35 @@ error variance.
 
 ### Test MSE
 
+PCR and PLS with their chosen $M$, and least squares, are each fit to all
+the training diamonds and evaluated once on the `r big(n_test)` test
+diamonds.
+
+```{r test-mse}
+# PCR and PLS with their chosen M, fit to all the training diamonds, and
+# their training and test MSE.
+pcr_test_pred <- pcr_pred_hand[, M_pcr]
+pcr_test_mse <- mse(y_test, pcr_test_pred)
+pcr_train_mse <- mse(y_train, cbind(1, X_train) %*% B_pcr[, M_pcr])
+pls_test_pred <- pls_pred_hand[, M_pls]
+pls_test_mse <- mse(y_test, pls_test_pred)
+pls_train_mse <- mse(y_train, cbind(1, X_train) %*% B_pls[, M_pls])
+```
+
 ::: {.callout-note collapse="true"}
 ### Code
 ```{r test-table}
 #| output: false
 # Number of components, training MSE, cross-validation estimate, and test
 # MSE of the three fits.
+cv_values <- c(cv_pcr[p], cv_pcr[M_pcr], cv_pls[M_pls])
+test_values <- c(ls_test_mse, pcr_test_mse, pls_test_mse)
 compare_tibble <- tibble(
   Method = c("Least squares", "PCR", "PLS"),
   M = c(p, M_pcr, M_pls),
   train = fmt(c(ls_train_mse, pcr_train_mse, pls_train_mse), 4),
-  cv = fmt(c(cv_pcr[p], cv_pcr[M_pcr], cv_pls[M_pls]), 4),
-  test = fmt(c(ls_test_mse, pcr_test_mse, pls_test_mse), 4)
+  cv = fmt(cv_values, 4),
+  test = fmt(test_values, 4)
 )
 compare_columns <- c("Method",
                      "$M$",
@@ -1528,11 +1526,41 @@ compare_table <- knitr::kable(compare_tibble,
 # minus PLS's.
 sq_diff <- (y_test - ls_test_pred)^2 - (y_test - pls_test_pred)^2
 diff_se <- sd(sq_diff) / sqrt(n_test)
+```
+:::
 
+```{r test-table-display}
+#| echo: false
+compare_table
+```
+
+On this training sample PCR and PLS with $M = `r M_pcr`$ tie least squares:
+the test MSEs of least squares, PCR, and PLS,
+`r and_list(fmt(test_values, 4))`, are within
+`r pct(max(test_values) / min(test_values) - 1, 2)` of one another. Dropping
+`r and_list(paste0("PC", (M_pcr + 1):p))` removed estimates that were
+smaller than their standard errors, but on this training sample their least
+squares terms happened to
+`r if (pcr_test_mse > ls_test_mse) "help slightly" else "hurt slightly"` on
+the test diamonds. The paired difference in squared error over the test
+diamonds, least squares minus PLS, has mean `r fmt(mean(sq_diff), 5)` and
+standard error `r fmt(diff_se, 5)`, so on this training sample least squares
+`r if (mean(sq_diff) < 0) "predicts the test diamonds slightly better" else "predicts the test diamonds slightly worse"`.
+As in the ridge lecture, that standard error treats the fitted models as
+fixed and says nothing about another training sample. One training sample of
+`r n_train` diamonds cannot show whether either method helps on average; the
+lecture after next compares PCR and PLS with least squares over repeated
+training samples.
+
+### Cross-validation estimates
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cv-versus-test}
+#| output: false
 # Each cross-validation estimate is above the test MSE of its fit.
-cv_values <- c(cv_pcr[p], cv_pcr[M_pcr], cv_pls[M_pls])
-test_values <- c(ls_test_mse, pcr_test_mse, pls_test_mse)
 stopifnot(all(cv_values > test_values))
+cv_gap <- cv_values - test_values
 
 # Held-out squared error of each training diamond in cross-validation, for
 # least squares (PCR with M = p), PCR, and PLS; their means are the estimates.
@@ -1544,49 +1572,45 @@ cv_sq_errors <- cbind(ls = (y_train - held_out_pcr[, p])^2,
 cv_from_errors <- unname(colMeans(cv_sq_errors))
 stopifnot(isTRUE(all.equal(cv_from_errors, unname(cv_values))))
 
-# Their smallest correlation across the three fits, the heaviest diamond's
-# share of the least squares estimate, and the three estimates without it.
+# Their smallest correlation across the three fits.
 cv_error_cor <- min(cor(cv_sq_errors))
-heaviest <- which.max(train$carat)
+
+# The heaviest diamond's share of the least squares estimate, the three
+# estimates without it, and how much its removal lowers each.
 heaviest_share <- cv_sq_errors[heaviest, "ls"] / sum(cv_sq_errors[, "ls"])
 cv_without <- colMeans(cv_sq_errors[-heaviest, ])
-below_test <- all(cv_without < test_values)
+heaviest_drop <- cv_values - cv_without
+exceeds_gap <- all(heaviest_drop > cv_gap)
+
+# Test MSE of least squares fit to the training folds of each fold, 90
+# diamonds each, against the fit to all the training diamonds.
+fold_ls_test_mse <- function(l) {
+  fold_fit <- lm(ls_formula, data = train[fold_id != l, ])
+  fold_pred <- predict(fold_fit, test)
+  mse(y_test, fold_pred)
+}
+fold_test_mse <- map_dbl(seq_len(n_folds), fold_ls_test_mse)
+fold_size_effect <- mean(fold_test_mse) - ls_test_mse
 ```
 :::
 
-The table compares the three fits, each chosen and fit with the training
-diamonds and evaluated once on the `r big(n_test)` test diamonds; least
-squares is the fit with $M = p$.
-
-```{r test-table-display}
-#| echo: false
-compare_table
-```
-
-On this training sample PCR and PLS with $M = `r M_pcr`$ tie least squares:
-the test MSEs of least squares, PCR, and PLS,
-`r and_list(fmt(test_values, 4))`, are within
-`r pct(max(test_values) / min(test_values) - 1, 2)` of one another. The
-paired difference in squared error over the test diamonds, least squares
-minus PLS, has mean `r fmt(mean(sq_diff), 5)` and standard error
-`r fmt(diff_se, 5)`, so on this training sample least squares
-`r if (mean(sq_diff) < 0) "predicts the test diamonds slightly better" else "predicts the test diamonds slightly worse"`.
-As in the ridge lecture, that standard error treats the fitted models as
-fixed and says nothing about another training sample. One training sample of
-`r n_train` diamonds cannot show whether either method helps on average; the
-lecture after next compares PCR and PLS with least squares over repeated
-training samples.
-
-All three cross-validation estimates are above the test MSEs. Choosing the
-smallest estimate on a noisy curve cannot be the reason, since least squares
-involves no choice. The three estimates are means of the held-out squared
-errors of the same `r n_train` diamonds on the same folds, and those squared
-errors have correlation at least `r fmt(cv_error_cor, 3)` across the three
-fits, so the three estimates are high or low together. Here one diamond
-accounts for much of it: the heaviest training diamond, with its low price,
-contributes `r pct(heaviest_share, 0)` of the least squares estimate, and
-without it the three estimates would be `r and_list(fmt(cv_without, 4))`,
-`r if (below_test) "all below the test MSEs" else "closer to the test MSEs"`.
+All three cross-validation estimates are above the test MSEs, by
+`r and_list(fmt(cv_gap, 4))` for least squares, PCR, and PLS. Choosing the smallest estimate on a noisy
+curve cannot be the reason, since least squares involves no choice. Fitting
+each fold to `r n_train - n_train / n_folds` diamonds rather than
+`r n_train` explains little: least squares fit to the training folds of each
+fold has test MSE `r fmt(mean(fold_test_mse), 4)` on average, against
+`r fmt(ls_test_mse, 4)` for the fit to all `r n_train`, a difference of
+`r fmt(fold_size_effect, 4)`. One diamond accounts for
+`r if (exceeds_gap) "more than the gap" else "much of the gap"`: the
+heaviest training diamond, with its low price, contributes
+`r pct(heaviest_share, 0)` of the least squares estimate, and removing it
+lowers the three estimates by `r and_list(fmt(heaviest_drop, 4))`, to
+`r and_list(fmt(cv_without, 4))`. The three estimates also agree closely with
+one another, because they are means of the held-out squared errors of the
+same `r n_train` diamonds on the same folds, and those squared errors have
+correlation at least `r fmt(cv_error_cor, 3)` across the three fits. That
+explains why the three move together, not why they exceed the test MSEs.
 
 ::: {.callout-note collapse="true"}
 ### Beyond this course

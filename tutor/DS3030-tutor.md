@@ -1124,39 +1124,41 @@ rank-$M$ approximation, sparse, kernel and robust PCA) is not assessed.
 ### 24. Principal Components Regression and Partial Least Squares (Exam 2)
 <https://jarad.github.io/DS3030/06-regularization/50-pcr-and-pls.html>
 
-Dimension reduction on the same `ggplot2::diamonds` data, with log price as
-the response (price is right skewed and its spread grows with size), a
-100-diamond training sample, 10-fold cross-validation folds, and every other
-diamond as test data. **Principal components regression** (PCR) regresses the
-response on the first $M$ principal component scores of the standardized
-training features, $y_i = \theta_0 + \sum_{m=1}^M\theta_m z_{im} + \epsilon_i$;
-because the scores are uncorrelated, $\hat\theta_0 = \bar y$ and each
-$\hat\theta_m$ is the simple regression estimate on $z_m$, with variance
-$\sigma^2/(nv_m)$. With the features fixed, dropping component $m$ lowers the
-mean squared error of the fitted values about the true mean at the training
-observations (predicting a new response adds $\sigma^2$) when $|\theta_m|$ is
-below that standard error, but PCR can only drop the last components. PCR is a constrained linear model in the features,
+Dimension reduction on the same `ggplot2::diamonds` data, with log price as the
+response (price is right skewed and its spread grows with size), a 100-diamond
+training sample, 10-fold cross-validation folds, and every other diamond as test
+data. **Principal components regression** (PCR) regresses the response on the
+first $M$ principal component scores of the standardized training features,
+$y_i = \theta_0 + \sum_{m=1}^M\theta_m z_{im} + \epsilon_i$; because the scores
+are uncorrelated, $\hat\theta_0 = \bar y$ and each $\hat\theta_m$ is the simple
+regression estimate on $z_m$, with variance $\sigma^2/(nv_m)$. With the features
+fixed, dropping component $m$ lowers the mean squared error of the fitted values
+about the true mean at the training observations (predicting a new response adds
+$\sigma^2$) when $|\theta_m|$ is below that standard error, but PCR can only
+drop the last components. PCR is a constrained linear model in the features,
 $\hat\beta = \boldsymbol{\Phi}_M\hat\theta$; $M = p$ is least squares, $M$ plays
 the role of $\lambda$, and PCR is not variable selection. Ridge regression
 multiplies each component's term by $v_m/(v_m + \lambda/n)$ where PCR keeps or
 drops it. **Partial least squares** (PLS): the first direction is proportional
 to the simple regression estimates (covariances) of the response on each
-standardized feature, the unit vector maximizing the squared covariance of
-its scores with the response (by Cauchy-Schwarz), which balances the variance
-of the scores (maximized by the first principal component) against their
-correlation with the response (maximized by the least squares direction);
-later directions repeat this on residual features. $M$ is chosen by
-cross-validation with the standardization and directions recomputed inside
-each fold; computing PLS directions outside the folds makes the estimate
-optimistic, PCR's much less so (and here not enough to change the chosen
-$M$). Choosing directions with the response can lower bias for a given $M$ but
-can add variance, and better training fit alone does not show which. Here both
-choose $M = 4$ (PC4, a low-variance weight-versus-dimensions contrast, matters
-for price) and tie least squares on the test data; one training sample cannot
-show whether either helps on average. The cross-validation estimates all sit
-above the test MSEs because they share the same 100 held-out errors, one
-unusual diamond included. A `Beyond this course` callout (other PLS algorithms
-such as SIMPLS, supervised principal components, kernel PCR and PLS, PLS for
+standardized feature, the unit vector maximizing the squared covariance of its
+scores with the response (by Cauchy-Schwarz), which balances the variance of the
+scores (maximized by the first principal component) against their correlation
+with the response (maximized by the least squares direction); later directions
+repeat this on residual features. $M$ is chosen by cross-validation with the
+standardization and directions recomputed inside each fold; computing PLS
+directions outside the folds makes the estimate optimistic (here not enough to
+change the chosen $M$), and doing so for PCR's components matters much less. Students describe why choosing
+directions with the response can lower bias for a given $M$ but can add
+variance, and better training fit alone does not show which. Here both choose
+$M = 4$ (PC4, a low-variance weight-versus-dimensions contrast, matters for
+price) and tie least squares on the test data; one training sample cannot show
+whether either helps on average. All three cross-validation estimates sit above
+the test MSEs; one unusual diamond (the heaviest, with a low price) accounts for
+more than the gap, fitting folds to 90 rather than 100 diamonds is a small
+effect, and the three estimates agree with one another because they share the
+same held-out errors. A `Beyond this course` callout (other PLS algorithms such
+as SIMPLS, supervised principal components, kernel PCR and PLS, PLS for
 classification) is not assessed.
 
 ## What has already been assessed

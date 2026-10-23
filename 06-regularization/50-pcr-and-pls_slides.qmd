@@ -60,9 +60,9 @@ execute:
 :::
 
 ::: notes
-Distilled from the chapter's six learning objectives and the slides this deck spends time on: the PCR model, its estimates and their variance; PCR as a linear model in the standardized features and not variable selection; ridge regression's shrinkage factors against PCR's; choosing M by cross-validation with every data-dependent step recomputed in each fold; the first PLS direction as the unit vector with the largest squared covariance with the response, and the later directions; and the test MSE of the three fits. The Dropped components derivation, the pcr() and plsr() checks, the separate test MSE subsections of PCR and PLS, the Bias and variance subsection and the Beyond this course callout are in the notes and not in the agenda. The previous lecture replaced the p features by M < p principal components; this one regresses the response on them, then on directions chosen with the response. M is the number of components or directions kept; in the ridge and lasso lectures it was the number of repeated training samples. The next lecture is high dimensions.
+Distilled from the chapter's six learning objectives and the slides this deck spends time on: the PCR model, its estimates and their variance; PCR as a linear model in the standardized features and not variable selection; ridge regression's shrinkage factors against PCR's; choosing M by cross-validation with every data-dependent step recomputed in each fold; the first PLS direction as the unit vector with the largest squared covariance with the response, and the later directions; and the test MSE of the three fits. The Dropped components derivation, the pcr() and plsr() checks, the Cross-validation estimates subsection (its content is in the Test MSE speaker notes), the Bias and variance subsection and the Beyond this course callout are in the notes and not in the agenda. The previous lecture replaced the p features by M < p principal components; this one regresses the response on them, then on directions chosen with the response. M is the number of components or directions kept; in the ridge and lasso lectures it was the number of repeated training samples. The next lecture is high dimensions.
 
-Timing: one 50-minute period; the core slides come to about 36.5 minutes and the optional slides to about 2.5 more. The Conclusion is the closing slide. If time is short, drop in this order: Loadings of three directions (say the first PLS direction and the first principal component nearly coincide, and the least squares direction loads negatively on carat), Least squares (say the carat estimate is negative although carat and log price are positively correlated), Factors by component (say ridge regression's factors fall with the variance of the component and PCR's are 1 then 0), then the Variance tab of Directions compared (show Training R²).
+Timing: one 50-minute period; the core slides come to about 36.5 minutes and the optional slides to about 2.5 more. The Conclusion is the closing slide. If time is short, drop in this order: Loadings of three directions (say the first PLS direction and the first principal component nearly coincide, and the least squares direction loads negatively on carat), Least squares (say the carat estimate is negative although carat and log price are positively correlated), Factors by component (say PCR's factors are 1 then 0 and ridge regression's lie between 0 and 1), then the Variance tab of Directions compared (show Training R²).
 :::
 
 ## Diamond prices
@@ -161,7 +161,7 @@ $$E\left[\widehat\theta_m\right] = \theta_m, \qquad Var\left[\widehat\theta_m\ri
 :::
 
 ::: notes
-Each estimate is the estimate of the simple linear regression of y on z_m alone, so keeping one more component leaves the earlier estimates unchanged. For the variance, treat the features as fixed and suppose the linear model in all p features is correct. The components with the least variance have the most variable estimates.
+Each estimate is the estimate of the simple linear regression of y on z_m alone, so keeping one more component leaves the earlier estimates unchanged. For the variance, treat the features as fixed and suppose the linear model in all p features is correct.
 :::
 
 ## Estimates and standard errors
@@ -226,7 +226,7 @@ $$\widehat y^R_\lambda = \bar y\mathbf{1} + \sum_{m=1}^p\frac{v_m}{v_m + \lambda
 :::
 
 ::: notes
-With the standardized features and the ridge criterion, X-tilde transpose X-tilde is n R, whose eigenvectors are the loading vectors, so ridge regression acts on the principal components too. It keeps every component and multiplies its least squares term by a factor that is smallest for the components with the least variance. PCR multiplies by 1 or 0. Both favor the high-variance directions: PCR keeps or drops each component, as subset selection keeps or drops each feature, and ridge regression shrinks every component continuously. The display is the last link of the notes' chain of equalities, which starts from the closed form of the ridge fitted values.
+With the standardized features and the ridge criterion, X-tilde transpose X-tilde is n R, whose eigenvectors are the loading vectors, so ridge regression acts on the principal components too. It keeps every component and multiplies its least squares term by a factor that is smallest for the components with the least variance. PCR multiplies by 1 or 0. PCR keeps or drops each component, as subset selection keeps or drops each feature. The display is the last link of the notes' chain of equalities, which starts from the closed form of the ridge fitted values.
 :::
 
 ## Factors by component
@@ -234,7 +234,7 @@ With the standardized features and the ridge criterion, X-tilde transpose X-tild
 ![](../_freeze/06-regularization/50-pcr-and-pls/figure-html/factor-figure-1.png)
 
 ::: notes
-The factors of ridge regression fall with the variance of the component. At lambda = 10 the PC4 term keeps 23% of its least squares size, where PCR with M = 4 keeps all of it, while PCR keeps the PC2 and PC3 terms in full although their estimates are small. The closed-form ridge estimate and Phi times the shrunken theta-hat agree to within 3.8 times 10 to the minus 15.
+At lambda = 10 the PC4 term keeps 23% of its least squares size, where PCR with M = 4 keeps all of it, while PCR keeps the PC2 and PC3 terms in full although their estimates are small. The closed-form ridge estimate and Phi times the shrunken theta-hat agree to within 3.8 times 10 to the minus 15.
 
 Optional: third in the drop order; if time is short, skip this slide.
 :::
@@ -352,7 +352,7 @@ The second PLS direction repeats the construction on what the first scores do no
 :::
 
 ::: notes
-The tabs compare the PLS directions with the principal components of the training features: the variance of the scores on each direction, and the training R squared of the regression of log price on the first M directions. The principal component variances fall by construction. The PLS variances do not: the second PLS direction has variance 0.147, against 1.390 for PC2, and the third and fourth have more, 0.393 and 0.414. PLS scores are uncorrelated too. The training R squared of PLS rises with each of the first four directions, from 0.879 to 0.941, while that of PCR stays near 0.878 until PC4 lifts it to 0.941. PLS fits the training diamonds at least as well as PCR at every M less than p, and both reach the least squares fit at M = p.
+The tabs compare the PLS directions with the principal components of the training features: the variance of the scores on each direction, and the training R squared of the regression of log price on the first M directions. The principal component variances fall by construction. The PLS variances do not: the second PLS direction has variance 0.147, against 1.390 for PC2, and the third and fourth are larger than the second, 0.393 and 0.414. PLS scores are uncorrelated too. The training R squared of PLS rises with each of the first four directions, from 0.879 to 0.941, while that of PCR stays near 0.878 until PC4 lifts it to 0.941. PLS fits the training diamonds at least as well as PCR at every M less than p, and both reach the least squares fit at M = p.
 
 If time is short, show Training R² only.
 :::
@@ -362,7 +362,7 @@ If time is short, show Training R² only.
 ![](../_freeze/06-regularization/50-pcr-and-pls/figure-html/cv-figure-1.png)
 
 ::: notes
-PLS directions use the response, so they too are recomputed from the training folds in each fold. At M = 3 the PLS estimate is 0.1165, against 0.1505 for PCR, because the second and third PLS directions carry part of what PC4 adds. PLS reaches its smallest estimate, 0.0745, at M = 4, and PCR its smallest, 0.0744, at M = 4, both below the least squares estimate of 0.0778.
+PLS directions use the response, so they too are recomputed from the training folds in each fold. At M = 3, where the two curves differ most, the PLS estimate is 0.1165, against 0.1505 for PCR, because the PLS directions after the first carry part of what PC4 adds. PLS reaches its smallest estimate, 0.0745, at M = 4, and PCR its smallest, 0.0744, at M = 4, both below the least squares estimate of 0.0778.
 
 Computing the PLS directions once from all 100 training diamonds, and cross-validating only the regression on their scores, lowers the estimate by as much as 0.0160, at M = 3 (14% of the estimate there), against at most 0.00103 for PCR. The log prices of each held-out fold then helped choose the directions they are predicted with, so the estimate is optimistic. The size of the optimism depends on M: at the chosen M = 4 it is only 0.0001, and the estimates computed outside the folds would choose M = 4, the same value. The directions are part of the fit, and anything the fit computes from the data is recomputed inside each fold.
 :::
@@ -376,9 +376,9 @@ Computing the PLS directions once from all 100 training diamonds, and cross-vali
 |PLS           |   4|       0.0619|              0.0745|   0.0727|
 
 ::: notes
-The table compares the three fits, each chosen and fit with the training diamonds and evaluated once on the 53,817 test diamonds; least squares is the fit with M = p. On this training sample PCR and PLS with M = 4 tie least squares: the test MSEs are within 0.21% of one another. The paired difference in squared error over the test diamonds, least squares minus PLS, has mean −0.00015 and standard error 0.00009, so on this training sample least squares predicts the test diamonds slightly better. As in the ridge lecture, that standard error treats the fitted models as fixed and says nothing about another training sample. One training sample of 100 diamonds cannot show whether either method helps on average; the lecture after next compares PCR and PLS with least squares over repeated training samples.
+The table compares the three fits: PCR and PLS with their chosen M, and least squares (M = p), each fit to all the training diamonds and evaluated once on the 53,817 test diamonds. On this training sample PCR and PLS with M = 4 tie least squares: the test MSEs are within 0.21% of one another. Dropping PC5 and PC6 removed estimates that were smaller than their standard errors, but on this training sample their least squares terms happened to help slightly on the test diamonds. The paired difference in squared error over the test diamonds, least squares minus PLS, has mean −0.00015 and standard error 0.00009, so on this training sample least squares predicts the test diamonds slightly better. As in the ridge lecture, that standard error treats the fitted models as fixed and says nothing about another training sample. One training sample of 100 diamonds cannot show whether either method helps on average; the lecture after next compares PCR and PLS with least squares over repeated training samples.
 
-All three cross-validation estimates are above the test MSEs. Choosing the smallest estimate on a noisy curve cannot be the reason, since least squares involves no choice. The three estimates are means of the held-out squared errors of the same 100 diamonds on the same folds, and those squared errors have correlation at least 0.998 across the three fits, so the three estimates are high or low together. Here one diamond accounts for much of it: the heaviest training diamond, with its low price, contributes 12% of the least squares estimate, and without it the three estimates would be 0.0688, 0.0657 and 0.0657, all below the test MSEs.
+Cross-validation estimates (the notes' next subsection, no slide of its own): all three cross-validation estimates are above the test MSEs, by 0.0052, 0.0017 and 0.0017 for least squares, PCR and PLS. Choosing the smallest estimate on a noisy curve cannot be the reason, since least squares involves no choice. Fitting each fold to 90 diamonds rather than 100 explains little: least squares fit to the training folds of each fold has test MSE 0.0735 on average, against 0.0726 for the fit to all 100, a difference of 0.0009. One diamond accounts for more than the gap: the heaviest training diamond, with its low price, contributes 12% of the least squares estimate, and removing it lowers the three estimates by 0.0090, 0.0087 and 0.0087, to 0.0688, 0.0657 and 0.0657. The three estimates also agree closely with one another, because they are means of the held-out squared errors of the same 100 diamonds on the same folds, and those squared errors have correlation at least 0.998 across the three fits; that explains why the three move together, not why they exceed the test MSEs.
 :::
 
 ## Conclusion

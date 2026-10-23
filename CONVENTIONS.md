@@ -181,7 +181,9 @@ convention.
   $\boldsymbol{\Phi}_M$ the $p \times M$ matrix of the first $M$ loading
   vectors, $\mathbf{Z}_M$ the $n \times M$ matrix of scores, and
   $\hat\beta = \boldsymbol{\Phi}_M\hat\theta$ the standardized-scale
-  estimate. The PLS directions are $\phi^{\text{PLS}}_m$ (unit length) with
+  estimate (of PCR, or of PLS in its section); the least squares estimate on
+  the standardized scale is $\hat\beta^{\text{LS}}$, by analogy with the
+  lasso chapter's $\hat\beta^L$ and $\hat\beta^R$. The PLS directions are $\phi^{\text{PLS}}_m$ (unit length) with
   scores $z^{\text{PLS}}_{im}$, so the unsuperscripted $\phi_m$ and $z_{im}$
   stay the principal components'; $g_j$ is the simple regression estimate
   (equal to the sample covariance) of the response on standardized feature
