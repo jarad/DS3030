@@ -36,7 +36,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 06-regularization/50-pcr-and-pls.qmd @ uncommitted -->
+<!-- derived-from: 06-regularization/50-pcr-and-pls.qmd @ adedf71 -->
 
 ::: {.columns}
 ::: {.column width="50%"}
