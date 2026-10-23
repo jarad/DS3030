@@ -36,7 +36,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 06-regularization/30-lasso.qmd @ 1ffd3f0 -->
+<!-- derived-from: 06-regularization/30-lasso.qmd @ bbebcf9 -->
 
 ::: {.columns}
 ::: {.column width="50%"}
