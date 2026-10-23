@@ -1824,6 +1824,12 @@ also shrinks the large hour and distance estimates more than the lasso
 does, in the fit to the training orders and on average over the samples.
 Neither reason has been isolated from the other here.
 
+Which penalty predicts better depends on how many features carry the signal.
+The reasoning above suggests the lasso predicts better when a few features
+matter and the rest are noise, and ridge regression when many features have
+small effects of similar size, because the lasso then sets real signal to
+zero. One dataset cannot show that.
+
 ::: {.callout-note collapse="true"}
 ### Beyond this course
 - **Bayesian interpretation.** If
@@ -1883,7 +1889,10 @@ estimate is
 optimistic as an estimate of the chosen model's error, because $\lambda$ was
 chosen to make it small. Whether the lasso predicts better than ridge
 regression or least squares depends on the data and the training sample size,
-and is best judged over repeated samples rather than one. The set of features
+and is best judged over repeated samples rather than one. The lasso is
+expected to predict better when a few features carry the signal and ridge
+regression when many features have small effects of similar size, but one
+dataset cannot show that. The set of features
 it selects can change from sample to sample, especially when many features
 have small effects of similar size, so a dropped feature is not shown to have
 no effect. The nonzero lasso estimates are shrunken toward zero, the lasso

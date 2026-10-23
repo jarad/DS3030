@@ -1090,8 +1090,10 @@ on the training data, the model is refit and evaluated once on test data, and
 lasso, ridge and least squares are compared by test MSE and by the features
 kept; the cross-validation estimates exceed the test MSEs and the smallest
 estimate is optimistic. Over repeated training samples the lasso helps at
-$n = 100$ and not at $n = 300$, this sample is a favorable draw, the selected
-set is unstable, and the nonzero lasso estimates are shrunken toward zero, so
+$n = 100$ and not at $n = 300$, this sample is a favorable draw, the lasso is
+expected to beat ridge regression when a few features carry the signal and to
+lose when many have small effects of similar size (one dataset cannot show
+that), the selected set is unstable, and the nonzero lasso estimates are shrunken toward zero, so
 the lasso estimator of a nonzero coefficient is biased toward zero (bias is a
 property of the estimator, not of the estimates from one sample); `lm()`
 standard errors and $p$-values do not apply after selection. A
