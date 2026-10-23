@@ -1358,6 +1358,6 @@ most variance need not be the best predictor, a low-variance component can
 matter for prediction, and every component uses every feature.
 
 The next lecture, principal components regression and partial least
-squares, regresses the price of the same diamonds on the first $M$
+squares, regresses the log price of the same diamonds on the first $M$
 components, chooses $M$ by cross-validation, and compares the components with
 directions that partial least squares chooses using the response.

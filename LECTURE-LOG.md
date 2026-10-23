@@ -53,9 +53,9 @@ shifted.
 | ---- | --- | -------------- | ----- |
 | 2026-10-23 | Fri | `06-regularization/30-lasso.qmd` | Lasso (ISLR2 6.2.2-6.2.3), example data `modeldata::deliveries` (same as ridge): L1 penalty and exact zeros, ridge versus lasso, Bayesian view as a short aside, choosing λ by cross-validation |
 | 2026-10-26 | Mon | `06-regularization/40-principal-components.qmd` | Principal components (ISLR2 6.3): directions of maximum variance, loadings and scores, scaling, proportion of variance explained (PCA is formally Chapter 12, after Exam 2) |
-| 2026-10-28 | Wed | `06-regularization/50-pcr-and-pls.qmd` (to be written) | Principal components regression and partial least squares (ISLR2 6.3.1-6.3.2): choosing the number of components by cross-validation |
+| 2026-10-28 | Wed | `06-regularization/50-pcr-and-pls.qmd` | Principal components regression and partial least squares (ISLR2 6.3.1-6.3.2), example data `ggplot2::diamonds` (same as principal components), log price from 100 training diamonds: PCR as least squares on the first M scores and as a constrained linear model, the variance σ²/(n v_m) of each score estimate, ridge's factor v_m/(v_m + λ/n) on each component, the first PLS direction as maximal covariance with the response, and choosing M by cross-validation with the directions recomputed in each fold |
 | 2026-10-30 | Fri | `06-regularization/60-high-dimensions.qmd` (to be written) | High dimensions (ISLR2 6.4): p > n, why R², training error and p-values mislead, the role of regularization and tuning, cross-validation done correctly |
-| 2026-11-02 | Mon | `06-regularization/70-method-comparison.qmd` (to be written) | Comparison day: subset selection, ridge, lasso, PCR and PLS on one dataset by cross-validated and test error; ridge/lasso for logistic and Poisson regression if time allows. Also a buffer if an earlier lecture runs over |
+| 2026-11-02 | Mon | `06-regularization/70-method-comparison.qmd` (to be written) | Comparison day: subset selection, ridge, lasso, PCR and PLS on one dataset by cross-validated and test error, including a repeated-training-samples study of PCR and PLS against least squares (moved from the PCR/PLS lecture); ridge/lasso for logistic and Poisson regression if time allows. Also a buffer if an earlier lecture runs over |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |
 

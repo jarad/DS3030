@@ -41,6 +41,7 @@ book:
       - 06-regularization/20-ridge-regression.qmd
       - 06-regularization/30-lasso.qmd
       - 06-regularization/40-principal-components.qmd
+      - 06-regularization/50-pcr-and-pls.qmd
 
 format:
   html:

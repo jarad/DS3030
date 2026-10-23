@@ -172,6 +172,34 @@ convention.
   (never $\lambda$, the ridge and lasso tuning parameter), and $\mathbf{R}$ the
   correlation matrix, a matrix unrelated to the coefficient of determination
   $R^2$.
+- **In the PCR and PLS chapter (`06-regularization/50-pcr-and-pls.qmd`)**,
+  $n$ is the training sample size (not the count of retained diamonds, as in
+  the principal components chapter), $M$ the number of components or
+  directions kept, $\theta_0, \theta_1, \ldots, \theta_M$ the coefficients
+  of the regression on the scores ($\theta$ is also the bootstrap estimand
+  and the naive Bayes Bernoulli parameter; the passages are far apart),
+  $\boldsymbol{\Phi}_M$ the $p \times M$ matrix of the first $M$ loading
+  vectors, $\mathbf{Z}_M$ the $n \times M$ matrix of scores, and
+  $\hat\beta = \boldsymbol{\Phi}_M\hat\theta$ the standardized-scale
+  estimate. The PLS directions are $\phi^{\text{PLS}}_m$ (unit length) with
+  scores $z^{\text{PLS}}_{im}$, so the unsuperscripted $\phi_m$ and $z_{im}$
+  stay the principal components'; $g_j$ is the simple regression estimate
+  (equal to the sample covariance) of the response on standardized feature
+  $j$, $\tilde{\mathbf{X}}^{(m)}$ the $n \times p$ matrix of residual features
+  used for direction $m$, with column $j$ written
+  $\tilde{\mathbf{x}}^{(m)}_{\cdot j}$; the $n$-vector of feature $j$ (column $j$
+  of $\tilde{\mathbf{X}}$) is $\tilde{\mathbf{x}}_{\cdot j}$, bold with a dot
+  for the row index, so it cannot be mistaken for the unbolded row
+  $\tilde x_i$ of one observation, and $r_m$ the $p$-vector with
+  $z^{\text{PLS}}_m = \tilde{\mathbf{X}}r_m$.
+  For a unit vector $a$, $R_a^2$, $s_a^2$, and $s_y^2$ are the squared sample
+  correlation of its scores with the response, the sample variance of its
+  scores, and the sample variance of the response (divisor $n$); sample
+  quantities are named this way rather than with $Var[\cdot]$, which is
+  reserved for expectation-type variances.
+  $\text{CV}_{(k)}(M)$ is the $k$-fold cross-validation estimate for $M$
+  components, and the ridge shrinkage factor on component $m$ is
+  $v_m/(v_m + \lambda/n)$, with $\lambda$ the ridge chapter's.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted
