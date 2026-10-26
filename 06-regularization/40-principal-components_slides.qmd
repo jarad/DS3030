@@ -162,7 +162,7 @@ $$Z_1 = \phi_{11}\tilde X_1 + \phi_{21}\tilde X_2 + \cdots + \phi_{p1}\tilde X_p
 ::: {style="font-size: 0.6em"}
 - $Z_1$ — first principal component: the combination with the largest sample variance
 - $\tilde X_j$ — feature $j$
-- $\phi_{j1}$ — loading of feature $j$; $\phi_1 = \left(\phi_{11}, \ldots, \phi_{p1}\right)^\top$ — loading vector
+- $\phi_{j1}$ — loading of feature $j$, with $-1 \le \phi_{j1} \le 1$; $\phi_1 = \left(\phi_{11}, \ldots, \phi_{p1}\right)^\top$ — loading vector
 :::
 :::
 
@@ -177,13 +177,13 @@ $$z_{i1} = \sum_{j=1}^p\phi_{j1}\tilde x_{ij} = \tilde x_i\phi_1$$
 :::
 
 ::: notes
-The first principal component is the linear combination of the features with the largest sample variance, subject to the loadings having unit sum of squares; without the constraint the variance could be made as large as desired by multiplying the loadings by a constant. The loading vector is a unit-length direction in the p-dimensional feature space. The score of diamond i is its signed position along that direction, and the n-vector of scores is z_1 = X-tilde phi_1. phi_j1 is the loading here, not the dispersion parameter phi of the generalized linear models lecture. In the two-feature figure the line at angle theta has unit direction a = (cos theta, sin theta), each blue segment ends at the projection of a diamond onto it, and the first component is the line with the largest variance of the scores x-tilde_i a. The loading vector and the scores are computed from the n diamonds, so they are estimates.
+The first principal component is the linear combination of the features with the largest sample variance, subject to the loadings having unit sum of squares; without the constraint the variance could be made as large as desired by multiplying the loadings by a constant. The loading vector is a unit-length direction in the p-dimensional feature space, and because the squared loadings sum to 1, every loading lies between −1 and 1. The score of diamond i is its signed position along that direction, and the n-vector of scores is z_1 = X-tilde phi_1. phi_j1 is the loading here, not the dispersion parameter phi of the generalized linear models lecture. In the two-feature figure the line at angle theta has unit direction a = (cos theta, sin theta), each blue segment ends at the projection of a diamond onto it, and the first component is the line with the largest variance of the scores x-tilde_i a. The loading vector and the scores are computed from the n diamonds, so they are estimates.
 :::
 
 ## Maximum variance
 
 ::: {style="font-size: 0.8em"}
-Sample variance of the scores of a unit vector $a$
+Sample variance of the scores of a unit vector $a$, a candidate for $\phi_1$
 :::
 
 ::: {style="font-size: 0.7em"}
@@ -200,24 +200,28 @@ $$2\mathbf{R}a - 2va = 0 \quad\Rightarrow\quad \mathbf{R}a = va$$
 :::
 
 ::: {style="font-size: 0.6em"}
-- $v$ — Lagrange multiplier
+- $v$ — Lagrange multiplier: at the maximum, the gradient of the variance, $2\mathbf{R}a$, is $v$ times the gradient of the constraint, $2a$
 :::
 :::
 
 ::: {.fragment}
 ::: {style="font-size: 0.6em"}
-- $\phi_1$ — eigenvector of $\mathbf{R}$ with the largest eigenvalue $v_1$
+- $\phi_1$ — the maximizing $a$: the eigenvector of $\mathbf{R}$ with the largest eigenvalue $v_1$
 - $v_1$ — variance of the first component's scores
 :::
 :::
 
 ::: notes
-The features have mean 0, so the scores of any unit vector a have mean 0 and sample variance a-transpose R a. To maximize it subject to a-transpose a = 1, introduce a Lagrange multiplier v and set the gradient of a-transpose R a minus v times (a-transpose a minus 1) to zero, which gives 2 R a minus 2 v a equal to zero, so R a = v a. So a maximizing direction is an eigenvector of R with eigenvalue v, and multiplying R a = v a on the left by a-transpose shows that the variance of its scores is v. Of all the unit eigenvectors, the one with the largest eigenvalue gives the largest variance: phi_1 is the eigenvector of the sample correlation matrix with the largest eigenvalue v_1, and v_1 is the variance of the first component's scores. Both are estimates, computed from the n diamonds, of the leading eigenvector and eigenvalue of the population correlation matrix of the explanatory variables.
+Let a be any unit vector, a candidate for the loading vector phi_1; the maximizer of the variance of the scores x-tilde_i a is phi_1. The features have mean 0, so the scores of a have mean 0 and sample variance a-transpose R a. To maximize it subject to a-transpose a = 1, introduce a Lagrange multiplier v: at a maximum on the constraint the gradient of the objective, 2 R a, is proportional to the gradient of the constraint, 2 a, and v is the constant of proportionality. Set the gradient of a-transpose R a minus v times (a-transpose a minus 1) to zero, which gives 2 R a minus 2 v a equal to zero, so R a = v a. So a maximizing direction is an eigenvector of R with eigenvalue v, and multiplying R a = v a on the left by a-transpose shows that the variance of its scores is v. Of all the unit eigenvectors, the one with the largest eigenvalue gives the largest variance: phi_1 is the eigenvector of the sample correlation matrix with the largest eigenvalue v_1, and v_1 is the variance of the first component's scores. Both are estimates, computed from the n diamonds, of the leading eigenvector and eigenvalue of the population correlation matrix of the explanatory variables.
 
 For the diamonds the estimated loading vector is (0.49, 0.00, 0.12, 0.50, 0.50, 0.50) in the order carat, depth, table, x, y, z, with v_1 = 4.00 against 1 for any single feature; the loadings figure later in the deck shows it.
 :::
 
 ## Closest line
+
+::: {style="font-size: 0.8em"}
+The first component is also the line closest to the data
+:::
 
 ::: {style="font-size: 0.7em"}
 $$\left\|\tilde x_i\right\|^2 = z_{i1}^2 + \left\|\tilde x_i - z_{i1}\phi_1^\top\right\|^2$$
@@ -233,11 +237,12 @@ $$\frac{1}{n}\sum_{i=1}^n\left\|\tilde x_i - z_{i1}\phi_1^\top\right\|^2 = p - \
 ::: {style="font-size: 0.6em"}
 - $\left\|\tilde x_i - z_{i1}\phi_1^\top\right\|^2$ — squared distance from diamond $i$ to the line
 - $\phi_1^\top\mathbf{R}\phi_1$ — variance of the scores
+- maximizing the variance minimizes the distance
 :::
 :::
 
 ::: notes
-Because phi_1 has unit length, Pythagoras splits each diamond's squared distance from the origin into its squared score and its squared distance from the line. Averaging over the diamonds, and using (1/n) times the sum of the squares of each feature equal to 1, the mean squared distance from the diamonds to the line through the origin in direction phi_1 is p minus the variance of the scores. The direction that maximizes the variance therefore minimizes the mean squared distance, so the first principal component is also the line closest to the data. In the last tab of Two features the two curves sum to p = 2 at every angle.
+The first component has a second characterization that gives the same direction: it is the line closest to the data, so projecting each diamond onto it loses the least, in squared distance. Because phi_1 has unit length, Pythagoras splits each diamond's squared distance from the origin into its squared score and its squared distance from the line. Averaging over the diamonds, and using (1/n) times the sum of the squares of each feature equal to 1, the mean squared distance from the diamonds to the line through the origin in direction phi_1 is p minus the variance of the scores. The direction that maximizes the variance therefore minimizes the mean squared distance, so the first principal component is also the line closest to the data. In the last tab of Two features the two curves sum to p = 2 at every angle.
 :::
 
 # Later components

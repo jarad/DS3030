@@ -603,6 +603,8 @@ $$z_{i1} = \sum_{j=1}^p\phi_{j1}\tilde x_{ij} = \tilde x_i\phi_1,$$
 is its **score** on the first component, its signed position along the
 direction $\phi_1$. The $n$-vector of scores is $z_1 = \tilde{\mathbf{X}}\phi_1$.
 
+Because the squared loadings sum to 1, every loading lies between $-1$ and $1$.
+
 Without the constraint $\left\|\phi_1\right\| = 1$ the variance could be made
 as large as desired by multiplying the loadings by a constant. In the
 two-feature figure, the line at angle $\theta$ has unit direction
@@ -612,14 +614,18 @@ first component is the line with the largest variance of $\tilde x_ia$.
 
 ### Maximum variance
 
-The features have mean 0, so the scores of any unit vector $a$ have mean 0
-and sample variance
+Let $a$ be any unit vector, a candidate for the loading vector $\phi_1$. The
+features have mean 0, so the scores $\tilde x_ia$ have mean 0 and sample
+variance
 
 $$\frac{1}{n}\sum_{i=1}^n\left(\tilde x_i a\right)^2 = \frac{1}{n}a^\top\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}}a = a^\top\mathbf{R}a.$$
 
-To maximize $a^\top\mathbf{R}a$ subject to $a^\top a = 1$, introduce a
-Lagrange multiplier $v$ and set the gradient of
-$a^\top\mathbf{R}a - v\left(a^\top a - 1\right)$ to zero:
+The $a$ that maximizes $a^\top\mathbf{R}a$ is $\phi_1$. At a maximum subject to
+the constraint $a^\top a = 1$, the gradient of the objective,
+$2\mathbf{R}a$, is proportional to the gradient of the constraint, $2a$; the
+constant of proportionality $v$ is the **Lagrange multiplier**. Setting the
+gradient of $a^\top\mathbf{R}a - v\left(a^\top a - 1\right)$ to zero imposes
+both conditions:
 
 $$2\mathbf{R}a - 2va = 0 \quad\Rightarrow\quad \mathbf{R}a = va.$$
 
@@ -649,7 +655,9 @@ With $r = 0$ the eigenvalues tie and every direction is a first component.
 
 ### Closest line
 
-Because $\phi_1$ has unit length, Pythagoras splits each diamond's squared
+The first component has a second characterization that gives the same
+direction: it is the line closest to the data, so projecting each diamond onto
+it loses the least, in squared distance. Because $\phi_1$ has unit length, Pythagoras splits each diamond's squared
 distance from the origin into its squared score and its squared distance from
 the line:
 

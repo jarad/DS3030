@@ -32,6 +32,7 @@ takes more or fewer days than planned.
 | 2026-10-16 | Fri | Class cancelled | No class meeting. The planned lecture (the Classification slides held over from Wednesday, then `05-resampling/15-cv-in-practice.qmd` and its small-group activity `15-cv-in-practice_activity.R`) was not taught. The next class (Monday 2026-10-19) moves on to the next topic, so the cross-validation Classification section and Cross-Validation in Practice were not presented in class; both stay in the book. |
 | 2026-10-19 | Mon | `06-regularization/10-subset-selection.qmd` | Covered most of the slides in `10-subset-selection_slides.qmd` (best subset selection, stepwise selection, choosing model size by the penalized criteria and the chosen-sizes comparison, interpreting the selected model); the within-fold cross-validation slides and the optimism slides (Training error optimism and Optimistic inference) were skipped. |
 | 2026-10-21 | Wed | `06-regularization/20-ridge-regression.qmd` | Covered the ridge slides in `20-ridge-regression_slides.qmd`. Afterwards the deck was trimmed: Shrinkage, Standardization, Squared bias and variance, Favorable draw, the Ridge coefficients transition, Coefficient comparison and Interpretation were removed from it. |
+| 2026-10-23 | Fri | `06-regularization/30-lasso.qmd` | Covered all of the slides in `30-lasso_slides.qmd` with time to spare. The text in several figures was too small to read on the slides (for example Selected sets), though the same figures read well in the notes; see the Notes for the next offering. |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -51,7 +52,6 @@ shifted.
 
 | Date | Day | Planned topic | Notes |
 | ---- | --- | -------------- | ----- |
-| 2026-10-23 | Fri | `06-regularization/30-lasso.qmd` | Lasso (ISLR2 6.2.2-6.2.3), example data `modeldata::deliveries` (same as ridge): L1 penalty and exact zeros, ridge versus lasso, Bayesian view as a short aside, choosing λ by cross-validation |
 | 2026-10-26 | Mon | `06-regularization/40-principal-components.qmd` | Principal components (ISLR2 6.3): directions of maximum variance, loadings and scores, scaling, proportion of variance explained (PCA is formally Chapter 12, after Exam 2) |
 | 2026-10-28 | Wed | `06-regularization/50-pcr-and-pls.qmd` | Principal components regression and partial least squares (ISLR2 6.3.1-6.3.2), example data `ggplot2::diamonds` (same as principal components), log price from 100 training diamonds: PCR as least squares on the first M scores and as a constrained linear model, the variance σ²/(n v_m) of each score estimate, ridge's factor v_m/(v_m + λ/n) on each component, the first PLS direction as maximal covariance with the response, and choosing M by cross-validation with the directions recomputed in each fold |
 | 2026-10-30 | Fri | `06-regularization/60-high-dimensions.qmd` (to be written) | High dimensions (ISLR2 6.4): p > n, why R², training error and p-values mislead, the role of regularization and tuning, cross-validation done correctly |
@@ -105,6 +105,11 @@ the semester in which they were noted.
   re-render and refresh the figures in their slide decks). The course now
   prefers violin plots; `notes-author` and `slides-author` were updated
   2026-10-15 (noted 2026-10-15, to do next semester).
+- Slide figure text size: figures reused from the notes show their text too
+  small on the slides (noted 2026-10-23 after the lasso lecture, for example
+  Selected sets). The cause is figure height in inches against the height at
+  which the slide displays it: a tall figure shrinks its text to 8 to 10 pixels
+  on a 720 pixel slide. The fix is under discussion.
 - Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
   has a callout headed `### Two questions, two verdicts`, which is not one of
   the three fixed callout headings in `CONVENTIONS.md`.
