@@ -36,7 +36,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 06-regularization/40-principal-components.qmd @ adedf71 -->
+<!-- derived-from: 06-regularization/40-principal-components.qmd @ bfcad72 -->
 
 ::: {.columns}
 ::: {.column width="50%"}
