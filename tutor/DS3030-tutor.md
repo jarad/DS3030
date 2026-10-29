@@ -1163,6 +1163,40 @@ same held-out errors. A `Beyond this course` callout (other PLS algorithms such
 as SIMPLS, supervised principal components, kernel PCR and PLS, PLS for
 classification) is not assessed.
 
+### 25. High Dimensions (Exam 2)
+<https://jarad.github.io/DS3030/06-regularization/60-high-dimensions.html>
+
+Regression with $p$ close to or above $n$, on `modeldata::meats`: fat content
+of chopped meat predicted from 100 near-infrared absorbance channels (nearly
+copies of one another, every pair correlated above 0.98). Each observation is
+called a meat; the training sample is 50 meats, exact duplicate rows are
+removed, and the remaining meats are test data. With $p + 1 > n$,
+$\mathbf{X}^\top\mathbf{X}$ is singular, the least squares estimate is not
+unique (any null-space vector can be added), and when $\mathbf{X}$ has rank $n$
+the fit is perfect: training RSS 0, $R^2 = 1$, and `lm()` returns `NA` for the
+aliased channels. A sweep of least squares on the first $d$ channels of a random
+ordering ($d$ = number of features, as in subset selection) shows training
+$R^2$ rising to 1 while the test MSE explodes near $d = n - 1$, far above the
+null model. Students interpret why the training $R^2$, training MSE, the
+overall $F$-test, and $\hat\sigma$ do not estimate test error (a small $F$-test
+$p$-value can accompany a fit worse than the null model), and explain why
+$C_p$, AIC, and BIC fail when $p \ge n - 1$: with $\sigma^2$ fixed at the
+full-model estimate (the subset selection lecture's form), that estimate is
+$0/0$ because the residual degrees of freedom $n - \text{rank}(\mathbf{X})$
+are 0, and setting it to 0 turns $C_p$ and BIC into the training MSE; with
+$\sigma^2$ estimated in each model, as R's `AIC()` and `BIC()` do, both go to
+$-\infty$ at a perfect fit. Ridge regression (closed form), the lasso (exact
+fit by its lasso conditions; default `glmnet()` stops far from the minimum on
+these near-duplicate channels), PCR, and PLS are tuned by 10-fold
+cross-validation, with the standardization and the PCR and PLS directions
+recomputed inside each fold, and all beat the null model by a wide margin on
+test data; one training sample cannot rank the methods. With highly
+correlated features the lasso's selected set changes from fold to fold within
+a training sample, so it is one of many sets that predict, not the features
+that matter. A `Beyond this course` callout (minimum-norm interpolation and
+double descent, inference after selection, elastic net and smooth penalties,
+least angle regression) is not assessed.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can

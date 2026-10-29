@@ -202,6 +202,26 @@ convention.
   $\text{CV}_{(k)}(M)$ is the $k$-fold cross-validation estimate for $M$
   components, and the ridge shrinkage factor on component $m$ is
   $v_m/(v_m + \lambda/n)$, with $\lambda$ the ridge chapter's.
+- **In the high-dimensions chapter
+  (`06-regularization/60-high-dimensions.qmd`)**, an observation is a
+  **meat** (one sample of chopped meat, named after the data set), so
+  "sample" always means a set of observations ("a training sample of 50
+  meats", "the test meats"), never one observation, as the ridge and lasso
+  chapters say "orders". $n$ is the training sample size and $p$ the number
+  of candidate features, the 100 absorbance
+  **channels** of `modeldata::meats`; a channel's absorbance is an
+  explanatory variable, entering least squares unchanged and the other
+  methods standardized as $\tilde x_{ij}$. $d$ is the number of features in
+  a least squares model, the subset selection chapter's meaning, here the
+  first $d$ channels of a random ordering (the **channel sweep**) rather than
+  the best subset of size $d$. $\lambda$, $M$, $\hat\beta^R_\lambda$,
+  $\hat\beta^L_\lambda$, $v_m$, and $\tilde{\mathbf{x}}_{\cdot j}$ keep their meanings from the ridge,
+  lasso, and PCR and PLS chapters. The subgradient conditions
+  $\tilde{\mathbf{x}}_{\cdot j}^\top r = (\lambda/2)\,\text{sign}(\hat\beta^L_{\lambda j})$
+  or $|\tilde{\mathbf{x}}_{\cdot j}^\top r| \le \lambda/2$ are called the
+  **lasso conditions** (not "KKT conditions"), with $r$ the $n$-vector of
+  lasso residuals (unrelated to the PLS vectors $r_m$ of the previous
+  chapter, which always carry a subscript).
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

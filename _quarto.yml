@@ -42,6 +42,7 @@ book:
       - 06-regularization/30-lasso.qmd
       - 06-regularization/40-principal-components.qmd
       - 06-regularization/50-pcr-and-pls.qmd
+      - 06-regularization/60-high-dimensions.qmd
 
 format:
   html:
