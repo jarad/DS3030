@@ -1197,6 +1197,40 @@ that matter. A `Beyond this course` callout (minimum-norm interpolation and
 double descent, inference after selection, elastic net and smooth penalties,
 least angle regression) is not assessed.
 
+### 26. Method Comparison (Exam 2)
+<https://jarad.github.io/DS3030/06-regularization/70-method-comparison.html>
+
+The capstone of Chapter 6: least squares, forward stepwise selection (size
+$d$), ridge regression and the lasso ($\lambda$), PCR and PLS ($M$) compared
+on one dataset, `modeldata::ames` home sales (each observation a home), with
+the natural log of the sale price as the response and main effects only.
+Cleaning: the five homes over 4,000 sq ft removed (the data compiler's rule),
+`BsmtFin_SF_1` dropped (a numeric code of `BsmtFin_Type_1`), an indicator for
+a missing lot frontage, ratings entered as unordered dummies. Candidate
+features are built from the training homes' explanatory variables only:
+levels with fewer than 5 training homes merge into the most common level
+(the reference), and constant or exactly duplicated columns are dropped,
+giving $p$ comparable to the training sample size $n = 200$. Every method is
+tuned by 10-fold cross-validation with the standardization, the forward path,
+and the PCR/PLS directions recomputed in each fold, then evaluated once on
+test homes; `glmnet()`'s default tolerance is checked against the lasso
+conditions and tightened. A study over 200 repeated training samples drawn
+from the remaining test homes shows that methods within a few percent of
+one another cannot be ranked by one training sample, while large differences
+between methods show up in nearly every sample. A chosen fit's CV estimate
+can miss its test MSE either way: choosing the smallest estimate makes it
+optimistic, and fitting each fold to fewer homes raises it, most for least
+squares with $p$ close to $n$ (lost residual degrees of freedom). Students
+compare the methods in a table by what they do to the estimates (hard
+threshold, soft threshold, shrinkage of every estimate, reduction to
+directions), feature selection, tuning parameter, standardization, needs from
+$n$ and $p$, computation, and interpretation; explain that the lasso and
+forward selection treat each dummy alone, so a dropped dummy merges its level
+into the reference; and state the setting each method is expected to suit
+from earlier reasoning, which one dataset cannot establish. A `Beyond this
+course` callout (penalized logistic and Poisson regression, elastic net,
+group lasso, interactions with a penalized fit) is not assessed.
+
 ## What has already been assessed
 
 These are **topic tags only** — no question text and no answers — so you can
@@ -1305,6 +1339,26 @@ analysis, touching test-set discipline, where feature screening belongs
 relative to cross-validation, standardization, comparing methods on shared
 folds, uncertainty about the selected set, tuning on the test set, what a zero
 estimate does and does not show, and inference after selection.
+
+**Homework 9** (principal components, principal components regression, partial
+least squares, high dimensions): a by-hand derivation of the principal
+components of features with a simple correlation structure, the proportion of
+variance explained and rules for choosing how many components to keep, and
+what changes when the explanatory variables are not standardized; how
+principal components regression and partial least squares differ in which
+directions they use; on real data with nearly as many features as
+observations, a principal component analysis with a scree plot and loading
+interpretation, a least squares fit whose training summaries disagree with its
+held-out error, and a comparison of principal components regression, partial
+least squares, ridge regression, and the lasso tuned by cross-validation and
+judged on held-out data, including what each can and cannot say about which
+features matter; a simulation of cross-validation with data-dependent
+directions when features outnumber observations; a true/false conceptual
+review touching scree-plot elbows, how ridge regression treats the components,
+units and standardization, the sign of a loading vector, the number of
+components with nonzero variance, whether dimension reduction selects
+features, choosing the number of components by training error, and a perfect
+training fit.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable

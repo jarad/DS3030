@@ -42,6 +42,7 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-21 | New | | 06-regularization/40-principal-components.qmd | |
 | 2026-10-22 | New | | 06-regularization/50-pcr-and-pls.qmd | |
 | 2026-10-22 | New | | 06-regularization/60-high-dimensions.qmd | |
+| 2026-10-28 | New | | 06-regularization/70-method-comparison.qmd | |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into

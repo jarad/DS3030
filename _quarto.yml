@@ -43,6 +43,7 @@ book:
       - 06-regularization/40-principal-components.qmd
       - 06-regularization/50-pcr-and-pls.qmd
       - 06-regularization/60-high-dimensions.qmd
+      - 06-regularization/70-method-comparison.qmd
 
 format:
   html:

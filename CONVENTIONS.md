@@ -222,6 +222,26 @@ convention.
   **lasso conditions** (not "KKT conditions"), with $r$ the $n$-vector of
   lasso residuals (unrelated to the PLS vectors $r_m$ of the previous
   chapter, which always carry a subscript).
+- **In the method comparison chapter
+  (`06-regularization/70-method-comparison.qmd`)**, an observation is a
+  **home**, as in `05-resampling/15-cv-in-practice.qmd`, and "sample" always
+  means a set of homes ("a training sample of 200 homes", "the test
+  homes"). The response is the natural log of `Sale_Price`, the log of the
+  other Chapter 6 lectures (the cross-validation in practice lecture used
+  $\log_{10}$; the chapter says so). $n$ is the training sample size and $p$
+  the number of candidate features left by the chapter's three rules (rare
+  levels merged into the reference, dummy variables, constant or collinear
+  columns dropped); the rules use the training sample's explanatory
+  variables, so $p$ changes from one repeated training sample to the next.
+  The **reference** level of each categorical variable is its most common
+  level among the training homes. $d$ (forward stepwise size), $\lambda$
+  (ridge and lasso, each on its own lecture's scale, so the two are not
+  compared), and $M$ (PCR components and PLS directions) keep their earlier
+  meanings. Because $M$ is the number of directions here, the number of
+  repeated training samples gets no symbol in this chapter and is written as
+  a number. The repeated samples are drawn from "the remaining test homes",
+  and every prediction is made at "the test homes at which every prediction
+  is made", mirroring the ridge and lasso chapters' test orders.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted
