@@ -4,7 +4,7 @@
 
 Outline for `70-method-comparison_slides.qmd` (Mon 2026-11-02, one 50-minute period, the capstone of the regularization chapter; ISLR2 Chapter 6 as a whole). **This file is the spec; the deck is built from it, and this file describes the deck as it stands.** Edit it freely and ask for the deck to be refreshed.
 
-Drafted against `70-method-comparison.qmd`. The chapter is **not yet committed**, so the deck's `derived-from` comment records the repository HEAD at drafting time (`640b5d1`); replace it with the chapter's short hash (`git log -1 --format=%h -- 06-regularization/70-method-comparison.qmd`) once the chapter is committed. The deck was refreshed after the chapter's proofreading revision (headings renamed, the correlated-features row and claims removed, the cross-validation-versus-test explanation rewritten, the timing prose removed).
+Drafted against `70-method-comparison.qmd`. The deck's `derived-from` comment records the chapter's commit (`b23af55`). The deck was refreshed after the chapter's proofreading revision (headings renamed, the correlated-features row and claims removed, the cross-validation-versus-test explanation rewritten, the timing prose removed).
 
 **What the deck is.** 18 slides including the title: the agenda, four transitions, 11 content slides and the Conclusion. The chapter is mostly empirical (8 figures reused, 3 kable tables reused, no console output) on one running example, `modeldata::ames` (log sale price, main effects only, $n = 200$ training homes, $p = 122$ candidate features, 2,725 test homes). The deck has no new content: every `show:` is a figure or table the chapter already renders, or a list cut from the chapter's own bullets.
 
