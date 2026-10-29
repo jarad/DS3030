@@ -50,6 +50,30 @@ are not book chapters. Render one directly with
 project's `output-dir: docs` — the HTML and its `_slides_files/` support
 directory land next to the source `.qmd`, not in `docs/`.
 
+## Outline file format
+
+A deck's outline, `<chapter>_slides.outline.md`, is read on GitHub and in
+Positron, so every field of an entry is a bullet. GitHub (like any CommonMark
+renderer) joins consecutive lines into one paragraph, so bare `tag:`, `show:`,
+`words:`, `reveal:`, `say:`, `note:` and `needs:` lines on consecutive lines
+render as one run-on line. Write each entry as a heading, a blank line, and
+one bullet per field, with the field name in bold:
+
+```
+## 7. Maximum variance
+
+- **tag:** core (2)
+- **show:** equation — the chapter's variance display
+- **words:** a short label
+- **say:** what the instructor says aloud
+- **note:** build and provenance details
+```
+
+Keep each field on a single line (the bullet may be long), leave a blank line
+between entries, and give a transition slide's `# Title` heading the same
+blank line and bullets. Do not use a trailing backslash or two trailing spaces
+for line breaks, and do not run fields together without a bullet.
+
 ## Precondition: the notes chapter must already be rendered
 
 You have no way to produce a figure or table that hasn't already been
