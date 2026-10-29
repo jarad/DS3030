@@ -33,6 +33,7 @@ takes more or fewer days than planned.
 | 2026-10-19 | Mon | `06-regularization/10-subset-selection.qmd` | Covered most of the slides in `10-subset-selection_slides.qmd` (best subset selection, stepwise selection, choosing model size by the penalized criteria and the chosen-sizes comparison, interpreting the selected model); the within-fold cross-validation slides and the optimism slides (Training error optimism and Optimistic inference) were skipped. |
 | 2026-10-21 | Wed | `06-regularization/20-ridge-regression.qmd` | Covered the ridge slides in `20-ridge-regression_slides.qmd`. Afterwards the deck was trimmed: Shrinkage, Standardization, Squared bias and variance, Favorable draw, the Ridge coefficients transition, Coefficient comparison and Interpretation were removed from it. |
 | 2026-10-23 | Fri | `06-regularization/30-lasso.qmd` | Covered all of the slides in `30-lasso_slides.qmd` with time to spare. The text in several figures was too small to read on the slides (for example Selected sets), though the same figures read well in the notes; see the Notes for the next offering. |
+| 2026-10-28 | Wed | `06-regularization/50-pcr-and-pls.qmd` | Covered the PCR and PLS slides in `50-pcr-and-pls_slides.qmd`. |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -53,7 +54,6 @@ shifted.
 | Date | Day | Planned topic | Notes |
 | ---- | --- | -------------- | ----- |
 | 2026-10-26 | Mon | `06-regularization/40-principal-components.qmd` | Principal components (ISLR2 6.3): directions of maximum variance, loadings and scores, scaling, proportion of variance explained (PCA is formally Chapter 12, after Exam 2) |
-| 2026-10-28 | Wed | `06-regularization/50-pcr-and-pls.qmd` | Principal components regression and partial least squares (ISLR2 6.3.1-6.3.2), example data `ggplot2::diamonds` (same as principal components), log price from 100 training diamonds: PCR as least squares on the first M scores and as a constrained linear model, the variance σ²/(n v_m) of each score estimate, ridge's factor v_m/(v_m + λ/n) on each component, the first PLS direction as maximal covariance with the response, and choosing M by cross-validation with the directions recomputed in each fold |
 | 2026-10-30 | Fri | `06-regularization/60-high-dimensions.qmd` (to be written) | High dimensions (ISLR2 6.4): p > n, why R², training error and p-values mislead, the role of regularization and tuning, cross-validation done correctly |
 | 2026-11-02 | Mon | `06-regularization/70-method-comparison.qmd` (to be written) | Comparison day: subset selection, ridge, lasso, PCR and PLS on one dataset by cross-validated and test error, including a repeated-training-samples study of PCR and PLS against least squares (moved from the PCR/PLS lecture); ridge/lasso for logistic and Poisson regression if time allows. Also a buffer if an earlier lecture runs over |
 | 2026-11-04 | Wed | **Exam 2 review** | |
