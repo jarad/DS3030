@@ -37,7 +37,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 06-regularization/60-high-dimensions.qmd @ uncommitted -->
+<!-- derived-from: 06-regularization/60-high-dimensions.qmd @ 6d656ce -->
 
 ::: {.columns}
 ::: {.column width="50%"}
