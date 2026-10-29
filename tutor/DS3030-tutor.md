@@ -1344,21 +1344,20 @@ estimate does and does not show, and inference after selection.
 least squares, high dimensions): a by-hand derivation of the principal
 components of features with a simple correlation structure, the proportion of
 variance explained and rules for choosing how many components to keep, and
-what changes when the explanatory variables are not standardized; how
-principal components regression and partial least squares differ in which
-directions they use; on real data with nearly as many features as
-observations, a principal component analysis with a scree plot and loading
-interpretation, a least squares fit whose training summaries disagree with its
-held-out error, and a comparison of principal components regression, partial
-least squares, ridge regression, and the lasso tuned by cross-validation and
-judged on held-out data, including what each can and cannot say about which
-features matter; a simulation of cross-validation with data-dependent
-directions when features outnumber observations; a true/false conceptual
-review touching scree-plot elbows, how ridge regression treats the components,
-units and standardization, the sign of a loading vector, the number of
-components with nonzero variance, whether dimension reduction selects
-features, choosing the number of components by training error, and a perfect
-training fit.
+what changes when the explanatory variables are not standardized; when
+principal components regression drops a component that matters; on real data
+with nearly as many features as observations, a principal component analysis
+with a scree plot, loading interpretation, and which components' relation to
+the response exceeds chance, a least squares fit whose training summaries
+disagree with its held-out error, and principal components regression and
+partial least squares tuned by cross-validation and judged on held-out data,
+including what such methods can and cannot say about which features to
+change; a simulation of cross-validation with data-dependent directions when
+features outnumber observations, with a critique of an overconfident claim
+built on it; a true/false conceptual review touching
+scree-plot elbows, the sign of a loading vector, the number of components with
+nonzero variance, whether dimension reduction selects features, choosing the
+number of components by training error, and a perfect training fit.
 
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable

@@ -25,24 +25,24 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-09-19 | Rename | regression/03-20-mlr.qmd | 03-regression/20-mlr.qmd | x |
 | 2026-09-19 | Rename | regression/03-30-feature-engineering.qmd | 03-regression/30-feature-engineering.qmd | x |
 | 2026-09-19 | Rename | regression/03-40-flexibility.qmd | 03-regression/40-flexibility.qmd | x |
-| 2026-09-19 | New | | 04-classification/10-logistic-regression.qmd | |
-| 2026-09-19 | New | | 04-classification/20-multiple-logistic-regression.qmd | |
-| 2026-09-19 | New | | 04-classification/30-flexible-logistic-regression.qmd | |
-| 2026-09-19 | New | | 04-classification/40-problems-in-logistic-regression.qmd | |
-| 2026-10-01 | New | | 04-classification/50-lda.qmd | |
-| 2026-10-01 | New | | 04-classification/60-qda-naive-bayes.qmd | |
-| 2026-10-01 | New | | 04-classification/70-generalized-linear-models.qmd | |
-| 2026-10-06 | New (split from 04-classification/50-lda.qmd) | | 04-classification/55-classifier-evaluation.qmd | |
-| 2026-10-08 | New | | 05-resampling/10-cross-validation.qmd | |
-| 2026-10-08 | New | | 05-resampling/20-bootstrap.qmd | |
-| 2026-10-15 | New | | 05-resampling/15-cv-in-practice.qmd | |
-| 2026-10-17 | New | | 06-regularization/10-subset-selection.qmd | |
-| 2026-10-17 | New | | 06-regularization/20-ridge-regression.qmd | |
-| 2026-10-17 | New | | 06-regularization/30-lasso.qmd | |
-| 2026-10-21 | New | | 06-regularization/40-principal-components.qmd | |
-| 2026-10-22 | New | | 06-regularization/50-pcr-and-pls.qmd | |
-| 2026-10-22 | New | | 06-regularization/60-high-dimensions.qmd | |
-| 2026-10-28 | New | | 06-regularization/70-method-comparison.qmd | |
+| 2026-09-19 | New | | 04-classification/10-logistic-regression.qmd | x |
+| 2026-09-19 | New | | 04-classification/20-multiple-logistic-regression.qmd | x |
+| 2026-09-19 | New | | 04-classification/30-flexible-logistic-regression.qmd | x |
+| 2026-09-19 | New | | 04-classification/40-problems-in-logistic-regression.qmd | x |
+| 2026-10-01 | New | | 04-classification/50-lda.qmd | x |
+| 2026-10-01 | New | | 04-classification/60-qda-naive-bayes.qmd | x |
+| 2026-10-01 | New | | 04-classification/70-generalized-linear-models.qmd | x |
+| 2026-10-06 | New (split from 04-classification/50-lda.qmd) | | 04-classification/55-classifier-evaluation.qmd | x |
+| 2026-10-08 | New | | 05-resampling/10-cross-validation.qmd | x |
+| 2026-10-08 | New | | 05-resampling/20-bootstrap.qmd | x |
+| 2026-10-15 | New | | 05-resampling/15-cv-in-practice.qmd | x |
+| 2026-10-17 | New | | 06-regularization/10-subset-selection.qmd | x |
+| 2026-10-17 | New | | 06-regularization/20-ridge-regression.qmd | x |
+| 2026-10-17 | New | | 06-regularization/30-lasso.qmd | x |
+| 2026-10-21 | New | | 06-regularization/40-principal-components.qmd | x |
+| 2026-10-22 | New | | 06-regularization/50-pcr-and-pls.qmd | x |
+| 2026-10-22 | New | | 06-regularization/60-high-dimensions.qmd | x |
+| 2026-10-28 | New | | 06-regularization/70-method-comparison.qmd | x |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into
