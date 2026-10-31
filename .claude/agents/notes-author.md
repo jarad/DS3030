@@ -226,6 +226,16 @@ the shape of the distribution (skewness, several modes), which a box hides. Use
 `geom_boxplot()` only when the five-number summary itself is the point. Plots
 must stay legible without color, as above.
 
+**Plot grid lines are set explicitly.** Major grid lines at consistent
+distances (additive on a regular axis, multiplicative on a logarithmic one) and
+minor lines midway between them; ggplot2's default breaks do not do this (for
+example majors at 1, 10, 20, 30, 40, 49 and minors at 5.5, 15, 25, 35, 44.5).
+Set `breaks` and `minor_breaks` for every continuous axis, starting majors at a
+multiple of the step. Read `.claude/skills/plot-conventions/SKILL.md` before
+writing any figure; it is the full checklist (grid lines, legibility without
+color, size on slides, jitter, code placement), and then look at each rendered
+PNG to confirm the spacing.
+
 **Put extensive R code in a collapsed callout.** For a chunk with substantial
 setup — simulating data, fitting several models, building a prediction grid or
 a table — wrap it in `::: {.callout-note collapse="true"}`, suppress its
@@ -243,6 +253,24 @@ this repository. Whenever you add a chapter, remove one, or change a chapter's
 learning objectives or scope enough that the digest would mislead, update that
 section to match as part of the same change, not as a follow-up task.
 
+## Skills that cover the rest of the change
+
+These skills in `.claude/skills/` hold procedures you follow when they apply
+(read the `SKILL.md` with the Read tool):
+
+- `new-chapter-checklist`: everything a new or renamed chapter must touch
+  (`_quarto.yml`, `CANVAS-LINKS.md`, `DESCRIPTION`, the slides link line, the
+  tutor entry, the lecture log's planned row, `CONVENTIONS.md`, the seed).
+- `sync-chapter-edit`: what a chapter edit leaves stale (freeze, deck, outline,
+  tutor entry, `CONVENTIONS.md`). You re-render the chapter and update the
+  tutor entry and `CONVENTIONS.md`; the deck and outline belong to
+  `slides-author`, so name every slide whose quoted wording or numbers changed
+  in your report.
+- `plot-conventions`: see above.
+
+Committing and the two-commit publish sequence (`publish-in-two-commits`) and
+recording classes (`log-class`) are the main session's, not yours.
+
 ## Rendering and git
 
 Deployment is: render locally, commit the resulting `_freeze/` output, push.
@@ -255,7 +283,7 @@ changes git state. Write the files and let the instructor review the diff.
 
 ## Finishing
 
-End by reporting, briefly: which files you created or changed, what you added
+End by reporting, briefly: which files you created or changed (and any headings you renamed, so decks can follow), what you added
 to `_quarto.yml` or `DESCRIPTION`, whether `tutor/DS3030-tutor.md` needed an
 update and whether you made it, any place where you were unsure of the
 intended depth or scope, and any coverage gap you noticed against the schedule

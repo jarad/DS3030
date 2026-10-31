@@ -298,6 +298,29 @@ a chapter — leave it for the instructor to commit alongside your other
 changes, and mention it in your final report so it isn't mistaken for
 build noise.
 
+## Figure legibility on a slide
+
+A figure's text is the chapter's text size scaled by the figure's display height
+over its height in inches, so tall figures shrink their ticks. For every figure a
+deck reuses, compute the effective tick size
+(8.8/72 x display height px / figure height in; 14 px or more is the target, so
+figures at most about 4.5 in tall) and include a table of figure, height in
+inches, display height and tick px in your report. A figure that is too tall is
+reported to the instructor, never re-rendered or edited by you, and old decks
+are not retro-fitted unless asked. A figure whose grid lines are visibly uneven
+(see `.claude/skills/plot-conventions/SKILL.md`) is flagged to the instructor
+as a chapter defect.
+
+## Refreshing a deck after a chapter edit
+
+When the chapter changed after the deck was built, follow step 2 of
+`.claude/skills/sync-chapter-edit/SKILL.md`: re-copy changed tables from the
+frozen markdown, edit every slide whose quoted wording or numbers changed (the
+outline's `note:` fields list them), update the outline, and re-render the deck.
+Committing, and refreshing the `derived-from` hash after the chapter is
+committed, belong to the main session (`publish-in-two-commits`); leave the
+marker at the current hash and say so.
+
 ## Rendering, publishing, and git
 
 Rendering a slide deck needs no R execution, so it's cheap to verify: render

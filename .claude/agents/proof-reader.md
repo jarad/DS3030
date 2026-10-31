@@ -302,6 +302,15 @@ objectives block at the top; balanced `:::` blocks; and
 `::: {.callout-note collapse="true"}` spelled with the attribute, since
 `.collapse=TRUE` parses as a class and silently fails to collapse.
 
+**Rendered figures.** Open every PNG in the chapter's
+`_freeze/<path>/figure-html/` with the Read tool and check: grid lines (major
+lines at consistent distances, additive on a regular axis and multiplicative on
+a logarithmic one, minor lines midway; an uneven spacing such as majors at 1,
+10, 20, 30, 40, 49 is a finding, and so is a value the text refers to being hard
+to locate), distinguishability in greyscale, legibility of ticks and labels,
+clipping, and legends covering data. The full figure checklist is
+`.claude/skills/plot-conventions/SKILL.md`.
+
 **A hand-written markdown pipe table carrying a computed value is a finding,
 not just a style note.** `CLAUDE.md` requires `knitr::kable()` for any table
 with a computed value, because pandoc sizes a hand-written pipe table's

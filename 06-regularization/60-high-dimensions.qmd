@@ -204,6 +204,14 @@ spectrum_ends <- filter(spectra, channel == p) |>
   mutate(label = paste0(fmt(fat, 1), "% fat"),
          absorbance = spread_labels(absorbance, gap = 0.07))
 
+# Channel axis of every plot against channel: major lines every 20 channels,
+# minor lines midway between them.
+channel_axis <- function(...) {
+  scale_x_continuous(breaks = seq(0, p, by = 20),
+                     minor_breaks = seq(10, p + 10, by = 20),
+                     ...)
+}
+
 # Absorbance against channel, one line per meat, labeled by fat content.
 spectra_plot <- ggplot(spectra,
                        aes(x = channel,
@@ -217,8 +225,9 @@ spectra_plot <- ggplot(spectra,
             size = 3.5,
             show.legend = FALSE) +
   scale_color_viridis_c(end = 0.9) +
-  scale_x_continuous(breaks = c(1, 25, 50, 75, 100),
-                     expand = expansion(mult = c(0.02, 0.18))) +
+  channel_axis(expand = expansion(mult = c(0.02, 0.18))) +
+  scale_y_continuous(breaks = seq(2, 3.5, by = 0.5),
+                     minor_breaks = seq(2.25, 3.75, by = 0.5)) +
   labs(x = "Channel (850 nm at channel 1 to 1050 nm at channel 100)",
        y = "Absorbance",
        color = "Fat (%)",
@@ -383,15 +392,26 @@ stopifnot(all(sweep_results$rank == sweep_results$d + 1))
 # The null model: the training mean predicts every test meat.
 null_test_mse <- mse(y_test, mean(y_train))
 
+# Axis of d: major lines every 10 channels from 0 to n, minor lines midway
+# between them.
+d_axis <- scale_x_continuous(breaks = seq(0, n_train, by = 10),
+                             minor_breaks = seq(5, n_train - 5, by = 10))
+
+# Log-scale axis of a mean squared error: major lines at powers of 10, minor
+# lines midway between them in log space.
+mse_powers <- 0:4
+mse_axis <- scale_y_log10(breaks = 10^mse_powers,
+                          minor_breaks = 10^(mse_powers + 0.5))
+
 # Training R^2 against d.
-d_axis <- scale_x_continuous(breaks = c(1, seq(10, n_train - 1, by = 10),
-                                        n_train - 1))
 sweep_title <- paste("Least squares on the first d channels,",
                      n_train, "training meats")
 r2_plot <- ggplot(sweep_results, aes(x = d, y = r2)) +
   geom_line() +
   geom_point(size = 1.5) +
   d_axis +
+  scale_y_continuous(breaks = seq(0.2, 1, by = 0.2),
+                     minor_breaks = seq(0.3, 0.9, by = 0.2)) +
   labs(x = "Number of channels d",
        y = expression("Training " * R^2),
        title = sweep_title)
@@ -409,7 +429,7 @@ test_plot <- ggplot(sweep_results, aes(x = d, y = test_mse)) +
   geom_line() +
   geom_point(size = 1.5) +
   d_axis +
-  scale_y_log10() +
+  mse_axis +
   labs(x = "Number of channels d",
        y = "Test MSE (log scale)",
        title = sweep_title)
@@ -560,7 +580,10 @@ best_channel <- which.max(abs(fat_cor))
 cor_plot <- ggplot(cor_data, aes(x = channel, y = cor)) +
   geom_line() +
   geom_point(size = 1.2) +
-  scale_x_continuous(breaks = c(1, 25, 50, 75, 100)) +
+  channel_axis() +
+  scale_y_continuous(limits = c(0.4, 0.55),
+                     breaks = seq(0.4, 0.55, by = 0.05),
+                     minor_breaks = seq(0.425, 0.525, by = 0.05)) +
   labs(x = "Channel",
        y = "Correlation with fat",
        title = paste(n_train, "training meats"))
@@ -867,9 +890,15 @@ cv_axis_label <- paste0(n_folds, "-fold CV estimate (log scale)")
 cv_title <- paste(n_train, "training meats")
 cv_layers <- list(
   geom_hline(yintercept = cv_null, linetype = "dashed"),
-  scale_y_log10(),
+  mse_axis,
   labs(y = cv_axis_label, title = cv_title)
 )
+
+# Axis of lambda over both grids: major lines every 2 powers of 10, minor
+# lines midway between them in log space.
+lambda_axis <- scale_x_log10(breaks = 10^seq(-8, 4, by = 2),
+                             minor_breaks = 10^seq(-9, 5, by = 2),
+                             labels = scales::label_log())
 
 # The estimate against lambda for one of ridge regression and the lasso.
 lambda_cv_plot <- function(grid, cv, k_chosen, label) {
@@ -878,7 +907,7 @@ lambda_cv_plot <- function(grid, cv, k_chosen, label) {
     cv_layers +
     geom_line() +
     geom_point(data = chosen, size = 4, shape = 1, color = "#D55E00") +
-    scale_x_log10(labels = scales::label_log()) +
+    lambda_axis +
     labs(x = expression(lambda ~ "(log scale)"),
          subtitle = label,
          caption = "Circle: the chosen lambda. Dashed: the null model.")
@@ -911,6 +940,8 @@ direction_cv_plot <- ggplot(direction_cv,
              shape = 1,
              show.legend = FALSE) +
   scale_color_manual(values = okabe_ito[c(5, 4)]) +
+  scale_x_continuous(breaks = seq(0, M_max, by = 5),
+                     minor_breaks = seq(2.5, M_max - 2.5, by = 5)) +
   labs(x = "Number of directions M",
        color = NULL,
        linetype = NULL,
@@ -1185,8 +1216,7 @@ selected_plot <- ggplot(selected_data,
   geom_tile(width = 0.9, height = 0.8) +
   scale_fill_manual(values = c(`TRUE` = "grey20", `FALSE` = "#E69F00"),
                     labels = in_all_labels) +
-  scale_x_continuous(limits = c(0.5, p + 0.5),
-                     breaks = c(1, 25, 50, 75, 100)) +
+  channel_axis(limits = c(0.5, p + 0.5)) +
   labs(x = "Channel",
        y = NULL,
        fill = NULL,

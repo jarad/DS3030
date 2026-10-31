@@ -35,6 +35,7 @@ takes more or fewer days than planned.
 | 2026-10-23 | Fri | `06-regularization/30-lasso.qmd` | Covered all of the slides in `30-lasso_slides.qmd` with time to spare. The text in several figures was too small to read on the slides (for example Selected sets), though the same figures read well in the notes; see the Notes for the next offering. |
 | 2026-10-26 | Mon | `06-regularization/40-principal-components.qmd` | Covered all of the slides in `40-principal-components_slides.qmd`. |
 | 2026-10-28 | Wed | `06-regularization/50-pcr-and-pls.qmd` | Covered the PCR and PLS slides in `50-pcr-and-pls_slides.qmd`. |
+| 2026-10-30 | Fri | `06-regularization/60-high-dimensions.qmd` | Covered all of the slides in `60-high-dimensions_slides.qmd`. Grid lines on the plots were inconsistent: major and minor lines were not evenly spaced (on the channel sweep Test MSE plot the major lines fell at 1, 10, 20, 30, 40 and 49 and the minor lines at 5.5, 15, 25, 35 and 44.5, which made d = 46, used on the next slide, hard to find). See Notes for the next offering. |
 
 <!--
 Add one row per class meeting. "File(s) covered" can list more than one path
@@ -54,7 +55,6 @@ shifted.
 
 | Date | Day | Planned topic | Notes |
 | ---- | --- | -------------- | ----- |
-| 2026-10-30 | Fri | `06-regularization/60-high-dimensions.qmd` | High dimensions (ISLR2 6.4), example data `modeldata::meats` (near-infrared spectra, exact duplicate rows removed), fat from a training sample of n = 50 meats and p = 100 channels: singular X'X and perfect fits, a least squares sweep over d channels (training R² to 1, test MSE exploding near d = n − 1), why the F-test, σ̂, C_p, AIC and BIC mislead (σ² fixed at the full-model estimate, or estimated in each model as AIC()/BIC() do), ridge (closed form), lasso (exact active-set fit; default glmnet stops far from the minimum on these channels), PCR and PLS tuned by cross-validation against the null model, and the instability from fold to fold within the training sample of the lasso's selected channels |
 | 2026-11-02 | Mon | `06-regularization/70-method-comparison.qmd` | Comparison day on `modeldata::ames` (log sale price; the five homes over 4,000 sq ft removed; main effects only, no interactions): least squares, forward stepwise selection, ridge, lasso, PCR and PLS on one training sample of n = 200 homes with about 120 candidate features (rare levels merged into the reference, redundant columns dropped), each tuned by 10-fold cross-validation with standardization, the forward path and the PCR/PLS directions recomputed in each fold, then one test-MSE table; a study over 200 repeated training samples drawn from the remaining test homes (share of samples each method wins, change from least squares, features kept by forward selection and the lasso), moved here from the PCR/PLS lecture; a comparison table of the six methods and the setting each is expected to suit. Penalized logistic/Poisson regression, elastic net, group lasso and interactions are only in a Beyond this course callout. Also a buffer if an earlier lecture runs over |
 | 2026-11-04 | Wed | **Exam 2 review** | |
 | 2026-11-06 | Fri | **Exam 2** | |
@@ -111,6 +111,14 @@ the semester in which they were noted.
   which the slide displays it: a tall figure shrinks its text to 8 to 10 pixels
   on a 720 pixel slide. The instructor will deal with a figure when it
   causes a problem in class, not in advance.
+- Plot grid lines (noted 2026-10-30 after the high dimensions lecture): ggplot2's
+  default breaks put major and minor grid lines at uneven distances, for example
+  major lines at 1, 10, 20, 30, 40 and 49 and minor lines at 5.5, 15, 25, 35
+  and 44.5 on the channel sweep plot. Readers expect major lines equally
+  spaced (additive on a regular axis, multiplicative on a logarithmic one) and
+  minor lines midway between them: 0, 10, ..., 50 with minor lines at 5, 15,
+  ..., 45. The plots in Chapter 6 and likely earlier chapters set their breaks
+  by default and need explicit `breaks` and `minor_breaks`.
 - Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
   has a callout headed `### Two questions, two verdicts`, which is not one of
   the three fixed callout headings in `CONVENTIONS.md`.
