@@ -226,15 +226,17 @@ the shape of the distribution (skewness, several modes), which a box hides. Use
 `geom_boxplot()` only when the five-number summary itself is the point. Plots
 must stay legible without color, as above.
 
-**Plot grid lines are set explicitly.** Major grid lines at consistent
-distances (additive on a regular axis, multiplicative on a logarithmic one) and
-minor lines midway between them; ggplot2's default breaks do not do this (for
-example majors at 1, 10, 20, 30, 40, 49 and minors at 5.5, 15, 25, 35, 44.5).
-Set `breaks` and `minor_breaks` for every continuous axis, starting majors at a
-multiple of the step. Read `.claude/skills/plot-conventions/SKILL.md` before
-writing any figure; it is the full checklist (grid lines, legibility without
-color, size on slides, jitter, code placement), and then look at each rendered
-PNG to confirm the spacing.
+**Plot grid lines are set explicitly.** Grid lines sit at round numbers the
+reader would name: equal additive steps on a regular axis, and on a logarithmic
+axis powers of 10 or 2, the 1-2-5 pattern, or the round percentages
+(+5, +10, +25, +50, +100%) when the axis is a ratio to a baseline; minor lines
+midway. ggplot2's default breaks do not do this, so set `breaks` and
+`minor_breaks` for every continuous axis. Read
+`.claude/skills/plot-conventions/SKILL.md` before writing any figure; it is the
+full checklist (grid lines, legibility without color, size on slides, jitter,
+code placement, and the two-step rule for tabsets: decide whether the tabs
+should be aligned, then follow the alignment rules), and then look at each
+rendered PNG to confirm the spacing.
 
 **Put extensive R code in a collapsed callout.** For a chunk with substantial
 setup — simulating data, fitting several models, building a prediction grid or

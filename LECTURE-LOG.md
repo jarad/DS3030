@@ -114,10 +114,11 @@ the semester in which they were noted.
 - Plot grid lines (noted 2026-10-30 after the high dimensions lecture): ggplot2's
   default breaks put major and minor grid lines at uneven distances, for example
   major lines at 1, 10, 20, 30, 40 and 49 and minor lines at 5.5, 15, 25, 35
-  and 44.5 on the channel sweep plot. Readers expect major lines equally
-  spaced (additive on a regular axis, multiplicative on a logarithmic one) and
-  minor lines midway between them: 0, 10, ..., 50 with minor lines at 5, 15,
-  ..., 45. The plots in Chapter 6 and likely earlier chapters set their breaks
+  and 44.5 on the channel sweep plot. Readers expect round, evenly
+  spaced major lines (additive on a regular axis; powers, 1-2-5 values or
+  round percentages on a logarithmic one) and minor lines midway between
+  them: 0, 10, ..., 50 with minor lines at 5, 15, ..., 45; the rule is in
+  `.claude/skills/plot-conventions/SKILL.md`. The plots in Chapter 6 and likely earlier chapters set their breaks
   by default and need explicit `breaks` and `minor_breaks`.
 - Callout headings: `04-classification/30-flexible-logistic-regression.qmd`
   has a callout headed `### Two questions, two verdicts`, which is not one of

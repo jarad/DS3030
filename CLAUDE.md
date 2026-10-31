@@ -261,14 +261,9 @@ cross-validation curve against the tuning parameter is drawn without standard
 error bars or ribbons unless the uncertainty is the point; say the
 uncertainty in a sentence with the numbers computed inline.
 
-**Grid lines are set explicitly.** Major grid lines sit at consistent
-distances (additive on a regular axis, multiplicative on a logarithmic one) and
-minor lines midway between them. ggplot2's default breaks do not do this, so
-set `breaks` and `minor_breaks` for every continuous axis, starting the majors
-at a multiple of the step (majors at 0, 10, ..., 50 and minors at 5, 15, ...,
-45, not majors at 1, 10, 20, 30, 40, 49). A value the text or the next slide
-refers to must be easy to find on the grid. The `plot-conventions` skill is
-the full figure checklist.
+**If you are making or reviewing a plot, read
+`.claude/skills/plot-conventions/SKILL.md` first.** It holds the grid-line
+rule and the rest of the figure checklist.
 
 **Name every chunk**: ```` ```{r galileo-models} ````, never a bare
 ```` ```{r} ````. Illustrative code that only demonstrates `lm()` formula syntax

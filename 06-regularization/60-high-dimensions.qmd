@@ -885,12 +885,15 @@ null_sse <- function(l) {
 cv_null <- sum(map_dbl(seq_len(n_folds), null_sse)) / n_train
 
 # Shared look of the three tabs: the null model's estimate dashed, the
-# chosen value circled, a log-scale estimate.
+# chosen value circled, a log-scale estimate, and the same y limits, from the
+# smallest estimate of any method to a little above the null model's.
+cv_ylim <- c(min(cv_ridge, cv_lasso, cv_pcr, cv_pls), 1.1 * cv_null)
 cv_axis_label <- paste0(n_folds, "-fold CV estimate (log scale)")
 cv_title <- paste(n_train, "training meats")
 cv_layers <- list(
   geom_hline(yintercept = cv_null, linetype = "dashed"),
   mse_axis,
+  coord_cartesian(ylim = cv_ylim),
   labs(y = cv_axis_label, title = cv_title)
 )
 
@@ -901,7 +904,7 @@ lambda_axis <- scale_x_log10(breaks = 10^seq(-8, 4, by = 2),
                              labels = scales::label_log())
 
 # The estimate against lambda for one of ridge regression and the lasso.
-lambda_cv_plot <- function(grid, cv, k_chosen, label) {
+lambda_cv_plot <- function(grid, cv, k_chosen) {
   chosen <- tibble(lambda = grid[k_chosen], cv = cv[k_chosen])
   ggplot(tibble(lambda = grid, cv = cv), aes(x = lambda, y = cv)) +
     cv_layers +
@@ -909,12 +912,10 @@ lambda_cv_plot <- function(grid, cv, k_chosen, label) {
     geom_point(data = chosen, size = 4, shape = 1, color = "#D55E00") +
     lambda_axis +
     labs(x = expression(lambda ~ "(log scale)"),
-         subtitle = label,
          caption = "Circle: the chosen lambda. Dashed: the null model.")
 }
-ridge_cv_plot <- lambda_cv_plot(ridge_grid, cv_ridge, k_ridge,
-                                "Ridge regression")
-lasso_cv_plot <- lambda_cv_plot(lasso_grid, cv_lasso, k_lasso, "Lasso")
+ridge_cv_plot <- lambda_cv_plot(ridge_grid, cv_ridge, k_ridge)
+lasso_cv_plot <- lambda_cv_plot(lasso_grid, cv_lasso, k_lasso)
 
 # PCR and PLS against M, with the chosen M of each circled.
 method_levels <- c("PCR", "PLS")
@@ -948,7 +949,20 @@ direction_cv_plot <- ggplot(direction_cv,
        shape = NULL,
        caption = paste("Circles: the chosen M of each method.",
                        "Dashed: the null model.")) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.99, 0.9),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(color = "grey50"))
+
+# Line up the panels of the three tabs: the lambda axes use expressions, whose
+# labels are taller than the plain labels of the M axis.
+cv_aligned <- cowplot::align_plots(ridge_cv_plot,
+                                   lasso_cv_plot,
+                                   direction_cv_plot,
+                                   align = "hv")
+ridge_cv_tab <- cowplot::ggdraw(cv_aligned[[1]])
+lasso_cv_tab <- cowplot::ggdraw(cv_aligned[[2]])
+direction_cv_tab <- cowplot::ggdraw(cv_aligned[[3]])
 
 # Principal component variances of the standardized training features, and
 # ridge regression's factor v_m / (v_m + lambda / n) on each component.
@@ -976,7 +990,7 @@ estimate for the null model as a dashed line.
 #| echo: false
 #| fig-width: 7
 #| fig-height: 4.2
-ridge_cv_plot
+ridge_cv_tab
 ```
 
 #### Lasso
@@ -984,15 +998,15 @@ ridge_cv_plot
 #| echo: false
 #| fig-width: 7
 #| fig-height: 4.2
-lasso_cv_plot
+lasso_cv_tab
 ```
 
 #### PCR and PLS
 ```{r direction-cv-figure}
 #| echo: false
 #| fig-width: 7
-#| fig-height: 4.5
-direction_cv_plot
+#| fig-height: 4.2
+direction_cv_tab
 ```
 :::
 

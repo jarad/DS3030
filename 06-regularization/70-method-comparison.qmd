@@ -169,15 +169,24 @@ cleaning_data <- ames |>
   mutate(status = if_else(Gr_Liv_Area > max_area, "Removed", "Kept"),
          status = factor(status, levels = status_levels)) |>
   arrange(status)
-price_breaks <- c(12.5, 25, 50, 100, 200, 400, 800) * 1000
+
+# Price on a log scale: major lines at every doubling from $12,500, minor
+# lines midway between them in log space.
+price_breaks <- 12500 * 2^(0:6)
 price_axis <- scale_y_log10(breaks = price_breaks,
+                            minor_breaks = price_breaks * sqrt(2),
                             labels = scales::label_dollar())
+
+# Living area: major lines every 1,000 square feet, minor lines midway.
+area_axis <- scale_x_continuous(breaks = seq(0, 6000, by = 1000),
+                                minor_breaks = seq(500, 6500, by = 1000))
 cleaning_plot <- ggplot(cleaning_data, aes(x = Gr_Liv_Area, y = Sale_Price,
                                            color = status, shape = status)) +
   geom_vline(xintercept = max_area, linetype = "dashed", color = "grey50") +
   geom_point(alpha = 0.5, size = 1) +
   scale_color_manual(values = c("grey40", okabe_ito[4])) +
   scale_shape_manual(values = c(16, 17)) +
+  area_axis +
   price_axis +
   labs(x = "Above-ground living area (sq ft)", y = "Sale price (log scale)",
        color = NULL, shape = NULL, title = paste(big(n_all), "homes")) +
@@ -272,12 +281,42 @@ response_long <- train |>
 
 # Axis labels: dollars on the price panel, plain numbers on the log panel.
 price_or_log <- function(x) {
-  if_else(x > 100, scales::dollar(x), as.character(x))
+  if (max(x, na.rm = TRUE) > 100) {
+    scales::dollar(x)
+  } else {
+    as.character(x)
+  }
 }
+
+# Grid lines every `step` across a panel's limits, starting at a multiple of
+# the step; shift = step / 2 gives the minor lines midway between them.
+lines_every <- function(limits, step, shift = 0) {
+  from <- floor(limits[1] / step) * step + shift
+  seq(from, limits[2] + step, by = step)
+}
+
+# Major lines every $200,000 on the price panel and every 0.5 on the log
+# panel, minor lines midway.
+response_step <- function(limits) {
+  if (limits[2] > 100) 2e5 else 0.5
+}
+response_breaks <- function(limits) {
+  lines_every(limits, response_step(limits))
+}
+response_minor <- function(limits) {
+  step <- response_step(limits)
+  lines_every(limits, step, shift = step / 2)
+}
+
+# Number of homes: major lines every 10 homes, minor lines midway.
 response_plot <- ggplot(response_long, aes(x = value)) +
   geom_histogram(bins = 25, fill = "grey70", color = "grey30") +
   facet_wrap(~ scale, scales = "free_x") +
-  scale_x_continuous(labels = price_or_log) +
+  scale_x_continuous(breaks = response_breaks,
+                     minor_breaks = response_minor,
+                     labels = price_or_log) +
+  scale_y_continuous(breaks = seq(0, 50, by = 10),
+                     minor_breaks = seq(5, 55, by = 10)) +
   labs(x = NULL, y = "Number of homes", title = title_train)
 
 # Mean and median price of the training homes.
@@ -292,9 +331,30 @@ three_long <- train |>
   select(log_price, all_of(names(three_labels))) |>
   pivot_longer(-log_price, names_to = "variable") |>
   mutate(variable = factor(three_labels[variable], levels = three_labels))
+
+# Major lines every 20 years on the year panel, the only one whose limits
+# exceed 1,000, and every 500 square feet on the area panels; minor lines
+# midway.
+three_step <- function(limits) {
+  if (limits[1] > 1000) 20 else 500
+}
+three_breaks <- function(limits) {
+  lines_every(limits, three_step(limits))
+}
+three_minor <- function(limits) {
+  step <- three_step(limits)
+  lines_every(limits, step, shift = step / 2)
+}
+
+# Log sale price: major lines every 0.5, minor lines midway.
+log_price_axis <- scale_y_continuous(breaks = seq(10, 14, by = 0.5),
+                                     minor_breaks = seq(10.25, 14, by = 0.5))
 three_plot <- ggplot(three_long, aes(x = value, y = log_price)) +
   geom_point(alpha = 0.6, size = 1) +
   facet_wrap(~ variable, scales = "free_x") +
+  scale_x_continuous(breaks = three_breaks,
+                     minor_breaks = three_minor) +
+  log_price_axis +
   labs(x = NULL, y = "Log sale price", title = title_train)
 ```
 :::
@@ -364,6 +424,16 @@ level_title <- paste(n_level_total - n_level_zero,
                      "levels that occur among the", title_train)
 level_caption <- paste("Dashed line: levels to its left have fewer than",
                        min_homes, "training homes.")
+
+# Homes on a log scale: major lines at powers of 2, minor lines midway
+# between them in log space, at the edges of the histogram's bins.
+homes_powers <- 0:7
+homes_axis <- scale_x_log10(breaks = 2^homes_powers,
+                            minor_breaks = 2^(homes_powers - 0.5))
+
+# Number of levels: major lines every 5 levels, minor lines midway.
+levels_axis <- scale_y_continuous(breaks = seq(0, 30, by = 5),
+                                  minor_breaks = seq(2.5, 32.5, by = 5))
 level_plot <- level_counts |>
   filter(homes > 0) |>
   ggplot(aes(x = homes)) +
@@ -371,7 +441,8 @@ level_plot <- level_counts |>
                  color = "grey30") +
   geom_vline(xintercept = min_homes - 0.5, linetype = "dashed",
              color = okabe_ito[4]) +
-  scale_x_log10(breaks = c(1, 2, 5, 10, 20, 50, 100, 200)) +
+  homes_axis +
+  levels_axis +
   labs(x = "Training homes with the level (log scale)",
        y = "Number of levels", title = level_title, caption = level_caption)
 ```
@@ -544,6 +615,15 @@ cor_data <- tibble(feature = colnames(X_train), cor = feature_cor,
   arrange(desc(abs(cor))) |>
   mutate(rank = row_number())
 
+# Axis of a count of features from 0 to p (a rank, d, or M): major lines
+# every 20, minor lines midway.
+count_axis <- scale_x_continuous(breaks = seq(0, p + 20, by = 20),
+                                 minor_breaks = seq(10, p + 10, by = 20))
+
+# Correlation: major lines every 0.2, minor lines midway.
+cor_axis <- scale_y_continuous(breaks = seq(-10, 10, by = 2) / 10,
+                               minor_breaks = seq(-9, 9, by = 2) / 10)
+
 # Correlation against rank; the three largest are named in the prose.
 top_cor <- slice_head(cor_data, n = 3)
 cor_plot <- ggplot(cor_data, aes(x = rank, y = cor, color = kind,
@@ -552,6 +632,8 @@ cor_plot <- ggplot(cor_data, aes(x = rank, y = cor, color = kind,
   geom_point(size = 1.8) +
   scale_color_manual(values = okabe_ito[c(5, 4)]) +
   scale_shape_manual(values = c(16, 17)) +
+  count_axis +
+  cor_axis +
   labs(x = "Feature, by absolute correlation with log price",
        y = "Correlation with log price", color = NULL, shape = NULL,
        title = title_train) +
@@ -913,6 +995,23 @@ repeats the path in each of the `r n_folds` folds.
 ### Code
 ```{r cv-plots}
 #| output: false
+# Log-scale axis of a cross-validation estimate, shared by the three tabs:
+# major lines at 0.02, 0.03, 0.04 and 0.05, and limits from the smallest
+# estimate of any method to the largest of PCR and PLS, which rise above the
+# least squares line; the forward stepwise, ridge and lasso curves that go
+# higher are clipped.
+cv_axis <- scale_y_log10(breaks = c(0.02, 0.03, 0.04, 0.05),
+                         minor_breaks = NULL)
+cv_ylim <- c(min(unlist(cv_curves)),
+             max(cv_ls, unlist(cv_curves[c("PCR", "PLS")])))
+
+# Axis of lambda over both grids: major lines at powers of 10, minor lines
+# midway between them in log space.
+lambda_powers <- -2:4
+lambda_axis <- scale_x_log10(breaks = 10^lambda_powers,
+                             minor_breaks = 10^(lambda_powers + 0.5),
+                             labels = scales::label_log())
+
 # The curves of the given methods against their tuning values x, one line
 # per method, least squares dashed and each chosen value circled, on a
 # log-scale estimate.
@@ -929,13 +1028,17 @@ curve_plot <- function(methods, x_values) {
     geom_hline(yintercept = cv_ls, linetype = "dashed") +
     geom_line() +
     geom_point(data = chosen, size = 4, shape = 1, show.legend = FALSE) +
-    scale_y_log10() +
+    cv_axis +
+    coord_cartesian(ylim = cv_ylim) +
     scale_color_manual(values = okabe_ito[c(4, 5)]) +
     labs(y = paste0(n_folds, "-fold CV estimate (log scale)"),
          color = NULL, linetype = NULL, title = title_train,
          caption = paste("Dashed line: least squares.",
                          "Circles: the chosen value of each method.")) +
-    theme(legend.position = "bottom")
+    theme(legend.position = "inside",
+          legend.position.inside = c(0.99, 0.03),
+          legend.justification = c(1, 0),
+          legend.background = element_rect(color = "grey50"))
 }
 
 # The tuning values of each method's curve.
@@ -945,13 +1048,25 @@ x_values <- list(`Forward stepwise` = 0:p, Ridge = ridge_grid,
 # Forward stepwise against d, ridge and lasso against lambda, PCR and PLS
 # against M.
 forward_plot <- curve_plot("Forward stepwise", x_values) +
+  count_axis +
   labs(x = "Number of features d") +
   theme(legend.position = "none")
 penalty_plot <- curve_plot(c("Ridge", "Lasso"), x_values) +
-  scale_x_log10(labels = scales::label_log()) +
+  lambda_axis +
   labs(x = expression(lambda ~ "(log scale)"))
 direction_plot <- curve_plot(c("PCR", "PLS"), x_values) +
+  count_axis +
   labs(x = "Number of components or directions M")
+
+# Line up the panels of the three tabs: the lambda axis uses expressions, whose
+# labels are taller than the plain labels of the other two axes.
+cv_aligned <- cowplot::align_plots(forward_plot,
+                                   penalty_plot,
+                                   direction_plot,
+                                   align = "hv")
+forward_tab <- cowplot::ggdraw(cv_aligned[[1]])
+penalty_tab <- cowplot::ggdraw(cv_aligned[[2]])
+direction_tab <- cowplot::ggdraw(cv_aligned[[3]])
 
 # The tuning values at which a curve is within near_share of its own
 # minimum: how many, and the smallest and largest.
@@ -985,7 +1100,7 @@ lasso as $\lambda \to 0$, and PCR and PLS with $M = p$ are all least squares.
 #| echo: false
 #| fig-width: 8
 #| fig-height: 4.2
-forward_plot
+forward_tab
 ```
 
 #### Ridge and lasso
@@ -993,7 +1108,7 @@ forward_plot
 #| echo: false
 #| fig-width: 8
 #| fig-height: 4.2
-penalty_plot
+penalty_tab
 ```
 
 #### PCR and PLS
@@ -1001,7 +1116,7 @@ penalty_plot
 #| echo: false
 #| fig-width: 8
 #| fig-height: 4.2
-direction_plot
+direction_tab
 ```
 :::
 
@@ -1273,13 +1388,20 @@ rep_table <- rep_summary |>
 
 # The test MSE relative to the best of the six, one violin per method other
 # than least squares, which is far above them, on a log scale.
-ratio_breaks <- c(1, 1.05, 1.1, 1.25, 1.5, 2)
-ratio_labels <- c("Best", "+5%", "+10%", "+25%", "+50%", "+100%")
+# Major lines at the round percentages above the best; minor lines midway
+# between them in log space.
+ratio_percent <- c(0, 5, 10, 25, 50, 100)
+ratio_breaks <- 1 + ratio_percent / 100
+ratio_labels <- c("Best", paste0("+", ratio_percent[-1], "%"))
+ratio_minor <- sqrt(ratio_breaks[-1] * ratio_breaks[-length(ratio_breaks)])
+ratio_axis <- scale_y_log10(breaks = ratio_breaks,
+                            minor_breaks = ratio_minor,
+                            labels = ratio_labels)
 rep_plot <- reps |>
   filter(method != "Least squares") |>
   ggplot(aes(x = method, y = ratio_best)) +
   violin +
-  scale_y_log10(breaks = ratio_breaks, labels = ratio_labels) +
+  ratio_axis +
   labs(x = NULL,
        y = "Test MSE relative to the best\nof the six (log scale)",
        title = paste(n_samples, "training samples of", n_train, "homes"),
@@ -1401,8 +1523,14 @@ kept_counts <- kept_wide |>
   pivot_longer(-sample, names_to = "what", values_to = "count") |>
   mutate(what = factor(what, labels = count_levels,
                        levels = c("p", "Forward stepwise", "Lasso")))
+
+# Number of features: major lines every 25 from 0 to 150, minor lines midway.
+kept_axis <- scale_y_continuous(limits = c(0, 150),
+                                breaks = seq(0, 150, by = 25),
+                                minor_breaks = seq(12.5, 137.5, by = 25))
 kept_plot <- ggplot(kept_counts, aes(x = what, y = count)) +
   violin +
+  kept_axis +
   labs(x = NULL, y = "Number of features",
        title = paste(n_samples, "training samples of", n_train, "homes"),
        caption = "Lines = quartiles and median.")

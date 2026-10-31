@@ -11,6 +11,7 @@ RoxygenNote: 8.1.0
 Imports:
     caret,
     class,
+    cowplot,
     e1071,
     glmnet,
     hexbin,
