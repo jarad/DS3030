@@ -38,7 +38,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 06-regularization/70-method-comparison.qmd @ b23af55 -->
+<!-- derived-from: 06-regularization/70-method-comparison.qmd @ cd3469e -->
 
 ::: {.columns}
 ::: {.column width="50%"}
