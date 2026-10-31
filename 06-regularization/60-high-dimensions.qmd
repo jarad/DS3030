@@ -956,13 +956,12 @@ direction_cv_plot <- ggplot(direction_cv,
 
 # Line up the panels of the three tabs: the lambda axes use expressions, whose
 # labels are taller than the plain labels of the M axis.
-cv_aligned <- cowplot::align_plots(ridge_cv_plot,
-                                   lasso_cv_plot,
-                                   direction_cv_plot,
-                                   align = "hv")
-ridge_cv_tab <- cowplot::ggdraw(cv_aligned[[1]])
-lasso_cv_tab <- cowplot::ggdraw(cv_aligned[[2]])
-direction_cv_tab <- cowplot::ggdraw(cv_aligned[[3]])
+cv_aligned <- patchwork::align_patches(ridge_cv_plot,
+                                       lasso_cv_plot,
+                                       direction_cv_plot)
+ridge_cv_tab <- cv_aligned[[1]]
+lasso_cv_tab <- cv_aligned[[2]]
+direction_cv_tab <- cv_aligned[[3]]
 
 # Principal component variances of the standardized training features, and
 # ridge regression's factor v_m / (v_m + lambda / n) on each component.

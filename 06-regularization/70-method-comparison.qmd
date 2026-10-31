@@ -1060,13 +1060,12 @@ direction_plot <- curve_plot(c("PCR", "PLS"), x_values) +
 
 # Line up the panels of the three tabs: the lambda axis uses expressions, whose
 # labels are taller than the plain labels of the other two axes.
-cv_aligned <- cowplot::align_plots(forward_plot,
-                                   penalty_plot,
-                                   direction_plot,
-                                   align = "hv")
-forward_tab <- cowplot::ggdraw(cv_aligned[[1]])
-penalty_tab <- cowplot::ggdraw(cv_aligned[[2]])
-direction_tab <- cowplot::ggdraw(cv_aligned[[3]])
+cv_aligned <- patchwork::align_patches(forward_plot,
+                                       penalty_plot,
+                                       direction_plot)
+forward_tab <- cv_aligned[[1]]
+penalty_tab <- cv_aligned[[2]]
+direction_tab <- cv_aligned[[3]]
 
 # The tuning values at which a curve is within near_share of its own
 # minimum: how many, and the smallest and largest.

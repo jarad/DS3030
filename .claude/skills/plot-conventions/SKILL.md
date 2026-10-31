@@ -82,8 +82,10 @@ All of the following hold for every tab:
 - **Panels lined up**: labels built from expressions (`expression(lambda)`,
   `scales::label_log()`) are taller than plain text, which moves the panel
   edge on that tab only. After building the plots, pass them through
-  `cowplot::align_plots(..., align = "hv")` and draw each result with
-  `cowplot::ggdraw()`, and display the drawn plots in the tabs.
+  `patchwork::align_patches(plot_a, plot_b, plot_c)`, which returns the plots
+  with their panels aligned, and display the returned plots in the tabs. (A
+  tidyverse-adjacent package already installed with `tidymodels`;
+  `cowplot::align_plots()` does the same but is an extra dependency.)
 - Check the rendered PNGs of all the tabs: the panel border sits at the same
   pixel rows and columns, the same lines in the same places, and no legend
   covers data.
