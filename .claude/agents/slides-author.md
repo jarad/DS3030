@@ -103,6 +103,15 @@ built entirely from content that already exists as static output:
   field, locating the `::: {.cell-output-display}` block that follows the
   chunk that built the table, and copying that block's pandoc pipe-table
   markdown verbatim into the slide.
+- **Basic code** is shown, with its output. A chapter's visible chunk that
+  fits a model (the `rpart()` or `lm()` call and its brief summary, see
+  `CLAUDE.md`, "Show the basic code, in the open") gets a code slide: copy the
+  chunk's source from the `.qmd`, without the `#|` option lines, into a
+  ` ```r ` block, which Quarto highlights but does not run under
+  `execute: enabled: false`, and follow it on the same slide with the chunk's
+  console output as the next bullet describes. Keep the code at the chapter's
+  size (about eight lines); do not reflow or trim it, and never add code the
+  chapter does not show. The outline's `show:` line says `code`.
 - **Real R console output** (a `summary(fit)` printout, a warning) is
   authentic and worth showing exactly as R produced it — this does **not**
   conflict with executing nothing, since it's a fourth static-content type

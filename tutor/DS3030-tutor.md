@@ -101,6 +101,19 @@ read consistently with the notes:
   $g(\mu_i) = \eta_i$; ISLR2 instead writes $\eta$ for the link and
   $\lambda$ for the Poisson mean. $e^{\beta_j}$ in Poisson regression is a
   **rate ratio**.
+- In decision trees, regions (leaves) are $R_1, \ldots, R_J$ indexed by $m$,
+  because $j$ indexes the explanatory variable a split uses (split at cut
+  point $s$); $x$ is a value of $X = (X_1, \ldots, X_p)$, and $x_i$ the values
+  of observation $i$; $\hat y_{R_m}$ is a region's mean training response,
+  $\hat p_{mk}$ its proportion of class $k$, $|T|$ the number of leaves of a
+  subtree $T$, $T_0$ the full tree, and $\alpha$ the cost-complexity tuning
+  parameter (`rpart()`'s `cp` is $\alpha$ divided by the root's RSS). The
+  impurities are $E$ (classification error rate), $G$ (Gini index) and $D$
+  (entropy, natural log), with $Q$ standing for any of them; $D$ also names a
+  dummy variable and a deviance in earlier chapters. $n_R$ is the size of the
+  region being split ($n$, the training sample size, only at the root). A tree
+  splits on explanatory variables as recorded, so there each feature is an
+  explanatory variable.
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -136,14 +149,16 @@ material" and you can draw only from those chapters.
   Logistic Regression, everything before ISLR2 section 4.4 (linear
   discriminant analysis).
 - **Exam 2** (Nov 6): everything from ISLR2 section 4.4 onward, up to the cutoff
-  the instructor sets for the exam: chapter 13 (Linear Discriminant Analysis)
-  and every chapter after it below. By the course schedule the exam runs
-  through cross-validation (ISLR2 Chapter 5; the bootstrap chapter is
-  optional reading and not assessed), regularization (6.1-6.2) and
-  dimension reduction (6.3-6.4); chapters not listed below have not been
+  the instructor sets for the exam: chapters 13-26 below, from Linear
+  Discriminant Analysis through Method Comparison. By the course schedule the
+  exam runs through cross-validation (ISLR2 Chapter 5; the bootstrap chapter
+  is optional reading and not assessed), regularization (6.1-6.2) and
+  dimension reduction (6.3-6.4).
+- **Final exam** (cumulative): "Quiz me on the final" draws on every chapter
+  below. Chapters 27 onward (Decision Trees and later), taught after Exam 2,
+  are assessed only on the final. Chapters not listed below have not been
   written yet. If a student asks about material that is not listed, say so
   and quiz only on what is.
-- The final exam is cumulative: "Quiz me on the final" draws on both.
 
 When asked to quiz on an exam, follow the rules above: write original
 questions at a stated difficulty, never reuse an item from "What has already
@@ -1230,6 +1245,54 @@ into the reference; and state the setting each method is expected to suit
 from earlier reasoning, which one dataset cannot establish. A `Beyond this
 course` callout (penalized logistic and Poisson regression, elastic net,
 group lasso, interactions with a penalized fit) is not assessed.
+
+### 27. Decision Trees (Final exam)
+<https://jarad.github.io/DS3030/08-trees/10-decision-trees.html>
+
+Regression and classification trees (ISLR2 8.1), fit with `rpart()` and
+drawn with `rpart.plot()`. Regression trees on `modeldata::concrete`
+(compressive strength in MPa of concrete specimens against seven ingredient
+amounts and age in days; exact duplicate rows removed; each observation is a
+specimen): a tree divides the explanatory variables into rectangular regions
+$R_1, \ldots, R_J$ and predicts the mean training response of each region.
+Students derive the best single split, the explanatory variable $j$ and cut
+point $s$ minimizing the summed RSS of
+$R_1(j, s) = \{X \in R \mid X_j < s\}$ and
+$R_2(j, s) = \{X \in R \mid X_j \ge s\}$ for the region $R$ being split,
+and show that the decrease in RSS is
+$n_1n_2(\bar y_1 - \bar y_2)^2/(n_1 + n_2)$ (only cut points between
+consecutive distinct values matter); explain recursive binary splitting as
+greedy and top-down, and `rpart()`'s default stopping rules (`minsplit`,
+`minbucket`, `cp = 0.01`); read a printed tree (node, split, n, RSS as
+`deviance`, mean as `yval`) and a tree diagram; and see the fit as a step
+function over a two-variable partition (age and cement). Pruning: the full
+tree's training MSE falls with every leaf while its test MSE does not;
+cost-complexity pruning minimizes $\text{RSS} + \alpha|T|$ ($|T|$ leaves),
+with $\alpha = 0$ the full tree and nested subtrees (weakest link pruning)
+as $\alpha$ grows; `rpart()`'s `cp` is $\alpha$ divided by the root's RSS;
+$\alpha$ is chosen by the 10-fold cross-validation in `cptable` /
+`printcp()` (`rel error`, `xerror`, `xstd`), the full tree pruned with
+`prune()` and evaluated on test data against the default tree, the full tree
+and least squares. With all eight explanatory variables the tree beats least
+squares, and pruning matters less when the explanatory variables leave little
+for small leaves to fit. Classification trees on `modeldata::penguins`
+(species from bill length, bill depth, flipper length, body mass): predict
+the most common class of a region, with class proportions $\hat p_{mk}$;
+compute the classification error rate $E$, Gini index $G$ and entropy $D$ of
+a node and the weighted impurity of a split; explain why Gini and entropy
+(strictly concave) rather than the error rate grow a tree, since a split
+that keeps the parent's most common class in both children does not lower
+the error rate; fit with `method = "class"`, read class proportions, and
+evaluate with a test confusion matrix and accuracy; prune the same way.
+Strengths and weaknesses: small trees are interpretable, trees capture
+nonlinearity and interactions without hand-built features and handle many
+classes, but predictions are piecewise constant and trees have high variance
+(trees fit to random halves of the training data differ in their splits,
+often their first split, and their predictions differ far more than least
+squares fits). A `Beyond this course` callout (one-standard-error rule,
+random folds and `xval`) and another (surrogate splits for missing values,
+splits on categorical variables, conditional inference trees, oblique and
+model trees) are not assessed.
 
 ## What has already been assessed
 

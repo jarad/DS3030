@@ -242,6 +242,39 @@ convention.
   a number. The repeated samples are drawn from "the remaining test homes",
   and every prediction is made at "the test homes at which every prediction
   is made", mirroring the ridge and lasso chapters' test orders.
+- **In the decision trees chapter (`08-trees/10-decision-trees.qmd`)**,
+  regions (leaves) are $R_1, \ldots, R_J$ and are indexed by $m$, as in the
+  textbook's cost-complexity criterion, because $j$ indexes the explanatory
+  variable a split uses: a split of region $R$ at cut point $s$ makes
+  $R_1(j, s) = \{X \in R \mid X_j < s\}$ and
+  $R_2(j, s) = \{X \in R \mid X_j \ge s\}$. $x$ (unsubscripted) is a value
+  of $X = (X_1, \ldots, X_p)$, and $x_i = (x_{i1}, \ldots, x_{ip})$ the values
+  of observation $i$, so a single subscript on $x$ always means an
+  observation. A tree splits on explanatory variables as recorded, so there
+  each feature is an explanatory variable. $\hat y_{R_m}$ is the mean
+  training response in $R_m$; $n_1, n_2$ and $\bar y_1, \bar y_2$ are the
+  sizes and means of the two regions of a split, and $n_R = n_1 + n_2$ the
+  size of the region being split ($n$, the training sample size, only at the
+  root). $T_0$ is the full tree, $T$ a subtree,
+  $|T|$ its number of leaves, $\alpha$ the cost-complexity tuning parameter,
+  and $C_\alpha(T)$ the criterion; `rpart()`'s `cp` is $\alpha$ divided by
+  the RSS of the root. For classes, $K$ is the number of classes,
+  $\hat p_{mk}$ the proportion of class $k$ in $R_m$, $n_m$ the number of
+  training observations in $R_m$, and the impurities are $E_m$ (classification
+  error rate), $G_m$ (Gini index) and $D_m$ (entropy, natural log); $Q$
+  stands for any one of the three, with $Q_1, Q_2$ its values in the two
+  regions of a split (not $I$, which would read as the indicator
+  $\mathrm{I}(\cdot)$). $D$ is
+  thus a third contextual meaning, after the indicator and the residual
+  deviance; the chapter never uses $D$ for either of those, and calls the
+  `deviance` column of `rpart()`'s printout the node's RSS. The concrete
+  observation is a **specimen** (one cylinder of one mix crushed at one
+  age), with "training specimens" and "test specimens"; a penguin is a
+  **penguin**. The **full tree** is the tree grown with `cp = 0`,
+  `minsplit = 2`, `minbucket = 1`; the **default tree** is `rpart()` with its
+  default stopping rules; the **pruned tree** is the full tree pruned at the
+  `cp` with the smallest cross-validation estimate. A **halving** splits the
+  training specimens at random into two halves.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

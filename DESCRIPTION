@@ -23,7 +23,10 @@ Imports:
     patchwork,
     pls,
     quantmod,
+    randomForest,
     rmarkdown,
+    rpart,
+    rpart.plot,
     Sleuth3,
     tidymodels,
     tidyverse

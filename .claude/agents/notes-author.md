@@ -110,8 +110,9 @@ Match the voice of the existing chapters. Specifically:
   distinct purposes, each with its own fixed heading — do not invent a
   variant of either:
   - A short illustrative aside inside a theory subsection: `### For example,`.
-  - Extensive setup code (simulating data, fitting several models, building a
-    table or figure): `### Code`, with `#| output: false` and the result
+  - Extensive setup code (simulating data, building a table or figure, fitting
+    many models in a loop; not the basic fit-and-summarize call, which is shown
+    in the open): `### Code`, with `#| output: false` and the result
     assigned to an object, displayed afterward in its own `#| echo: false`
     chunk. Always just `### Code` — never "Code for the figure below" or any
     other variant naming what the code produces; the callout's own content
@@ -237,6 +238,19 @@ full checklist (grid lines, legibility without color, size on slides, jitter,
 code placement, and the two-step rule for tabsets: decide whether the tabs
 should be aligned, then follow the alignment rules), and then look at each
 rendered PNG to confirm the spacing.
+
+**Show the basic code, in the open.** Wherever the chapter fits a model, show
+the few lines that fit it and print a brief summary in an ordinary visible
+chunk (`#| echo: true`, output shown), not inside a `### Code` callout: the
+`rpart()`, `randomForest()` or `lm()` call a student would type, the data
+split if needed, and one brief summary (`print(fit)`, a short table, `head()`
+of predictions), about eight lines at most, each at most 80 characters. A
+from-scratch implementation that is the method being taught (a boosting loop)
+is shown in the open too if it fits in about ten lines. Plot and table
+construction, simulation, prediction grids and helper functions stay in the
+`### Code` callout. The deck reuses the visible snippet and its output, so name
+the chunks and keep the snippet self-contained. See `CLAUDE.md`, "Show the
+basic code, in the open."
 
 **Put extensive R code in a collapsed callout.** For a chunk with substantial
 setup — simulating data, fitting several models, building a prediction grid or

@@ -130,7 +130,8 @@ reuses; do not retro-fit old decks unprompted.
 
 ## Code placement
 
-Extensive plot code lives in a collapsed `### Code` callout with
+The basic fit-and-summarize code of a model is shown in the open (see
+`CLAUDE.md`). Extensive plot code lives in a collapsed `### Code` callout with
 `#| output: false`, assigning the plot to an object; the object is displayed in
 its own named chunk with `#| echo: false`. Every chunk is named; lines at most
 80 columns; every function definition uses braces.

@@ -295,7 +295,10 @@ numbering.
 chunk named, with illustrative code carrying `#| eval: false` rather than being
 a plain ```` ```r ```` block; extensive setup code inside a
 `::: {.callout-note collapse="true"}` with `#| output: false` and displayed from
-a short visible chunk, not hidden behind `#| echo: false`; plots legible without
+a short visible chunk, not hidden behind `#| echo: false`; the basic
+fit-and-summarize code of each model shown in the open with its output (about
+eight lines), not buried in a callout, in new or revised chapters (report a
+chapter that fits a model with no visible fitting code); plots legible without
 color, meaning `shape` and `linetype` mapped alongside `color` when they are not
 carrying another variable, or a facet instead; a Bloom-aligned learning
 objectives block at the top; balanced `:::` blocks; and

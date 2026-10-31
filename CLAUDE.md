@@ -175,13 +175,16 @@ below are the broader authoring rules those specific decisions sit inside.
   elsewhere. A bare pointer to a chapter or section for *further reading*
   (`ISLR2 Chapter 8`) is fine; an unverifiable claim about what the textbook
   contains is not.
-- **Prefer a real dataset over simulated data, ideally from a package already
-  in `DESCRIPTION`** (ISLR2, Sleuth3, ...). Simulated data is fine when the
-  point is about a data-generating process itself (e.g. demonstrating that a
-  method recovers a known truth), but a worked example illustrating a method
+- **Prefer a real dataset over simulated data.** Simulated data is fine when
+  the point is about a data-generating process itself (e.g. demonstrating that
+  a method recovers a known truth), but a worked example illustrating a method
   on realistic data teaches the method better with data students could
-  actually encounter. `ISLR2::Wage` (age vs. wage) and `ISLR2::Boston`
-  (housing) are already in use for exactly this reason.
+  actually encounter. Vary the datasets across chapters so students meet
+  different examples: before choosing one, check which datasets earlier
+  chapters already use (`grep -ho "[A-Za-z0-9]*::[A-Za-z_0-9.]*" */*.qmd`) and
+  prefer one not used yet. `modeldata` and `Sleuth3` are good sources; avoid
+  `ISLR2` datasets for new examples unless nothing else fits, and avoid sports
+  data. A new package a dataset needs is added to `DESCRIPTION`.
 - **Cut extemporaneous asides — phrasing that reinforces a point verbally but
   adds no information in writing.** "$\beta_j$ is a difference, not a bin's
   mean by itself" says the same thing twice; the second half is something an
@@ -306,6 +309,27 @@ the next without a separate `set.seed()` guarding every one of them. Use the
 date the file was first created (`git log --diff-filter=A --follow --format=%ad
 --date=format:%Y%m%d -- <file>`) as the seed, so it is reproducible and traceable
 rather than an arbitrary number picked at edit time.
+
+**Show the basic code, in the open.** Wherever a chapter fits a model, a
+student sees how to run it: the few lines that fit the model and print a brief
+summary, in an ordinary visible chunk (`#| echo: true`, with its output), not in
+a collapsed callout. For example, the `rpart()` call and `print(fit)`, or the
+`lm()` call and `summary(fit)`. What to show:
+
+- The call a student would type to run the method on the chapter's data, the
+  data split if it is needed to understand the call, and one brief summary of
+  the result (a printout, a short table, `head()` of the predictions): about
+  eight lines at most, each at most 80 characters.
+- A from-scratch implementation that *is* the method being taught (a boosting
+  loop, a sweep over a tuning parameter) is shown in the open too, if it fits
+  in about ten lines.
+- Do not show the construction of a plot or a table, simulation, a prediction
+  grid or helper functions: that is the next paragraph's callout.
+
+The deck carries the same snippet and its output (see `slides-author`), so a
+slide can show the call and what it produces. This rule applies to new and
+revised chapters; chapters already published are brought into line only when
+the instructor asks.
 
 **Put extensive R code in a collapsed callout.** When a chunk carries a lot of
 setup — simulating data, fitting several models, assembling a prediction grid,
