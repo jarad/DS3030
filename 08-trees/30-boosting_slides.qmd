@@ -43,7 +43,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 08-trees/30-boosting.qmd @ uncommitted -->
+<!-- derived-from: 08-trees/30-boosting.qmd @ 47a8166 -->
 
 ::: {.columns}
 ::: {.column width="34%"}
