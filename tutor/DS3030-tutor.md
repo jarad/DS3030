@@ -114,6 +114,15 @@ read consistently with the notes:
   region being split ($n$, the training sample size, only at the root). A tree
   splits on explanatory variables as recorded, so there each feature is an
   explanatory variable.
+- In boosting, $B$ is the number of trees (as for bagging), $\nu$ the
+  shrinkage or learning rate (ISLR2 writes $\lambda$, which in this course
+  is the ridge and lasso tuning parameter), and $\delta$ the depth of each
+  tree, the largest number of splits on a path from the root to a leaf
+  (ISLR2 instead limits the number of splits $d$). $\hat f^b$ is the $b$th
+  tree and $\hat f_b$ the boosted model after $b$ trees. A boosted model of
+  stumps is $\sum_j a_j(x)$, with $a_j(x)$ the sum of the shrunken stumps
+  that split on $X_j$ (a function of $x$ only through the value of $X_j$;
+  not $g_j(x_j)$, since a single subscript on $x$ means an observation).
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -155,8 +164,8 @@ material" and you can draw only from those chapters.
   is optional reading and not assessed), regularization (6.1-6.2) and
   dimension reduction (6.3-6.4).
 - **Final exam** (cumulative): "Quiz me on the final" draws on every chapter
-  below. Chapters 27 onward (Decision Trees, Bagging and Random Forests, and
-  later), taught after Exam 2,
+  below. Chapters 27 onward (Decision Trees, Bagging and Random Forests,
+  Boosting, and later), taught after Exam 2,
   are assessed only on the final. Chapters not listed below have not been
   written yet. If a student asks about material that is not listed, say so
   and quiz only on what is.
@@ -1335,6 +1344,48 @@ store, and no extrapolation beyond the training data (predictions constant
 past the largest training value). A `Beyond this course` callout (extremely
 randomized trees, conditional forests, quantile regression forests,
 proximity, `ranger`) is not assessed.
+
+### 29. Boosting (Final exam)
+<https://jarad.github.io/DS3030/08-trees/30-boosting.html>
+
+Boosting regression trees (ISLR2 8.2.3) on the same `modeldata::concrete`
+training and test split as the two previous chapters (numeric response
+only). Notation differs from the textbook: the shrinkage (learning rate) is
+$\nu$, not $\lambda$ (which is the ridge/lasso tuning parameter in this
+course), and tree size is the depth $\delta$ (`rpart()`'s `maxdepth`; a
+stump has $\delta = 1$), not the textbook's number of splits $d$; $B$ is
+the number of trees. Students describe the algorithm: start from
+$\hat f_0 = 0$ with residuals $r_i = y_i$; for $b = 1, \ldots, B$ fit a tree
+$\hat f^b$ of depth $\delta$ to the residuals, update
+$\hat f_b = \hat f_{b-1} + \nu\hat f^b$ and
+$r_i \leftarrow r_i - \nu\hat f^b(x_i)$;
+predict with $\hat f_B(x) = \sum_b \nu\hat f^b(x)$; and implement it as a
+short loop of `rpart()` fits. Tuning parameters: a smaller $\nu$ learns more
+slowly and needs more trees (with a small $\nu$ the fit stays near its
+starting value 0, like a large ridge/lasso penalty); deeper trees learn
+faster; boosting, unlike bagging, overfits when $B$ is too large, so $B$ is
+chosen by 10-fold cross-validation (one run per fold gives the estimate for
+every $B$), then the chosen model is evaluated on test data. A tree of
+depth $\delta$ can split on more than $\delta$ variables in all, but each
+leaf is reached through at most $\delta$ splits, so the boosted model is a
+sum of terms each involving at most $\delta$ explanatory variables
+(interactions among at most $\delta$); stumps give an additive model
+$\sum_j a_j(x)$, each $a_j$ depending on $x$ only through $X_j$ (parallel
+prediction curves), and on concrete trees of depth 2 or more predict better
+than stumps. Boosting versus bagging: boosting fits small, high-bias trees in
+sequence to residuals and reduces bias; bagging and forests average large,
+low-bias, high-variance trees grown independently and reduce variance
+(bagging small trees leaves their bias: bagged stumps improve little on one
+stump, and bagged depth-4 trees stay far worse than boosted ones).
+Variable importance: the decrease in
+RSS of the residuals from each variable's splits summed over the trees, a
+ranking with no direction or effect size. Comparison table of test MSE for
+least squares, trees, bagging, a random forest and boosting; limits of
+boosting (three tuning parameters, sequential fitting, overfitting, no
+single tree to read, no extrapolation). A `Beyond this course` callout
+(classification boosting with the deviance, AdaBoost, gradient boosting
+with other losses, `gbm` and `xgboost` and their extra tuning parameters,
+BART) is not assessed.
 
 ## What has already been assessed
 

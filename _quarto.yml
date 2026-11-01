@@ -48,6 +48,7 @@ book:
       chapters:
       - 08-trees/10-decision-trees.qmd
       - 08-trees/20-bagging-and-random-forests.qmd
+      - 08-trees/30-boosting.qmd
 
 format:
   html:

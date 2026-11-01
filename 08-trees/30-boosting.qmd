@@ -1,0 +1,1739 @@
+# Boosting
+
+[Slides for this lecture](30-boosting_slides.html)
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("rpart")
+library("randomForest")
+theme_set(theme_bw())
+
+# Seeds: the split chunk sets 20261031, the Decision Trees lecture's seed,
+# so that the split and that lecture's later draws repeat; the callout
+# after the split sets 20261101, the date this file was created, which
+# governs every random draw of this lecture from there on.
+
+# Printed output wraps at 80 characters.
+options(width = 80)
+
+# Fixed decimals with thousands separators, for use inside $...$, whose
+# hyphen MathJax sets as a minus. Adding 0 after rounding turns a negative
+# zero into 0.
+fmt_math <- function(x, digits = 2) {
+  rounded <- round(x, digits) + 0
+  formatC(rounded, format = "f", digits = digits, big.mark = ",")
+}
+
+# The same for prose, where a negative value prints with a minus sign (the
+# HTML entity) rather than a hyphen.
+fmt <- function(x, digits = 2) {
+  sub("^-", "&minus;", fmt_math(x, digits))
+}
+
+# A percentage, for prose.
+pct <- function(x, digits = 1) {
+  paste0(fmt(100 * x, digits), "%")
+}
+
+# A count with thousands separators, for prose, each value formatted on
+# its own (no padding to a common width).
+big <- function(x) {
+  format(x, big.mark = ",", trim = TRUE)
+}
+
+# The same inside $...$, where the comma is braced so that MathJax does
+# not set it as punctuation followed by a space.
+big_math <- function(x) {
+  gsub(",", "{,}", big(x), fixed = TRUE)
+}
+
+# "a", "a and b", "a, b, and c".
+and_list <- function(x) {
+  n_x <- length(x)
+  if (n_x == 1) {
+    return(x)
+  }
+  if (n_x == 2) {
+    return(paste(x, collapse = " and "))
+  }
+  paste0(paste(x[-n_x], collapse = ", "), ", and ", x[n_x])
+}
+
+# A name set as code in prose.
+code <- function(x) {
+  paste0("`", x, "`")
+}
+
+# Mean squared error of predictions y_hat of responses y.
+mse <- function(y, y_hat) {
+  mean((y - y_hat)^2)
+}
+
+# Color-blind-friendly palette.
+okabe_ito <- c("#E69F00",
+               "#56B4E9",
+               "#009E73",
+               "#D55E00",
+               "#0072B2",
+               "#CC79A7")
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **describe** boosting for regression trees: start from the fit 0, fit a
+tree of depth $\delta$ to the current residuals, add $\nu$ times its
+predictions to the fit, update the residuals, and repeat $B$ times, and
+**implement** it with `rpart()`,
+- **explain** the roles of the three tuning parameters, the number of trees
+$B$, the shrinkage $\nu$, and the depth $\delta$: why a smaller $\nu$ needs a
+larger $B$, and why, since each leaf of a tree of depth $\delta$ is reached
+through at most $\delta$ splits, the boosted model is a sum of terms that
+each involve at most $\delta$ explanatory variables, so that stumps give an
+additive model,
+- **compare** boosting with bagging and random forests: small trees grown one
+after another, each fit to the residuals of the trees before it, which
+reduces bias, against large trees grown independently on bootstrap samples
+and averaged, which reduces variance,
+- **evaluate** how the test error changes as $B$ grows, including
+overfitting, and **choose** $B$ by 10-fold cross-validation, and
+- **interpret** the variable importance of a boosted model, the decrease in
+RSS from each explanatory variable's splits summed over the trees, as a
+ranking without direction or effect size.
+:::
+
+The [Bagging and Random Forests](20-bagging-and-random-forests.qmd) lecture
+averaged many large trees, each grown independently of the others, to
+reduce the variance of a single tree. **Boosting** also combines many
+trees, but grows small ones, one after another. This lecture builds
+boosting from scratch with `rpart()` for a numeric response. The reading is
+ISLR2 Section 8.2.3.
+
+## Data
+
+**Question.** With the concrete data of the two previous lectures, can a sum
+of small trees grown one after another predict compressive strength better
+than one tree or an average of many?
+
+### Concrete specimens
+
+The data and split are those of the [Decision
+Trees](10-decision-trees.qmd) lecture, so the test MSEs of the three
+lectures can be compared. `modeldata::concrete` records the compressive
+strength (MPa) of concrete cylinders, with seven ingredient amounts (kg per
+cubic meter of mix) and the age (days) as explanatory variables. Each
+observation is a **specimen**: one cylinder of one mix, crushed at one age.
+Rows that repeat an earlier row exactly are removed.
+
+```{r split}
+# The seed of the Decision Trees lecture, so that the training specimens
+# are the same specimens.
+set.seed(20261031)
+
+# One row per specimen; 700 training specimens, the rest test specimens.
+specimens <- distinct(modeldata::concrete)
+n_train <- 700
+train_id <- sample(nrow(specimens), n_train)
+train <- specimens[train_id, ]
+test <- specimens[-train_id, ]
+y_train <- train$compressive_strength
+y_test <- test$compressive_strength
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r earlier}
+#| output: false
+# Rows removed as exact duplicates, and the explanatory variables.
+n_exact <- sum(duplicated(modeldata::concrete))
+explanatory <- setdiff(names(specimens), "compressive_strength")
+p <- length(explanatory)
+
+# rpart() draws its cross-validation folds at random, so the pruned tree
+# depends on the random draws before it. These are the Decision Trees
+# lecture's draws after its split, in order: the jitter of the training
+# ages, two fits on age and cement, and the full tree on all eight
+# explanatory variables.
+age_jitter <- runif(n_train, -0.08, 0.08)
+full_control <- rpart.control(cp = 0, minsplit = 2, minbucket = 1)
+two_default <- rpart(compressive_strength ~ age + cement, data = train)
+two_full <- rpart(compressive_strength ~ age + cement, data = train,
+                  control = full_control)
+all_full <- rpart(compressive_strength ~ ., data = train,
+                  control = full_control)
+
+# The pruned tree, the default tree, and least squares with age and with
+# log(age), on all eight explanatory variables.
+all_cp <- all_full$cptable
+all_best_cp <- all_cp[which.min(all_cp[, "xerror"]), "CP"]
+all_pruned <- prune(all_full, cp = all_best_cp)
+all_default <- rpart(compressive_strength ~ ., data = train)
+all_ls <- lm(compressive_strength ~ ., data = train)
+log_ls <- lm(compressive_strength ~ . - age + log(age), data = train)
+
+# Their test MSEs. The Decision Trees lecture reported 106.4, 48.5, 86.8,
+# 40.3, and 42.2; a different split or different folds stops the render
+# here.
+earlier_mse <- c(ls = mse(y_test, predict(all_ls, test)),
+                 log_ls = mse(y_test, predict(log_ls, test)),
+                 default = mse(y_test, predict(all_default, test)),
+                 full = mse(y_test, predict(all_full, test)),
+                 pruned = mse(y_test, predict(all_pruned, test)))
+stopifnot(round(earlier_mse, 1) == c(106.4, 48.5, 86.8, 40.3, 42.2))
+
+# This lecture's seed, for every random draw from here on.
+set.seed(20261101)
+
+# Share of the test specimens whose mix, the seven ingredients, is the mix
+# of some training specimen.
+ingredients <- setdiff(explanatory, "age")
+train_mixes <- distinct(select(train, all_of(ingredients)))
+test_mix_seen <- nrow(semi_join(test, train_mixes, by = ingredients)) /
+  nrow(test)
+```
+:::
+
+The `r n_exact` exact duplicates removed leave
+`r big(nrow(specimens))` specimens: `r n_train` training and
+`r nrow(test)` test specimens, with $p = `r p`$ explanatory variables. After
+the split, the callout repeats the random draws the Decision Trees lecture
+made before its pruned tree, because `rpart()` draws its cross-validation
+folds at random, and then sets this lecture's seed. It reproduces that
+lecture's test MSEs on all `r p` explanatory variables:
+`r fmt(earlier_mse[["ls"]], 1)` for least squares,
+`r fmt(earlier_mse[["log_ls"]], 1)` for least squares with
+$\log(\texttt{age})$ in place of age, `r fmt(earlier_mse[["default"]], 1)`
+for the default tree, and `r fmt(earlier_mse[["full"]], 1)` and
+`r fmt(earlier_mse[["pruned"]], 1)` for the full and pruned trees.
+
+### Earlier fits
+
+The tabs plot the predicted against the observed strength of the
+`r nrow(test)` test specimens for four fits on all `r p` explanatory
+variables: the mean training strength, a **stump** (a tree with a single
+split, so of depth 1), the default tree, and a random forest with $m$, the
+number of explanatory variables tried at each split as in the previous
+lecture, chosen by its out-of-bag (OOB) error. A point on the dashed line
+is predicted exactly.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r earlier-fits}
+#| output: false
+# A stump: a tree with one split.
+stump <- rpart(compressive_strength ~ ., data = train,
+               control = rpart.control(maxdepth = 1))
+
+# A forest for each m from 1 to p, with randomForest()'s other defaults;
+# m = p is bagging. The forest with the smallest OOB MSE.
+m_forests <- map(seq_len(p), \(m) {
+  randomForest(compressive_strength ~ ., data = train, mtry = m)
+})
+m_oob <- map_dbl(m_forests, \(forest) tail(forest$mse, 1))
+m_best <- which.min(m_oob)
+best_rf <- m_forests[[m_best]]
+bag_rf <- m_forests[[p]]
+forest_mse <- c(bagging = mse(y_test, predict(bag_rf, test)),
+                forest = mse(y_test, predict(best_rf, test)))
+
+# The Bagging and Random Forests lecture reported test MSEs of 27.1 for
+# bagging with randomForest() and 26.7 for the forest with the OOB choice
+# of m, which was 5. The refit forests are other random draws.
+previous_forest <- c(bagging = 27.1, forest = 26.7)
+previous_m <- 5
+forest_gap <- max(abs(forest_mse - previous_forest))
+stopifnot(forest_gap < 1)
+forest_text <- paste0("These forests are refit here, so their test MSEs, ",
+                      "which depend on random draws, differ from those of ",
+                      "the previous lecture by up to ", fmt(forest_gap, 1))
+if (m_best != previous_m) {
+  forest_text <- paste0(forest_text, ", and the OOB error chose $m = ",
+                        previous_m, "$ there")
+}
+
+# Predictions for the test specimens of the four fits.
+fit_names <- c("Mean", "Stump", "Default tree", "Random forest")
+earlier_pred <- list(rep(mean(y_train), nrow(test)),
+                     predict(stump, test),
+                     predict(all_default, test),
+                     predict(best_rf, test)) |>
+  set_names(fit_names)
+earlier_test <- map_dbl(earlier_pred, \(pred) mse(y_test, pred))
+n_distinct_pred <- map_int(earlier_pred, n_distinct)
+
+# The default tree's leaves: each leaf has its own prediction here, so the
+# test specimens are grouped by prediction. The pooled standard deviation
+# of the test strengths within leaves, against their overall standard
+# deviation.
+n_default_leaves <- sum(all_default$frame$var == "<leaf>")
+stopifnot(n_distinct_pred[["Default tree"]] == n_default_leaves)
+within_leaf <- tibble(y = y_test, leaf = earlier_pred[["Default tree"]]) |>
+  mutate(deviation = y - mean(y), .by = leaf)
+within_sd <- sqrt(sum(within_leaf$deviation^2) /
+                    (nrow(test) - n_distinct(within_leaf$leaf)))
+overall_sd <- sd(y_test)
+
+# Strength axes: major lines every 20 MPa, minor lines midway.
+observed_axis <- scale_x_continuous(breaks = seq(0, 80, by = 20),
+                                    minor_breaks = seq(10, 90, by = 20),
+                                    limits = c(0, 90),
+                                    expand = expansion(0))
+predicted_axis <- scale_y_continuous(breaks = seq(0, 80, by = 20),
+                                     minor_breaks = seq(10, 90, by = 20),
+                                     limits = c(0, 90),
+                                     expand = expansion(0))
+
+# Predicted against observed strength, with the test MSE in a corner.
+title_test <- paste(nrow(test), "test specimens")
+observed_plot <- function(predicted) {
+  points <- tibble(observed = y_test, predicted = predicted)
+  label <- paste("Test MSE", fmt(mse(y_test, predicted), 1))
+  ggplot(points, aes(x = observed, y = predicted)) +
+    geom_abline(linetype = "dashed", color = "grey40") +
+    geom_point(alpha = 0.5, size = 1.2) +
+    annotate("label", x = 3, y = 87, hjust = 0, vjust = 1, label = label) +
+    observed_axis +
+    predicted_axis +
+    coord_fixed() +
+    labs(x = "Observed strength (MPa)", y = "Predicted strength (MPa)",
+         title = title_test)
+}
+earlier_plots <- map(earlier_pred, observed_plot)
+earlier_plots <- do.call(patchwork::align_patches, unname(earlier_plots))
+```
+:::
+
+::: {.panel-tabset}
+#### Mean
+```{r mean-figure}
+#| echo: false
+#| fig-width: 5.5
+#| fig-height: 4.5
+earlier_plots[[1]]
+```
+
+#### Stump
+```{r stump-figure}
+#| echo: false
+#| fig-width: 5.5
+#| fig-height: 4.5
+earlier_plots[[2]]
+```
+
+#### Default tree
+```{r default-figure}
+#| echo: false
+#| fig-width: 5.5
+#| fig-height: 4.5
+earlier_plots[[3]]
+```
+
+#### Random forest
+```{r forest-figure}
+#| echo: false
+#| fig-width: 5.5
+#| fig-height: 4.5
+earlier_plots[[4]]
+```
+:::
+
+The mean predicts one value for every specimen, the stump
+`r n_distinct_pred[["Stump"]]`, and the default tree
+`r n_distinct_pred[["Default tree"]]`, one per leaf; each horizontal row of
+points is one leaf or a few leaves with close predictions. Within a leaf the
+test strengths have a pooled standard deviation of `r fmt(within_sd, 1)`
+MPa, against `r fmt(overall_sd, 1)` MPa over all the test specimens. The
+random forest's predictions follow the dashed line.
+The test MSEs are `r fmt(earlier_test[["Mean"]], 1)`,
+`r fmt(earlier_test[["Stump"]], 1)`, `r fmt(earlier_test[["Default tree"]], 1)`,
+and `r fmt(earlier_test[["Random forest"]], 1)`. The forest here uses
+$m = `r m_best`$, chosen by its OOB error; bagging ($m = p$) has test MSE
+`r fmt(forest_mse[["bagging"]], 1)`. `r forest_text`.
+
+A small tree is a poor fit: it predicts a few values, each the mean of many
+specimens that differ in strength. Bagging and random forests get past this
+by averaging large trees, each with low bias and high variance. Boosting
+instead keeps the trees small and adds them up one at a time, each fit to
+the part of the strength that the trees before it have not yet explained.
+
+## Algorithm
+
+### Residuals
+
+Boosting starts from the prediction 0 for every specimen, so its first
+residuals are the strengths themselves. It fits a small tree to the
+residuals, adds a shrunken copy of the tree's predictions to the fit, and
+recomputes the residuals.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r boost-function}
+#| output: false
+# Boosting as in the loop of the Fitting subsection: B trees of depth
+# `depth`, with shrinkage nu, fit to explanatory variables x and response
+# y. Returns each tree's predictions for each data frame in `newdata` (one
+# column per tree), each tree's decrease in RSS by explanatory variable,
+# and the training MSE after each tree. maxcompete = 0 and maxsurrogate = 0
+# skip the competing and surrogate splits, which a prediction does not use.
+boost <- function(x, y, B, nu, depth, newdata = list()) {
+  control <- rpart.control(maxdepth = depth, cp = 0, xval = 0,
+                           maxcompete = 0, maxsurrogate = 0)
+  r <- y
+  pred <- map(newdata, \(d) matrix(0, nrow(d), B))
+  importance <- vector("list", B)
+  train_mse <- numeric(B)
+  for (b in seq_len(B)) {
+    data_b <- mutate(x, r = r)
+    tree <- rpart(r ~ ., data = data_b, control = control)
+    r <- r - nu * predict(tree, x)
+    for (name in names(newdata)) {
+      pred[[name]][, b] <- predict(tree, newdata[[name]])
+    }
+    importance[[b]] <- tree$variable.importance
+    train_mse[b] <- mean(r^2)
+  }
+  list(pred = pred, importance = importance, train_mse = train_mse)
+}
+
+# The boosted predictions after each number of trees b: nu times the
+# running sum of the trees' predictions, one column per b.
+running_fit <- function(pred, nu) {
+  nu * t(apply(pred, 1, cumsum))
+}
+
+# MSE of the boosted predictions after each number of trees.
+running_mse <- function(pred, y, nu) {
+  colMeans((y - running_fit(pred, nu))^2)
+}
+
+# Explanatory variables of the training and test specimens.
+x_train <- select(train, -compressive_strength)
+x_test <- select(test, -compressive_strength)
+
+# A grid for the Additive structure section: age from 1 to 365 days, two
+# cement contents, the other ingredients at their training medians.
+cement_levels <- c(200, 400)
+medians <- summarise(train, across(all_of(ingredients), median))
+age_grid <- exp(seq(log(1), log(365), length.out = 300))
+grid <- expand_grid(age = age_grid, cement = cement_levels) |>
+  bind_cols(select(medians, -cement)) |>
+  select(all_of(explanatory))
+
+# The main fit of this lecture: depth 4, shrinkage 0.1, up to 5,000 trees.
+B_max <- 5000
+nu_main <- 0.1
+depth_main <- 4
+main <- boost(x_train, y_train, B_max, nu_main, depth_main,
+              newdata = list(train = x_train, test = x_test, grid = grid))
+main_train_fit <- running_fit(main$pred$train, nu_main)
+main_test <- running_mse(main$pred$test, y_test, nu_main)
+
+# Residuals of the training specimens after 0, 1, 10, 100, and 1,000
+# trees; the tabs name these numbers.
+residual_b <- c(0, 1, 10, 100, 1000)
+residual_at <- function(b) {
+  if (b == 0) {
+    return(y_train)
+  }
+  y_train - main_train_fit[, b]
+}
+
+# Ages repeat, so each training specimen's age is jittered once, by up to
+# 8% either way, and the jittered age is used in every tab.
+age_jit <- train$age * exp(runif(n_train, -0.08, 0.08))
+
+# Age on a log scale: major lines at 1, 2, 5, 10, 20, 50, 100 and 200
+# days, no minor lines.
+age_axis <- scale_x_log10(breaks = c(1, 2, 5, 10, 20, 50, 100, 200),
+                          minor_breaks = NULL,
+                          limits = c(0.8, 450),
+                          expand = expansion(0))
+
+# Residual: major lines every 20 MPa, minor lines midway.
+residual_axis <- scale_y_continuous(breaks = seq(-20, 80, by = 20),
+                                    minor_breaks = seq(-10, 90, by = 20),
+                                    limits = c(-20, 90),
+                                    expand = expansion(0))
+
+# Residuals against age, with the training MSE in a corner.
+title_train <- paste(n_train, "training specimens")
+residual_plot <- function(b) {
+  points <- tibble(age = age_jit, residual = residual_at(b))
+  label <- paste("Training MSE", fmt(mean(points$residual^2), 1))
+  ggplot(points, aes(x = age, y = residual)) +
+    geom_hline(yintercept = 0, color = "grey40") +
+    geom_point(alpha = 0.4, size = 1) +
+    annotate("label", x = 0.9, y = 87, hjust = 0, vjust = 1,
+             label = label) +
+    age_axis +
+    residual_axis +
+    labs(x = "Age (days, log scale)", y = "Residual (MPa)",
+         title = title_train)
+}
+residual_plots <- map(residual_b, residual_plot)
+residual_plots <- do.call(patchwork::align_patches, residual_plots)
+
+# Mean fitted value after 10 trees, the largest change one tree makes, the
+# training MSE at the start and after one tree, and the training MSE after
+# 1,000 trees.
+mean_fit_10 <- mean(main_train_fit[, 10])
+first_step <- max(abs(main_train_fit[, 1]))
+train_mse_0 <- mean(y_train^2)
+train_mse_1 <- main$train_mse[1]
+train_mse_1000 <- main$train_mse[1000]
+
+# A regression tree's predictions for its training data average to the
+# mean of its response, so the mean fitted value after b trees is
+# 1 - (1 - nu)^b times the mean strength.
+level_10 <- 1 - (1 - nu_main)^10
+stopifnot(isTRUE(all.equal(mean_fit_10, level_10 * mean(y_train))))
+
+# Correlation of the residuals with log(age), at the start and after 100
+# trees.
+age_cor <- map_dbl(c(0, 100), \(b) cor(residual_at(b), log(train$age)))
+```
+:::
+
+The tabs plot the residuals of the training specimens against age: at the
+start, the strengths, and then after
+`r and_list(big(residual_b[-1]))` trees of **depth** `r depth_main` (each
+leaf reached through at most `r depth_main` splits), each tree's
+predictions multiplied by the **shrinkage** $\nu = `r nu_main`$ before they
+are added.
+
+::: {.panel-tabset}
+#### No trees
+```{r residual-0-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+residual_plots[[1]]
+```
+
+#### 1 tree
+```{r residual-1-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+residual_plots[[2]]
+```
+
+#### 10 trees
+```{r residual-10-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+residual_plots[[3]]
+```
+
+#### 100 trees
+```{r residual-100-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+residual_plots[[4]]
+```
+
+#### 1,000 trees
+```{r residual-1000-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+residual_plots[[5]]
+```
+:::
+
+The first tab is the data: strength rises steeply with age over the first
+month. The fit after one tree is $\nu = `r nu_main`$ times that tree's
+predictions, so no residual moves by more than `r fmt(first_step, 1)` MPa,
+and the training MSE falls from `r fmt(train_mse_0, 1)` to
+`r fmt(train_mse_1, 1)`, by `r pct(1 - train_mse_1 / train_mse_0, 0)`.
+A regression tree's predictions for its training data average to the mean
+of the residuals it is fit to, so after $b$ trees the mean fitted value is
+$1 - \left(1 - \nu\right)^b$ times the mean strength. After 10 trees that
+factor is $1 - `r 1 - nu_main`^{10} = `r fmt_math(level_10, 3)`$: the mean
+fitted value is `r fmt(mean_fit_10, 1)` MPa, against a mean training
+strength of `r fmt(mean(y_train), 1)`, and the first trees mostly raise the
+overall level from 0. By 100 trees the rise with age is gone from the
+residuals (their correlation with $\log(\texttt{age})$ falls from
+`r fmt(age_cor[1], 2)` to `r fmt(age_cor[2], 2)`), and after 1,000 trees
+the training MSE is `r fmt(train_mse_1000, 1)`.
+
+### Steps
+
+Boosting for regression trees, with $B$ trees of depth $\delta$ and
+shrinkage $\nu$:
+
+1. Set $\hat f_0(x) = 0$ for every $x$, and $r_i = y_i$ for every training
+observation $i = 1, \ldots, n$.
+2. For $b = 1, \ldots, B$:
+    a. fit a tree $\hat f^b$ of depth $\delta$ to the training data, with the
+    residuals $r_1, \ldots, r_n$ as the response;
+    b. add a shrunken copy of it to the fit,
+    $\hat f_b(x) = \hat f_{b-1}(x) + \nu\,\hat f^b(x)$;
+    c. update the residuals, $r_i \leftarrow r_i - \nu\,\hat f^b(x_i)$, so
+    that $r_i = y_i - \hat f_b(x_i)$.
+3. Predict with the boosted model
+$$\hat f_B(x) = \sum_{b=1}^B \nu\,\hat f^b(x),$$
+
+where
+
+- $x_i$ and $y_i$ are the explanatory variables and the response of
+training observation $i$, and $n$ the number of training observations,
+- $B$ is the number of trees, indexed $b$, as in the Bagging and Random
+Forests lecture,
+- $\hat f^b(x)$ is the prediction at $x$ of the $b$th tree (the superscript
+names the tree; it has no star, because the tree is not fit to a bootstrap
+sample),
+- $\hat f_b(x)$ is the boosted model after $b$ trees, with $\hat f_0 = 0$,
+- $r_i$ is the current residual of training observation $i$ (not the lasso
+residual vector $r$),
+- $\nu$, with $0 < \nu \le 1$, is the shrinkage, or learning rate,
+which the textbook writes $\lambda$; in these notes $\lambda$ is the ridge
+and lasso tuning parameter, so the shrinkage is $\nu$, and
+- $\delta$ is the depth of each tree, the largest number of splits on a
+path from the root to a leaf; $\delta = 1$ is a stump.
+
+The textbook limits the number of splits, $d$; in these notes $d$ is the
+number of features of the subset selection lectures, and `rpart()` limits
+depth, with `maxdepth`. A tree of depth $\delta$ has at most $2^\delta$
+leaves. The symbol $\delta$ is unrelated to the discriminant functions
+$\delta_k(x)$ of the discriminant analysis lectures and to the interaction
+estimates $\delta_j$ of the Flexible Logistic Regression lecture, which
+always carry a subscript.
+
+The tree at step $b$ depends on the trees before it through the residuals,
+so the trees are grown in sequence.
+
+### Fitting
+
+The chunk writes the algorithm out with `rpart()`:
+$B = `r big_math(max(residual_b))`$ trees of depth $\delta = `r depth_main`$
+with shrinkage $\nu = `r nu_main`$, the fit of the Residuals tabs, on all
+`r p` explanatory variables of the training specimens.
+
+```{r boosting}
+# Boosting from scratch: B trees of depth 4, with shrinkage nu.
+B <- 1000
+nu <- 0.1
+small <- rpart.control(maxdepth = 4, cp = 0, xval = 0,
+                       maxcompete = 0, maxsurrogate = 0)
+
+# Start from the fit 0, so the residuals are the strengths.
+x_train <- select(train, -compressive_strength)
+r <- y_train
+trees <- vector("list", B)
+
+# Fit a tree to the residuals, then subtract nu times its predictions.
+for (b in seq_len(B)) {
+  data_b <- mutate(x_train, r = r)
+  trees[[b]] <- rpart(r ~ ., data = data_b, control = small)
+  r <- r - nu * predict(trees[[b]], x_train)
+}
+```
+
+`cp = 0` lets the depth limit the tree, but `rpart()`'s defaults still
+apply: it does not split a node with fewer than
+`minsplit = `r rpart.control()$minsplit`` training specimens and keeps at
+least `minbucket = `r rpart.control()$minbucket`` in every leaf, so
+$\delta$ is an upper bound on the depth. `xval = 0` skips the cross-validation
+`rpart()` would otherwise run, and `maxcompete = 0` and `maxsurrogate = 0`
+skip the competing and surrogate splits it would otherwise record, which
+speeds up the loop without changing any tree. The boosted prediction sums
+the trees' predictions and multiplies by $\nu$:
+
+```{r boosting-predict}
+# Each tree's predictions for the test specimens, one column per tree;
+# the boosted prediction is nu times their sum.
+tree_pred <- sapply(trees, predict, newdata = test)
+boost_pred <- nu * rowSums(tree_pred)
+c(train_mse = mean(r^2), test_mse = mean((y_test - boost_pred)^2))
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r boosting-check}
+#| output: false
+# The loop above is the main fit of the Residuals callout, cut at B trees.
+main_pred_B <- nu_main * rowSums(main$pred$test[, seq_len(B)])
+stopifnot(nu == nu_main,
+          B == max(residual_b),
+          small$maxdepth == depth_main,
+          isTRUE(all.equal(unname(boost_pred), main_pred_B)))
+loop_test <- mse(y_test, boost_pred)
+
+# Training specimens in the leaves of the first tree of the loop.
+first_leaf_n <- with(trees[[1]]$frame, n[var == "<leaf>"])
+first_leaf_min <- min(first_leaf_n)
+first_leaf_max <- max(first_leaf_n)
+```
+:::
+
+The leaves of the first tree hold `r first_leaf_min` to
+`r first_leaf_max` training specimens. With $B = `r big_math(B)`$ trees the
+training MSE is `r fmt(mean(r^2), 1)` and the test MSE
+`r fmt(loop_test, 1)`, against
+`r fmt(earlier_test[["Default tree"]], 1)` for the default tree and
+`r fmt(forest_mse[["forest"]], 1)` for the random forest.
+
+## Tuning parameters
+
+### Shrinkage
+
+::: {.callout-note collapse="true"}
+### Code
+```{r shrinkage}
+#| output: false
+# Test MSE after each number of trees, for three shrinkages at depth 4; the
+# main fit supplies nu = 0.1.
+nu_values <- c(0.5, 0.1, 0.01)
+shrink_curves <- map(nu_values, \(v) {
+  run <- if (v == nu_main) {
+    main
+  } else {
+    boost(x_train, y_train, B_max, v, depth_main,
+          newdata = list(test = x_test))
+  }
+  tibble(nu = v, trees = seq_len(B_max),
+         test = running_mse(run$pred$test, y_test, v),
+         train = run$train_mse,
+         mean_pred = colMeans(running_fit(run$pred$test, v)))
+}) |>
+  list_rbind()
+
+# The smallest test MSE of each curve, where it is, and the test MSE at
+# B_max trees.
+shrink_min <- shrink_curves |>
+  slice_min(test, n = 1, with_ties = FALSE, by = nu) |>
+  select(nu, trees, test)
+shrink_end <- filter(shrink_curves, trees == B_max)
+shrink_at <- function(v, column = "test", b = B_max) {
+  filter(shrink_curves, nu == v, trees == b)[[column]]
+}
+min_of <- function(v, column = "test") {
+  filter(shrink_min, nu == v)[[column]]
+}
+
+# A curve is still falling at B_max when its smallest value is in the last
+# 10% of the trees; its smallest value is then not a minimum.
+falling_after <- function(min_trees) {
+  min_trees > 0.9 * B_max
+}
+small_nu <- min(nu_values)
+still_falling <- falling_after(min_of(small_nu, "trees"))
+small_nu_text <- if (still_falling) {
+  "and still falling"
+} else {
+  paste("its smallest value", fmt(min_of(small_nu), 1), "after",
+        big(min_of(small_nu, "trees")))
+}
+
+# Number of trees on a log scale: the 1-2-5 pattern from 1 to 5,000, no
+# minor lines.
+trees_axis <- scale_x_log10(breaks = c(1, 2, 5, 10, 20, 50, 100, 200, 500,
+                                       1000, 2000, 5000),
+                            minor_breaks = NULL,
+                            labels = scales::label_comma())
+
+# Test MSE: major lines every 10, minor lines midway; the first trees,
+# far above, are clipped.
+curve_axis <- scale_y_continuous(breaks = seq(20, 50, by = 10),
+                                 minor_breaks = seq(15, 55, by = 10))
+curve_ylim <- c(15, 55)
+curve_caption <- paste("Dashed line: the random forest.",
+                       "Circles: the smallest test MSE of each curve.",
+                       "Values above", curve_ylim[2], "are clipped.")
+
+# Test MSE curves by a tuning parameter, with the forest's test MSE and the
+# smallest value of each curve circled. The curves are drawn and labeled in
+# the order of `levels`; `labels` (plotmath expressions or text) go with
+# `levels` in that order.
+curve_plot <- function(curves, minima, group, levels, labels, colors) {
+  curves <- mutate(curves, group = factor(.data[[group]], levels = levels))
+  linetypes <- c("solid", "longdash", "dotted", "dotdash")
+  ggplot(curves, aes(x = trees, y = test, color = group,
+                     linetype = group)) +
+    geom_hline(yintercept = forest_mse[["forest"]], linetype = "dashed",
+               color = "grey40") +
+    geom_line() +
+    geom_point(data = minima, aes(x = trees, y = test),
+               inherit.aes = FALSE, size = 4, shape = 1) +
+    scale_color_manual(values = colors[seq_along(levels)],
+                       breaks = as.character(levels), labels = labels) +
+    scale_linetype_manual(values = linetypes[seq_along(levels)],
+                          breaks = as.character(levels), labels = labels) +
+    trees_axis +
+    curve_axis +
+    coord_cartesian(ylim = curve_ylim) +
+    labs(x = "Number of trees b (log scale)", y = "Test MSE (MPa squared)",
+         color = NULL, linetype = NULL, title = title_train,
+         caption = curve_caption) +
+    theme(legend.position = "inside",
+          legend.position.inside = c(0.99, 0.97),
+          legend.justification = c(1, 1),
+          legend.background = element_rect(color = "grey50"))
+}
+nu_labels <- parse(text = paste("nu ==", nu_values))
+shrink_plot <- curve_plot(shrink_curves, shrink_min, "nu", nu_values,
+                          nu_labels, okabe_ito[c(4, 5, 3)])
+
+# Mean prediction for the test specimens after 100 trees, by shrinkage.
+mean_pred_100 <- map_dbl(nu_values, \(v) shrink_at(v, "mean_pred", 100)) |>
+  set_names(nu_values)
+
+# The prose says a smaller nu reaches its smallest test MSE after more
+# trees, and that nu = 0.01 keeps the mean prediction after 100 trees
+# closer to 0 than nu = 0.1 does.
+stopifnot(!is.unsorted(map_dbl(nu_values, \(v) min_of(v, "trees"))),
+          mean_pred_100[["0.01"]] < mean_pred_100[["0.1"]],
+          small_nu == 0.01, nu_values[2] == nu_main)
+
+# The factor 1 - (1 - nu)^100 for the smallest nu: the mean fitted value of
+# the training specimens after 100 trees over the mean training strength.
+level_100 <- 1 - (1 - small_nu)^100
+```
+:::
+
+The figure plots the test MSE of the boosted model after $b$ trees against
+$b$, for $\nu = `r and_list(nu_values)`$, each with trees of depth
+$\delta = `r depth_main`$, with the random forest's test MSE as a dashed
+line.
+
+```{r shrinkage-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+shrink_plot
+```
+
+The smaller the shrinkage, the more trees the model needs. With
+$\nu = `r nu_values[1]`$ the test MSE is smallest,
+`r fmt(min_of(nu_values[1]), 1)`, after
+`r big(min_of(nu_values[1], "trees"))` trees; with
+$\nu = `r nu_values[2]`$ it is smallest, `r fmt(min_of(nu_values[2]), 1)`,
+after `r big(min_of(nu_values[2], "trees"))`; with
+$\nu = `r small_nu`$ it is `r fmt(shrink_at(small_nu), 1)` after
+`r big(B_max)` trees, `r small_nu_text`. The shrinkage controls how fast
+the model learns: each tree corrects only a fraction $\nu$ of what it
+estimates. After 100 trees the mean prediction for the test specimens is
+`r fmt(mean_pred_100[[as.character(small_nu)]], 1)` MPa with
+$\nu = `r small_nu`$ and `r fmt(mean_pred_100[[as.character(nu_main)]], 1)`
+with $\nu = `r nu_main`$, against a mean test strength of
+`r fmt(mean(y_test), 1)`. As a large $\lambda$ does in ridge regression and
+the lasso, a small $\nu$ holds the fit near its starting point, here 0, and
+more trees let it move further from it. Part of the slow start with
+$\nu = `r small_nu`$ is the start at 0: after 100 trees, the mean fitted
+value of the training specimens is
+$1 - `r 1 - small_nu`^{100} = `r fmt_math(level_100, 3)`$ times the mean
+training strength, `r fmt(level_100 * mean(y_train), 1)` MPa. The `gbm`
+package starts instead from the mean of the response.
+
+### Tree depth
+
+::: {.callout-note collapse="true"}
+### Code
+```{r depth}
+#| output: false
+# Test MSE after each number of trees, for four depths at nu = 0.1; the
+# main fit supplies depth 4. The stumps also predict the grid.
+depth_values <- c(1, 2, 4, 8)
+depth_runs <- map(depth_values, \(d) {
+  if (d == depth_main) {
+    main
+  } else {
+    boost(x_train, y_train, B_max, nu_main, d,
+          newdata = list(test = x_test, grid = grid))
+  }
+})
+depth_curves <- map2(depth_runs, depth_values, \(run, d) {
+  tibble(depth = d, trees = seq_len(B_max),
+         test = running_mse(run$pred$test, y_test, nu_main))
+}) |>
+  list_rbind()
+depth_min <- depth_curves |>
+  slice_min(test, n = 1, with_ties = FALSE, by = depth) |>
+  select(depth, trees, test)
+depth_at <- function(d, column = "test") {
+  filter(depth_min, depth == d)[[column]]
+}
+
+# The depth with the smallest test MSE over all numbers of trees.
+best_depth <- depth_min$depth[which.min(depth_min$test)]
+depth_labels <- parse(text = paste("delta ==", depth_values))
+
+# Test MSE at B_max trees and 1,000 trees earlier, by depth, and which
+# curves are still falling at B_max.
+depth_end <- function(d, b = B_max) {
+  filter(depth_curves, depth == d, trees == b)$test
+}
+depth_min_trees <- map_dbl(depth_values, \(d) depth_at(d, "trees"))
+depth_falling <- set_names(falling_after(depth_min_trees), depth_values)
+stump_last_drop <- depth_end(1, B_max - 1000) - depth_end(1)
+
+# The prose says stumps are still falling at B_max and the other depths are
+# not; that among those, deeper trees reach their smallest test MSE after
+# fewer trees; that depth 8 rises after its smallest value; and that stumps
+# at B_max do worse than the smallest value of every larger depth.
+stopifnot(depth_falling[["1"]],
+          !any(depth_falling[-1]),
+          !is.unsorted(rev(depth_min_trees[-1])),
+          depth_end(depth_values[4]) > depth_at(depth_values[4]),
+          depth_end(1) > max(map_dbl(depth_values[-1], depth_at)))
+depth_plot <- curve_plot(depth_curves, depth_min, "depth", depth_values,
+                         depth_labels, okabe_ito[c(1, 4, 5, 3)])
+```
+:::
+
+The figure plots the test MSE against the number of trees for depths
+$\delta = `r and_list(depth_values)`$, each with $\nu = `r nu_main`$.
+
+```{r depth-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+depth_plot
+```
+
+Deeper trees learn faster. The test MSE is smallest after
+`r big(depth_at(depth_values[4], "trees"))` trees of depth
+`r depth_values[4]` (`r fmt(depth_at(depth_values[4]), 1)`),
+`r big(depth_at(depth_values[3], "trees"))` of depth `r depth_values[3]`
+(`r fmt(depth_at(depth_values[3]), 1)`), and
+`r big(depth_at(depth_values[2], "trees"))` of depth `r depth_values[2]`
+(`r fmt(depth_at(depth_values[2]), 1)`). The stumps' curve is still
+falling at `r big(B_max)` trees, where it is `r fmt(depth_end(1), 1)`, but
+slowly: the last 1,000 trees lowered it by `r fmt(stump_last_drop, 1)`.
+Depth `r best_depth` does best, and depth `r depth_values[4]` reaches its
+smallest value early and then rises. The Additive structure section shows
+what the depth changes in the fitted model: the interactions it can
+represent.
+
+### Overfitting
+
+::: {.callout-note collapse="true"}
+### Code
+```{r overfitting}
+#| output: false
+# The test MSE curves for nu = 0.5 and 0.1 at depth 4, on a linear axis.
+over_nu <- c(0.5, 0.1)
+over_curves <- filter(shrink_curves, nu %in% over_nu) |>
+  mutate(nu = factor(nu, levels = over_nu))
+over_min <- filter(shrink_min, nu %in% over_nu)
+
+# How far each curve rises from its smallest value to B_max trees.
+rise <- map_dbl(over_nu, \(v) shrink_at(v) / min_of(v) - 1) |>
+  set_names(over_nu)
+
+# Training and test MSE after B_max trees with nu = 0.5.
+train_end <- shrink_at(0.5, "train")
+test_end <- shrink_at(0.5)
+
+# For comparison, the test MSE of the bagging forest of the Earlier fits
+# after 50 to all of its trees: the average of its first b trees.
+bag_individual <- predict(bag_rf, test, predict.all = TRUE)$individual
+bag_running <- t(apply(bag_individual, 1, cumsum)) /
+  matrix(seq_len(bag_rf$ntree), nrow(test), bag_rf$ntree, byrow = TRUE)
+bag_curve <- colMeans((y_test - bag_running)^2)
+bag_late <- range(bag_curve[50:bag_rf$ntree])
+
+# The prose says both curves rise after their smallest value, the curve for
+# the smaller nu less.
+stopifnot(all(rise > 0), rise[["0.1"]] < rise[["0.5"]])
+
+# Number of trees: major lines every 1,000, minor lines midway. Test MSE:
+# major lines every 2, minor lines midway; the first trees are clipped.
+over_ylim <- c(18, 28)
+over_plot <- ggplot(over_curves,
+                    aes(x = trees, y = test, color = nu, linetype = nu)) +
+  geom_line() +
+  geom_point(data = over_min, aes(x = trees, y = test),
+             inherit.aes = FALSE, size = 4, shape = 1) +
+  scale_color_manual(values = okabe_ito[c(4, 5)],
+                     breaks = as.character(over_nu),
+                     labels = nu_labels[1:2]) +
+  scale_linetype_manual(values = c("solid", "longdash"),
+                        breaks = as.character(over_nu),
+                        labels = nu_labels[1:2]) +
+  scale_x_continuous(breaks = seq(0, 5000, by = 1000),
+                     minor_breaks = seq(500, 4500, by = 1000),
+                     labels = scales::label_comma()) +
+  scale_y_continuous(breaks = seq(18, 28, by = 2),
+                     minor_breaks = seq(19, 27, by = 2)) +
+  coord_cartesian(ylim = over_ylim) +
+  labs(x = "Number of trees b", y = "Test MSE (MPa squared)",
+       color = NULL, linetype = NULL, title = title_train,
+       caption = paste("Circles: the smallest test MSE of each curve.",
+                       "Values above", over_ylim[2], "are clipped.")) +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.99, 0.97),
+        legend.justification = c(1, 1),
+        legend.background = element_rect(color = "grey50"))
+```
+:::
+
+The figure plots the test MSE for $\nu = `r over_nu[1]`$ and
+$\nu = `r over_nu[2]`$, at depth
+`r depth_main`, against the number of trees on a linear axis, from the
+same fits as the Shrinkage figure.
+
+```{r overfitting-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+over_plot
+```
+
+Both curves reach a smallest value and then rise. With
+$\nu = `r over_nu[1]`$, the test MSE rises `r pct(rise[[1]], 0)` from its
+smallest value, after `r big(min_of(over_nu[1], "trees"))` trees, to
+`r big(B_max)` trees; with $\nu = `r over_nu[2]`$ it rises
+`r pct(rise[[2]], 0)` from its smallest value, after
+`r big(min_of(over_nu[2], "trees"))` trees. The training MSE with
+$\nu = `r over_nu[1]`$ falls to `r fmt(train_end, 2)` by `r big(B_max)`
+trees, while its test MSE is `r fmt(test_end, 1)`: the late trees fit what
+is left of the training residuals, which does not carry over to the test
+specimens.
+Bagging's test error levels off instead: the bagging forest of the Earlier
+fits has test MSE between `r fmt(bag_late[1], 1)` and
+`r fmt(bag_late[2], 1)` from 50 to its `r bag_rf$ntree` trees. Boosting
+overfits when $B$ is too large; a smaller $\nu$ makes the rise slower.
+
+## Choosing $B$
+
+### Cross-validation estimate
+
+$B$ is chosen without the test data by 10-fold cross-validation. Split the
+training observations at random into 10 folds; for each fold $\ell$, run
+boosting on the other nine folds and record the error on fold $\ell$ after
+every number of trees. The estimate for $B$ trees is
+
+$$\text{CV}_{(10)}(B) = \frac{1}{n}\sum_{\ell=1}^{10}\sum_{i \in \mathcal{F}_\ell}\left[y_i - \hat f_B^{(-\ell)}(x_i)\right]^2,$$
+
+where
+
+- $\mathcal{F}_\ell$ is the set of training observations in fold $\ell$, and
+- $\hat f_B^{(-\ell)}$ is the boosted model of $B$ trees fit to the
+observations outside fold $\ell$.
+
+One run of $B_{\max}$ trees per fold gives the estimate for every
+$B \le B_{\max}$, because the model of $B$ trees is the first $B$ trees of
+the longer run. Here $B_{\max} = `r big_math(B_max)`$, with $\nu = `r nu_main`$
+and $\delta = `r depth_main`$.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cv}
+#| output: false
+# Ten folds of the training specimens, of 70 each.
+n_folds <- 10
+folds <- sample(rep(seq_len(n_folds), length.out = n_train))
+
+# For each fold, boost on the other nine folds and record the sum of
+# squared errors on the fold after each number of trees.
+fold_sse <- sapply(seq_len(n_folds), \(l) {
+  held <- folds == l
+  run <- boost(x_train[!held, ], y_train[!held], B_max, nu_main,
+               depth_main, newdata = list(held = x_train[held, ]))
+  colSums((y_train[held] - running_fit(run$pred$held, nu_main))^2)
+})
+cv <- rowSums(fold_sse) / n_train
+
+# The chosen B, its cross-validation estimate and test MSE, and the
+# smallest test MSE over every number of trees.
+B_cv <- which.min(cv)
+cv_best <- cv[B_cv]
+boost_mse <- main_test[B_cv]
+test_best <- min(main_test)
+test_best_b <- which.min(main_test)
+
+# How the cross-validation estimate at the chosen B compares with the test
+# MSE, for prose: equal to one decimal, or the size of the gap.
+cv_gap <- cv_best - boost_mse
+cv_text <- if (round(cv_best, 1) == round(boost_mse, 1)) {
+  "The cross-validation estimate equals the test MSE to one decimal."
+} else {
+  paste0("The cross-validation estimate is ",
+         if (cv_gap < 0) "below" else "above",
+         " the test MSE by ", fmt(abs(cv_gap), 1), ".")
+}
+
+# Share of the training specimens whose mix, the seven ingredients, is the
+# mix of a training specimen in another fold.
+fold_mix_seen <- train |>
+  mutate(fold = folds) |>
+  summarise(folds_with_mix = n_distinct(fold), .by = all_of(ingredients)) |>
+  right_join(train, by = ingredients) |>
+  summarise(share = mean(folds_with_mix > 1)) |>
+  pull(share)
+
+# The cross-validation estimate and the test MSE against the number of
+# trees, with the chosen B circled.
+cv_labels <- c("10-fold CV estimate", "Test")
+cv_curves <- bind_rows(tibble(error = cv_labels[1], trees = seq_len(B_max),
+                              test = cv),
+                       tibble(error = cv_labels[2], trees = seq_len(B_max),
+                              test = main_test)) |>
+  mutate(error = factor(error, levels = cv_labels))
+cv_chosen <- filter(cv_curves, trees == B_cv, error == cv_labels[1])
+cv_plot <- curve_plot(cv_curves, cv_chosen, "error", cv_labels, cv_labels,
+                      okabe_ito[c(4, 5)]) +
+  labs(y = "MSE (MPa squared)",
+       caption = paste("Dashed line: the random forest's test MSE.",
+                       "Circle: the chosen B.",
+                       "Values above", curve_ylim[2], "are clipped."))
+```
+:::
+
+### Chosen model
+
+The figure plots the cross-validation estimate and the test MSE of the
+model fit to all `r n_train` training specimens against the number of
+trees.
+
+```{r cv-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+cv_plot
+```
+
+The cross-validation estimate is smallest, `r fmt(cv_best, 1)`, at
+$B = `r big_math(B_cv)`$. The model of the first `r big(B_cv)` trees fit to all
+the training specimens has test MSE `r fmt(boost_mse, 1)`; the smallest
+test MSE over every number of trees, which cross-validation cannot know, is
+`r fmt(test_best, 1)`, after `r big(test_best_b)` trees.
+`r cv_text` Both measure predictions for mixes
+like those tested: `r pct(fold_mix_seen, 0)` of the training specimens
+share their mix with a training specimen in another fold, and
+`r pct(test_mix_seen, 0)` of the test specimens have a mix that some
+training specimen also has.
+
+## Variable importance
+
+### RSS decrease
+
+A split's decrease in RSS is
+$n_1n_2\left(\bar y_1 - \bar y_2\right)^2/\left(n_1 + n_2\right)$, as in
+the Decision Trees lecture; in boosting the RSS is that of the residuals
+the tree is fit to. The importance of an explanatory variable is the
+decrease in RSS from all its splits, summed over the $B$ trees; a random
+forest's `IncNodePurity` averages the same decrease over its trees. With
+`maxsurrogate = 0`, the `variable.importance` of an `rpart()` fit is this
+sum for one tree. For the `r big(B)` trees of the loop of the Fitting
+subsection, as shares of the total (the figure below uses the chosen model
+of `r big(B_cv)` trees instead):
+
+```{r importance}
+# Decrease in RSS from each variable's splits, summed over the trees, as
+# a share of the total.
+decreases <- unlist(map(trees, \(tree) tree$variable.importance))
+importance_sum <- tapply(decreases, names(decreases), sum)
+round(sort(importance_sum / sum(importance_sum), decreasing = TRUE), 3)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r importance-plot}
+#| output: false
+# Decrease in RSS by explanatory variable as a share of the total, for the
+# chosen boosted model, the random forest, and the pruned tree.
+share_of <- function(x) {
+  x / sum(x)
+}
+
+# Boosting: the first B_cv trees of the main fit.
+boost_decreases <- unlist(main$importance[seq_len(B_cv)])
+boost_share <- share_of(tapply(boost_decreases, names(boost_decreases),
+                               sum))
+
+# Random forest: IncNodePurity, the decrease in RSS averaged over trees.
+forest_share <- share_of(importance(best_rf)[, "IncNodePurity"])
+
+# Pruned tree: the decrease in RSS of each split, read from the RSS of
+# each node and of its two children in the frame (rpart()'s own
+# variable.importance would include surrogate splits).
+tree_decrease <- function(fit) {
+  frame <- fit$frame
+  nodes <- as.integer(rownames(frame))
+  internal <- frame$var != "<leaf>"
+  parent <- nodes[internal]
+  decrease <- frame$dev[internal] -
+    frame$dev[match(2 * parent, nodes)] -
+    frame$dev[match(2 * parent + 1, nodes)]
+  tapply(decrease, as.character(frame$var[internal]), sum)
+}
+tree_share <- share_of(tree_decrease(all_pruned))
+
+# The prose says that, without surrogate splits, rpart()'s
+# variable.importance is the decrease in RSS read from the frame.
+first_importance <- trees[[1]]$variable.importance
+first_decrease <- tree_decrease(trees[[1]])[names(first_importance)]
+stopifnot(isTRUE(all.equal(unname(first_importance),
+                           unname(as.numeric(first_decrease)))))
+
+# One row per method and variable; a variable a fit never splits on has
+# share 0.
+method_names <- c("Boosting",
+                  paste0("Random forest, m = ", m_best),
+                  "Pruned tree")
+shares <- list(boost_share, forest_share, tree_share)
+importance_long <- map2(shares, method_names, \(share, method) {
+  tibble(method = method, variable = explanatory,
+         share = coalesce(as.numeric(share[explanatory]), 0))
+}) |>
+  list_rbind() |>
+  mutate(method = factor(method, levels = method_names))
+
+# Variables in the order of the boosting shares.
+boost_rank <- names(sort(boost_share, decreasing = TRUE))
+forest_rank <- names(sort(forest_share, decreasing = TRUE))
+tree_rank <- names(sort(tree_share, decreasing = TRUE))
+importance_long <- importance_long |>
+  mutate(variable = factor(variable, levels = rev(boost_rank)))
+
+# Share: major lines every 10%, minor lines midway.
+share_top <- ceiling(max(importance_long$share) / 0.1) * 0.1
+importance_plot <- ggplot(importance_long, aes(x = share, y = variable)) +
+  geom_segment(aes(x = 0, xend = share, yend = variable), color = "grey60") +
+  geom_point(size = 2.5) +
+  facet_wrap(~ method) +
+  scale_x_continuous(breaks = seq(0, share_top, by = 0.1),
+                     minor_breaks = seq(0.05, share_top, by = 0.1),
+                     limits = c(0, share_top),
+                     labels = scales::label_percent()) +
+  labs(x = "Share of the total decrease in RSS", y = NULL,
+       title = title_train)
+
+# The top two variables of each method and, if they are the same two, the
+# share of each method's decrease in RSS that they carry, for prose.
+top_two <- list(boost_rank[1:2], forest_rank[1:2], tree_rank[1:2])
+same_top_two <- all(map_lgl(top_two, \(x) setequal(x, top_two[[1]])))
+top_text <- if (same_top_two) {
+  top_vars <- top_two[[1]]
+  top_shares <- map_dbl(shares, \(share) sum(share[top_vars]))
+  paste0("All three put ", and_list(code(sort(top_vars))),
+         " in the first two places, with ", pct(top_shares[1], 0),
+         " of the boosted model's decrease in RSS, ",
+         pct(top_shares[2], 0), " of the forest's, and ",
+         pct(top_shares[3], 0), " of the tree's; below them the orders ",
+         "differ.")
+} else {
+  "The three fits do not agree on the first two places."
+}
+
+# The prose says the orders below the first two places differ.
+below_two <- map(list(boost_rank, forest_rank, tree_rank), \(x) x[-(1:2)])
+stopifnot(!all(map_lgl(below_two, \(x) identical(x, below_two[[1]]))))
+```
+:::
+
+The figure plots the shares for the boosted model of the chosen
+`r big(B_cv)` trees, for the random forest with $m = `r m_best`$, and for
+the pruned tree of the Decision Trees lecture, the variables in the order
+of the boosting shares.
+
+```{r importance-figure}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 3.8
+importance_plot
+```
+
+### Forest and tree importance
+
+Boosting ranks the variables `r and_list(code(boost_rank))`; the random
+forest ranks them `r and_list(code(forest_rank))`; the pruned tree ranks
+them `r and_list(code(tree_rank))`. `r top_text` As for a forest,
+importance ranks the variables and gives no direction or effect size.
+
+## Additive structure
+
+### Cement and age
+
+Does the effect of cement on strength depend on age?
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cement-age}
+#| output: false
+# Training specimens in the lowest and the highest third of cement content.
+cement_cuts <- quantile(train$cement, c(1 / 3, 2 / 3))
+third_names <- paste(c("Cement at most", "Cement at least"),
+                     fmt(cement_cuts, 0), "kg per cubic meter")
+thirds <- train |>
+  mutate(age_jit = age_jit,
+         third = case_when(cement <= cement_cuts[[1]] ~ third_names[1],
+                           cement >= cement_cuts[[2]] ~ third_names[2])) |>
+  filter(!is.na(third)) |>
+  mutate(third = factor(third, levels = third_names))
+
+# Mean strength of each third at each age with at least min_per_age
+# specimens in both thirds, and the gap between the two means.
+min_per_age <- 5
+third_means <- thirds |>
+  summarise(strength = mean(compressive_strength), n = n(),
+            .by = c(third, age)) |>
+  filter(n >= min_per_age) |>
+  filter(n_distinct(third) == 2, .by = age)
+third_gaps <- third_means |>
+  pivot_wider(id_cols = age, names_from = third, values_from = strength) |>
+  mutate(gap = .data[[third_names[2]]] - .data[[third_names[1]]])
+gap_low <- slice_min(third_gaps, gap, n = 1, with_ties = FALSE)
+gap_max <- max(third_gaps$gap)
+gap_max_ages <- sort(third_gaps$age[third_gaps$gap >= gap_max - 0.1])
+
+# The prose says the high-cement third is stronger at every such age.
+stopifnot(all(third_gaps$gap > 0))
+
+# How the thirds differ in the other six ingredients: the difference of
+# their means in training standard deviations, and the two largest.
+other_ingredients <- setdiff(ingredients, "cement")
+ingredient_gaps <- map_dbl(other_ingredients, \(v) {
+  high <- mean(thirds[[v]][thirds$third == third_names[2]])
+  low <- mean(thirds[[v]][thirds$third == third_names[1]])
+  (high - low) / sd(train[[v]])
+}) |>
+  set_names(other_ingredients)
+top_ingredients <- names(sort(abs(ingredient_gaps), decreasing = TRUE))[1:2]
+top_names <- str_replace_all(top_ingredients, "_", " ")
+top_signs <- sign(ingredient_gaps[top_ingredients])
+ingredient_text <- if (all(top_signs < 0)) {
+  paste0("chiefly ", and_list(top_names),
+         ", of which the high-cement third has less")
+} else if (all(top_signs > 0)) {
+  paste0("chiefly ", and_list(top_names),
+         ", of which the high-cement third has more")
+} else {
+  paste0("chiefly ", top_names[1], " (",
+         if (top_signs[1] > 0) "more" else "less", " in the high-cement ",
+         "third) and ", top_names[2], " (",
+         if (top_signs[2] > 0) "more" else "less", ")")
+}
+
+# Strength against age, by third, with the means joined by lines.
+third_plot <- ggplot(thirds, aes(x = age_jit, y = compressive_strength,
+                                 color = third, shape = third,
+                                 linetype = third)) +
+  geom_point(alpha = 0.35, size = 1) +
+  geom_line(data = third_means, aes(x = age, y = strength),
+            linewidth = 0.9) +
+  geom_point(data = third_means, aes(x = age, y = strength), size = 2.5) +
+  scale_color_manual(values = okabe_ito[c(1, 5)]) +
+  age_axis +
+  scale_y_continuous(breaks = seq(0, 80, by = 20),
+                     minor_breaks = seq(10, 90, by = 20),
+                     limits = c(0, 90)) +
+  labs(x = "Age (days, log scale)", y = "Compressive strength (MPa)",
+       color = NULL, shape = NULL, linetype = NULL,
+       title = paste(nrow(thirds), "training specimens")) +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.01, 0.97),
+        legend.justification = c(0, 1),
+        legend.background = element_rect(color = "grey50"))
+```
+:::
+
+The figure plots the strength of the training specimens in the lowest and
+the highest third of cement content against age, with the mean strength of
+each third at every age with at least `r min_per_age` specimens in both
+thirds.
+
+```{r cement-age-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+third_plot
+```
+
+The high-cement third is stronger at every such age, by
+`r fmt(gap_low$gap, 1)` MPa at `r gap_low$age` days and by about
+`r fmt(gap_max, 0)` MPa at `r and_list(gap_max_ages)` days. The two thirds
+also differ in other ingredients, `r ingredient_text`, so this raw
+comparison does not isolate cement; a model can.
+
+### Stumps
+
+The figure above asks whether the gap in strength between high- and
+low-cement mixes changes with age. A boosted model of stumps cannot let it
+change. A stump depends on one explanatory variable. Collecting the stumps
+that split on each variable, a boosted model of stumps is a sum of
+functions, each of which depends on one variable,
+
+$$\hat f_B(x) = \sum_{j=1}^p a_j(x), \qquad a_j(x) = \sum_{b:\, \hat f^b \text{ splits on } X_j} \nu\,\hat f^b(x),$$
+
+where $a_j(x)$ is the sum of the shrunken stumps that split on $X_j$, which
+depends on $x$ only through the value of $X_j$.
+
+This is an **additive model**: the change in the prediction when the value
+of $X_j$ changes does not depend on the values of the other variables.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r additive}
+#| output: false
+# Predictions on the grid from the stumps (all B_max trees) and from the
+# chosen model of depth 4 (the first B_cv trees).
+stump_run <- depth_runs[[which(depth_values == 1)]]
+grid_fits <- list(Stumps = nu_main * rowSums(stump_run$pred$grid),
+                  `Depth 4` = nu_main *
+                    rowSums(main$pred$grid[, seq_len(B_cv)]))
+grid_curves <- map2(grid_fits, names(grid_fits), \(fit, model) {
+  mutate(grid, strength = fit, model = model)
+}) |>
+  list_rbind()
+
+# The gap between the two cement contents at each age, for each model.
+gaps <- grid_curves |>
+  pivot_wider(id_cols = c(model, age), names_from = cement,
+              values_from = strength) |>
+  mutate(gap = .data[[as.character(cement_levels[2])]] -
+           .data[[as.character(cement_levels[1])]]) |>
+  summarise(low = min(gap), high = max(gap), .by = model)
+gap_of <- function(model_name, column) {
+  filter(gaps, model == model_name)[[column]]
+}
+
+# The prose says the stumps' gap is the same at every age.
+stopifnot(gap_of("Stumps", "high") - gap_of("Stumps", "low") < 1e-8)
+
+# Predicted strength against age, one line per cement content; the
+# models' tabs share their axes.
+cement_names <- paste(cement_levels, "kg of cement per cubic meter")
+strength_axis <- scale_y_continuous(breaks = seq(0, 80, by = 20),
+                                    minor_breaks = seq(10, 90, by = 20),
+                                    limits = c(0, 90))
+additive_plot <- function(model_name) {
+  curves <- grid_curves |>
+    filter(model == model_name) |>
+    mutate(cement = factor(cement, levels = cement_levels,
+                           labels = cement_names))
+  ggplot(curves, aes(x = age, y = strength, color = cement,
+                     linetype = cement)) +
+    geom_line(linewidth = 0.9) +
+    scale_color_manual(values = okabe_ito[c(1, 5)]) +
+    age_axis +
+    strength_axis +
+    labs(x = "Age (days, log scale)", y = "Predicted strength (MPa)",
+         color = NULL, linetype = NULL,
+         title = "Other ingredients at their training medians") +
+    theme(legend.position = "inside",
+          legend.position.inside = c(0.99, 0.03),
+          legend.justification = c(1, 0),
+          legend.background = element_rect(color = "grey50"))
+}
+additive_plots <- map(names(grid_fits), additive_plot)
+additive_plots <- do.call(patchwork::align_patches, additive_plots)
+
+# Number of explanatory variables each tree of the chosen depth-4 model
+# splits on (without surrogate splits, the names of its
+# variable.importance).
+vars_per_tree <- map_int(main$importance[seq_len(B_cv)], length)
+
+# The smallest test MSE of each depth above 1, for prose.
+interaction_depths <- depth_values[-1]
+interaction_text <- and_list(paste(fmt(map_dbl(interaction_depths,
+                                               depth_at), 1),
+                                   "for depth", interaction_depths))
+```
+:::
+
+A tree of depth $\delta$ can split on more than $\delta$ explanatory
+variables in all: the `r big(B_cv)` trees of depth `r depth_main` of the
+chosen model split on `r min(vars_per_tree)` to `r max(vars_per_tree)`,
+with median `r median(vars_per_tree)`. But each leaf is reached through at
+most $\delta$ splits, so the tree's prediction is a sum, over its leaves,
+of a constant times an indicator that involves at most $\delta$ variables.
+A boosted model of such trees is a sum of such terms, so it can represent
+interactions among at most $\delta$ variables.
+
+The tabs plot the predicted strength against age for mixes with
+`r and_list(cement_levels)` kg of cement per cubic meter, the other six
+ingredients at their medians among the training specimens: first for the
+boosted model of `r big(B_max)` stumps with $\nu = `r nu_main`$, then for
+the chosen model of `r big(B_cv)` trees of depth `r depth_main`.
+
+::: {.panel-tabset}
+#### Depth 1
+```{r stumps-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+additive_plots[[1]]
+```
+
+#### Depth 4
+```{r depth-4-figure}
+#| echo: false
+#| fig-width: 8
+#| fig-height: 4.2
+additive_plots[[2]]
+```
+:::
+
+For the stumps the two curves are parallel: the extra cement adds
+`r fmt(gap_of("Stumps", "low"), 1)` MPa to the prediction at every age. For
+the trees of depth `r depth_main`, the gap runs from
+`r fmt(gap_of("Depth 4", "low"), 1)` to `r fmt(gap_of("Depth 4", "high"), 1)`
+MPa, depending on age: the effect of cement on strength depends on age, an
+interaction, as the raw thirds suggested.
+
+Whether the interactions matter is a question for the test error. In the
+Tree depth figure, the stumps' test MSE after `r big(B_max)` trees,
+`r fmt(depth_end(1), 1)` and still falling slowly, is above the smallest
+test MSE of every depth that allows interactions:
+`r interaction_text`.
+On concrete an additive model leaves out structure that trees of depth 2 or
+more find.
+
+## Comparison
+
+### Bias and variance
+
+::: {.callout-note collapse="true"}
+### Code
+```{r bias-variance}
+#| output: false
+# Bagging with small trees: trees of depth 1 and of depth 4, each fit to a
+# bootstrap sample of the training specimens; the test MSE of the average
+# of the first b trees.
+n_bagged <- 1000
+small_depths <- c(1, 4)
+bag_small <- map(small_depths, \(d) {
+  control <- rpart.control(maxdepth = d, cp = 0, xval = 0,
+                           maxcompete = 0, maxsurrogate = 0)
+  pred <- sapply(seq_len(n_bagged), \(b) {
+    boot <- sample(n_train, replace = TRUE)
+    tree <- rpart(compressive_strength ~ ., data = train[boot, ],
+                  control = control)
+    predict(tree, test)
+  })
+  running <- t(apply(pred, 1, cumsum)) /
+    matrix(seq_len(n_bagged), nrow(test), n_bagged, byrow = TRUE)
+  tibble(depth = d, trees = seq_len(n_bagged),
+         test = colMeans((y_test - running)^2), method = "Bagging")
+}) |>
+  list_rbind()
+
+# Boosting with the same depths, from the Tree depth fits.
+boost_small <- filter(depth_curves, depth %in% small_depths) |>
+  mutate(method = "Boosting")
+
+# Test MSE of one tree of each depth fit to all the training specimens.
+single_small <- map_dbl(small_depths, \(d) {
+  control <- rpart.control(maxdepth = d, cp = 0, xval = 0)
+  tree <- rpart(compressive_strength ~ ., data = train, control = control)
+  mse(y_test, predict(tree, test))
+}) |>
+  set_names(small_depths)
+
+# Test MSE of each method with all its trees.
+small_end <- bind_rows(bag_small, boost_small) |>
+  slice_max(trees, n = 1, by = c(method, depth))
+end_of <- function(method_name, d) {
+  filter(small_end, method == method_name, depth == d)$test
+}
+
+# Test MSE against the number of trees, one panel per depth.
+depth_names <- paste("Trees of depth", small_depths)
+small_curves <- bind_rows(bag_small, boost_small) |>
+  mutate(depth = factor(depth, levels = small_depths, labels = depth_names))
+small_ylim <- c(0, 200)
+
+# Number of trees on a log scale, for the narrower panels: powers of 10,
+# minor lines midway in log space.
+decade_axis <- scale_x_log10(breaks = 10^(0:3),
+                             minor_breaks = 10^(seq(0.5, 3.5, by = 1)),
+                             labels = scales::label_comma())
+small_plot <- ggplot(small_curves, aes(x = trees, y = test, color = method,
+                                       linetype = method)) +
+  geom_line() +
+  facet_wrap(~ depth) +
+  scale_color_manual(values = okabe_ito[c(5, 4)]) +
+  decade_axis +
+  scale_y_continuous(breaks = seq(0, 200, by = 50),
+                     minor_breaks = seq(25, 175, by = 50)) +
+  coord_cartesian(ylim = small_ylim) +
+  labs(x = "Number of trees b (log scale)", y = "Test MSE (MPa squared)",
+       color = NULL, linetype = NULL, title = title_train,
+       caption = paste0("Bagging: ", big(n_bagged), " trees; boosting: ",
+                        big(B_max), ". Values above ", small_ylim[2],
+                        " are clipped.")) +
+  theme(legend.position = "bottom")
+
+# The prose says boosting ends below bagging at both depths, and bagging
+# below the single tree.
+stopifnot(end_of("Boosting", 1) < end_of("Bagging", 1),
+          end_of("Boosting", 4) < end_of("Bagging", 4),
+          end_of("Bagging", 1) < single_small[["1"]],
+          end_of("Bagging", 4) < single_small[["4"]])
+```
+:::
+
+The figure plots the test MSE against the number of trees for bagging and
+for boosting ($\nu = `r nu_main`$) with the same small trees, stumps and
+trees of depth 4.
+
+```{r bias-variance-figure}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.2
+small_plot
+```
+
+One stump fit to all the training specimens has test MSE
+`r fmt(single_small[["1"]], 1)`, and one tree of depth 4
+`r fmt(single_small[["4"]], 1)`. Averaging `r big(n_bagged)` of them over
+bootstrap samples brings these to `r fmt(end_of("Bagging", 1), 1)` and
+`r fmt(end_of("Bagging", 4), 1)`; boosting the same kinds of trees brings
+them to `r fmt(end_of("Boosting", 1), 1)` and
+`r fmt(end_of("Boosting", 4), 1)` with `r big(B_max)` trees. A small tree's
+error is mostly bias: it cannot follow the curve in age, or the effect of
+the other ingredients, with a few leaves. Averaging removes variance but
+leaves the bias of the trees it averages, so bagging needs large trees.
+Boosting removes bias: each tree is fit to what the trees before it got
+wrong, so the sum of many small trees can follow a function no single
+small tree can.
+
+### Test error
+
+::: {.callout-note collapse="true"}
+### Code
+```{r comparison}
+#| output: false
+# Test MSE of every fit on all eight explanatory variables, and how each
+# was tuned.
+comparison <- tribble(
+  ~Method, ~Tuning, ~value,
+  "Least squares", "none", earlier_mse[["ls"]],
+  "Least squares with log(age)", "none", earlier_mse[["log_ls"]],
+  "Default tree", "rpart() stopping rules", earlier_mse[["default"]],
+  "Full tree", "none", earlier_mse[["full"]],
+  "Pruned tree", "cp by 10-fold CV", earlier_mse[["pruned"]],
+  paste0("Bagging, $m = ", p, "$"), "none", forest_mse[["bagging"]],
+  paste0("Random forest, $m = ", m_best, "$"), "$m$ by OOB error",
+  forest_mse[["forest"]],
+  paste0("Boosting, $\\nu = ", nu_main, "$, $\\delta = ", depth_main, "$"),
+  paste0("$\\nu$ and $\\delta$ fixed, $B = ", big_math(B_cv),
+         "$ by 10-fold CV"), boost_mse
+) |>
+  mutate(value = fmt(value, 1))
+comparison_table <- knitr::kable(comparison,
+                                 col.names = c("Method", "Tuning",
+                                               "Test MSE"),
+                                 align = "llr")
+
+# Boosting's test MSE relative to the best of the other fits.
+others_best <- min(earlier_mse, forest_mse)
+boost_gain <- 1 - boost_mse / others_best
+best_text <- if (boost_mse < others_best) {
+  paste0("Boosting has the smallest test MSE, ", fmt(boost_mse, 1), ", ",
+         pct(boost_gain, 0), " below the best of the other fits, ",
+         fmt(others_best, 1), ".")
+} else {
+  paste0("Boosting's test MSE, ", fmt(boost_mse, 1), ", is not the ",
+         "smallest; the best of the other fits has ", fmt(others_best, 1),
+         ".")
+}
+
+# The smallest test MSE of boosting at each depth above 1, over B, for
+# the prose comparison with bagging.
+other_depths <- depth_values[-1]
+other_depth_mse <- map_dbl(other_depths, depth_at)
+stopifnot(all(other_depth_mse < others_best),
+          others_best == forest_mse[["bagging"]])
+```
+:::
+
+The table collects the test MSE of every fit to all `r p` explanatory
+variables in the three tree lectures, with how each was tuned.
+
+```{r comparison-display}
+#| echo: false
+#| tbl-colwidths: [38, 47, 15]
+comparison_table
+```
+
+`r best_text`
+Only $B$ was chosen by cross-validation; $\nu = `r nu_main`$ and
+$\delta = `r depth_main`$ were fixed in advance, but $\delta = `r depth_main`$
+is also the depth with the smallest test MSE in the Tree depth section, so
+`r fmt(boost_mse, 1)` is mildly optimistic. Even taking the best $B$ for
+each depth, chosen on the test specimens and so flattering to boosting,
+depths `r and_list(other_depths)` reach
+`r and_list(fmt(other_depth_mse, 1))`; all are below bagging's
+`r fmt(others_best, 1)`, which used no tuning.
+Least squares with $\log(\texttt{age})$, which needed a feature built after
+seeing the curve in age, has `r fmt(earlier_mse[["log_ls"]], 1)`; the tree
+ensembles find the curve and the interactions without it.
+
+### Limits
+
+Boosting has three tuning parameters, $B$, $\nu$, and $\delta$, against a
+random forest's $m$ and number of trees, and its $B$ must be chosen, since
+too many trees overfit, while a forest only needs enough trees. Its trees
+are grown in sequence, each needing the residuals of the one before, so
+they cannot be grown at the same time as a forest's can, and the
+cross-validation above refit `r big(B_max)` trees in each of
+`r n_folds` folds. With many trees it fits the training data nearly
+exactly: the training MSE fell to `r fmt(train_end, 2)` with
+$\nu = `r over_nu[1]`$, while that fit's test MSE never fell below
+`r fmt(min_of(over_nu[1]), 1)`. Like a forest, it has no single tree to
+read, only importance rankings, its predictions are made of steps, and it
+predicts a constant beyond the largest value of an explanatory variable in
+the training data, since every tree does.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+- **Classification.** Gradient boosting for a class fits each tree to the
+negative gradient of the deviance of a logistic or multinomial model in
+place of the residuals; the boosted model predicts the log-odds.
+**AdaBoost**, an early boosting method, instead reweights
+the observations, giving more weight at each step to those the trees so
+far misclassify.
+- **Gradient boosting.** The residual $y_i - \hat f_b(x_i)$ is the negative
+gradient of the loss $\tfrac{1}{2}\left[y_i - \hat f_b(x_i)\right]^2$ in
+$\hat f_b(x_i)$; replacing it by the negative gradient of another loss,
+such as absolute error, gives boosting for that loss, less sensitive to
+outlying responses.
+- **Packages.** `gbm::gbm()` (`n.trees`, `shrinkage`, `interaction.depth`,
+`distribution`) and `xgboost` fit boosted trees much faster than a loop of
+`rpart()` fits, and add tuning parameters: a random subsample of the
+training data for each tree (stochastic gradient boosting), a smallest leaf
+size, and penalties on the leaf values.
+- **Bayesian additive regression trees.** BART (ISLR2 Section 8.2.4) also
+fits a sum of trees to residuals, but changes each tree a little at a time
+by random perturbations and averages over many such sums.
+:::
+
+## Conclusion
+
+Boosting builds a model from small trees added one after another. It
+starts from the fit 0, fits a tree of depth $\delta$ to the current
+residuals, adds $\nu$ times the tree's predictions to the fit, and updates
+the residuals, $B$ times. Each tree is fit to what the trees before it got
+wrong, so the trees depend on one another and are grown in sequence.
+
+The three tuning parameters interact. The shrinkage $\nu$ sets how fast the
+model learns: a smaller $\nu$ needs more trees and makes the test error
+less sensitive to their number. The depth $\delta$ sets how complex each
+tree is: each leaf of a tree of depth $\delta$ is reached through at most
+$\delta$ splits, so the boosted model is a sum of terms that each involve
+at most $\delta$ explanatory variables and can represent interactions among
+at most $\delta$ of them. Stumps give an additive model, a sum of functions
+that each depend on one variable. The number of trees $B$ is chosen by
+cross-validation, since, unlike bagging, boosting overfits when $B$ is too
+large. One run of boosting gives the cross-validation estimate for every
+$B$ up to its length.
+
+Bagging and random forests average large trees, each with low bias and high
+variance, grown independently on bootstrap samples, which reduces
+variance. Boosting adds small trees, each with high bias, fit to residuals,
+which reduces bias. The importance of an explanatory variable, the decrease
+in RSS from its splits summed over the trees, ranks the variables without
+giving a direction or an effect size, as for a forest.
+
+The next lecture begins support vector machines (ISLR2 Chapter 9), which
+classify by finding a boundary that separates the classes in the space of
+the features, with as wide a margin as possible.

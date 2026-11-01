@@ -300,6 +300,41 @@ convention.
   resampling chapters, and the two do not appear in the same passage.
   Estimates of $\rho$ and $\sigma^2$ from the data carry hats,
   $\hat\rho$ and $\hat\sigma^2$.
+- **In the boosting chapter (`08-trees/30-boosting.qmd`)**, $B$ is the number
+  of trees, indexed $b$, as in the bagging chapter. The **shrinkage** (learning
+  rate) is $\nu$, $0 < \nu \le 1$, not the textbook's $\lambda$, which is the
+  ridge and lasso tuning parameter here. Tree size is the **depth** $\delta$,
+  the largest number of splits on a path from the root to a leaf (`rpart()`'s
+  `maxdepth`; a **stump** has $\delta = 1$), not the textbook's number of
+  splits $d$, which is the number of features in the subset selection
+  chapters; a tree of depth $\delta$ has at most $2^\delta$ leaves. It can
+  split on more than $\delta$ explanatory variables in all, but each leaf is
+  reached through at most $\delta$ splits, so a boosted model of such trees
+  is a sum of terms that each involve at most $\delta$ explanatory variables.
+  Bare $\delta$ is unrelated to the discriminant functions $\delta_k(x)$ of
+  the discriminant analysis chapters and to the interaction estimates
+  $\delta_j$ of `04-classification/30-flexible-logistic-regression.qmd`,
+  which always carry a subscript; the chapter says so.
+  $\hat f^b$ is the $b$th tree (superscript, no star: it is not fit to a
+  bootstrap sample, unlike $\hat f^{*b}$), $\hat f_b$ the boosted model after
+  $b$ trees, $\hat f_b = \hat f_{b-1} + \nu\hat f^b$ with $\hat f_0 = 0$, and
+  $r_i = y_i - \hat f_b(x_i)$ the current residual (not the lasso residual
+  vector $r$, which carries no subscript). $a_j(x)$ is the sum of the
+  shrunken stumps that split on $X_j$, a function of $x$ only through the
+  value of $X_j$, so a model of stumps is $\sum_j a_j(x)$. It is written
+  $a_j(x)$, not $g_j(x_j)$, because $g_j$ is the PLS simple regression
+  estimate and the naive Bayes log density ratio, and a single subscript on
+  $x$ means an observation. Cross-validation uses $\text{CV}_{(10)}(B)$, folds
+  $\mathcal{F}_\ell$ and $\hat f_B^{(-\ell)}$ as in the resampling chapters;
+  $B_{\max}$ is the length of the run whose first $B$ trees give the model of
+  $B$ trees. The curves of error against the number of trees use $b$ (the
+  bagging chapter's $k$ would collide with the number of folds in the same
+  chapter). The observation words and split are those of the decision trees
+  chapter (specimen, training specimens, test specimens), reproduced by
+  repeating that chapter's random draws after its seed, 20261031 (set in the
+  split chunk); this chapter's seed, 20261101, is set right after those
+  draws rather than in the `packages` chunk, where it would be overwritten
+  before any draw.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted
