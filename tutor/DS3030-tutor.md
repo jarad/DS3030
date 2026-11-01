@@ -155,7 +155,8 @@ material" and you can draw only from those chapters.
   is optional reading and not assessed), regularization (6.1-6.2) and
   dimension reduction (6.3-6.4).
 - **Final exam** (cumulative): "Quiz me on the final" draws on every chapter
-  below. Chapters 27 onward (Decision Trees and later), taught after Exam 2,
+  below. Chapters 27 onward (Decision Trees, Bagging and Random Forests, and
+  later), taught after Exam 2,
   are assessed only on the final. Chapters not listed below have not been
   written yet. If a student asks about material that is not listed, say so
   and quiz only on what is.
@@ -1293,6 +1294,47 @@ squares fits). A `Beyond this course` callout (one-standard-error rule,
 random folds and `xval`) and another (surrogate splits for missing values,
 splits on categorical variables, conditional inference trees, oblique and
 model trees) are not assessed.
+
+### 28. Bagging and Random Forests (Final exam)
+<https://jarad.github.io/DS3030/08-trees/20-bagging-and-random-forests.html>
+
+Ensembles of trees (ISLR2 8.2.1-8.2.2) on the same `modeldata::concrete` and
+`modeldata::penguins` training and test splits as the Decision Trees chapter.
+Motivation: trees fit to random halves of the training data (halvings)
+differ in their splits and predictions, and their average is smoother.
+Students derive the variance of an average of $B$ predictions with common
+variance $\sigma^2$ and pairwise correlation $\rho$,
+$\rho\sigma^2 + \left(1 - \rho\right)\sigma^2/B$ (here $\sigma^2$ is
+the variance of one tree's prediction, not the error variance), and explain
+why averaging helps less when the trees are correlated. Bagging (bootstrap
+aggregation): $B$ bootstrap samples (resampling the training data with
+replacement, defined in this chapter; the optional Bootstrap chapter uses
+the same resampling; a sample leaves out $\left(1 - 1/n\right)^n \approx 1/e \approx 37\%$ of the
+observations), one full unpruned tree $\hat f^{*b}$ per sample, prediction
+$\hat f_{\text{bag}}$ the average (numeric response) or a majority vote
+(class); bagging written as a short loop with `rpart()`; test error levels
+off as $B$ grows rather than overfitting. Out-of-bag (OOB) prediction of
+each training observation from the trees that did not use it, and OOB error
+as an estimate of test error without held-out data (like cross-validation,
+but from the fit itself). Random forests: bagged trees share their strong
+first splits (age, on concrete) and are correlated; restricting each split
+to $m$ randomly chosen explanatory variables decorrelates them, at some cost
+in each tree's accuracy; $m = p$ is bagging; `randomForest()` defaults are
+$\lfloor p/3 \rfloor$ (numeric response) and $\lfloor\sqrt{p}\rfloor$
+(class); $m$ and the number of trees are chosen by OOB error (on concrete the
+default $m = 2$ predicts worse than bagging, and OOB picks a larger $m$).
+Reading `randomForest()` printouts (OOB MSE, % Var explained, OOB error
+rate and confusion matrix). Variable importance: total decrease in RSS (or
+Gini index) from a variable's splits averaged over trees, and permutation
+importance (increase in OOB error when the variable is shuffled); both rank
+variables and give no direction or effect size. Classification forest on
+penguins, compared with the trees (an easy problem, so the gain is a few
+test penguins). Comparison of least squares, trees, bagging and forests on
+test error; costs of forests: no single tree to read, many trees to fit and
+store, and no extrapolation beyond the training data (predictions constant
+past the largest training value). A `Beyond this course` callout (extremely
+randomized trees, conditional forests, quantile regression forests,
+proximity, `ranger`) is not assessed.
 
 ## What has already been assessed
 

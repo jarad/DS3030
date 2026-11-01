@@ -275,6 +275,31 @@ convention.
   default stopping rules; the **pruned tree** is the full tree pruned at the
   `cp` with the smallest cross-validation estimate. A **halving** splits the
   training specimens at random into two halves.
+- **In the bagging and random forests chapter
+  (`08-trees/20-bagging-and-random-forests.qmd`)**, $B$ is the number of
+  bootstrap samples, and so of trees, indexed $b$. The chapter defines $B$
+  and the bootstrap sample itself, consistently with the bootstrap chapter's
+  use, without relying on that chapter, which was not taught in Fall 2026
+  and is linked as optional. $\hat f^{*b}(x)$ is the prediction of the tree
+  fit to bootstrap sample $b$, the star marking a quantity computed from a
+  bootstrap sample (as $\hat\theta^{*b}$ does in the bootstrap chapter), and
+  $\hat f_{\text{bag}}(x)$ their average. $\sigma^2$ and $\rho$ in the variance of an average,
+  $\rho\sigma^2 + \left(1 - \rho\right)\sigma^2/B$, are the variance of
+  one tree's prediction at $x$ and the correlation between two trees'
+  predictions, not the error variance; the chapter says so where they are
+  defined. $m$ is the number of explanatory variables tried at each split of
+  a random forest, as in the textbook, not the region index of the decision
+  trees chapter; this chapter does not index regions, and says so where $m$
+  is defined. $\mathcal{O}_i$ is the set of bootstrap samples that leave out
+  observation $i$ (out of bag), with $\hat f_{\text{OOB}}(x_i)$ the
+  out-of-bag prediction. The observation words are those of the decision
+  trees chapter (specimen, penguin, halving), and its training and test
+  splits are reused exactly. $k$ counts the first $k$ trees of a bagged
+  fit or forest, $k = 1, \ldots, B$, in the curves of error against the
+  number of trees; it is unrelated to the number of folds $k$ of the
+  resampling chapters, and the two do not appear in the same passage.
+  Estimates of $\rho$ and $\sigma^2$ from the data carry hats,
+  $\hat\rho$ and $\hat\sigma^2$.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted
