@@ -243,25 +243,31 @@ convention.
   and every prediction is made at "the test homes at which every prediction
   is made", mirroring the ridge and lasso chapters' test orders.
 - **In the decision trees chapter (`08-trees/10-decision-trees.qmd`)**,
-  regions (leaves) are $R_1, \ldots, R_J$ and are indexed by $m$, as in the
-  textbook's cost-complexity criterion, because $j$ indexes the explanatory
-  variable a split uses: a split of region $R$ at cut point $s$ makes
+  the $L$ regions (leaves) are $R_1, \ldots, R_L$ and are indexed by
+  $\ell$, the lower-case letter of the count $L$, not by the textbook's $j$
+  or $m$: $j$ indexes the explanatory variable a split uses, and $m$ is the
+  number of explanatory variables tried at each split of a random forest. A
+  split of region $R$ at cut point $s$ makes
   $R_1(j, s) = \{X \in R \mid X_j < s\}$ and
   $R_2(j, s) = \{X \in R \mid X_j \ge s\}$. $x$ (unsubscripted) is a value
   of $X = (X_1, \ldots, X_p)$, and $x_i = (x_{i1}, \ldots, x_{ip})$ the values
   of observation $i$, so a single subscript on $x$ always means an
   observation. A tree splits on explanatory variables as recorded, so there
-  each feature is an explanatory variable. $\hat y_{R_m}$ is the mean
-  training response in $R_m$; $n_1, n_2$ and $\bar y_1, \bar y_2$ are the
+  each feature is an explanatory variable. $\hat y_{R_\ell}$ is the mean
+  training response in $R_\ell$; $n_1, n_2$ and $\bar y_1, \bar y_2$ are the
   sizes and means of the two regions of a split, and $n_R = n_1 + n_2$ the
   size of the region being split ($n$, the training sample size, only at the
   root). $T_0$ is the full tree, $T$ a subtree,
-  $|T|$ its number of leaves, $\alpha$ the cost-complexity tuning parameter,
+  $|T|$ its number of leaves (the $L$ of that subtree, so a sum over its
+  leaves runs $\ell = 1, \ldots, |T|$), $\alpha$ the cost-complexity tuning
+  parameter,
   and $C_\alpha(T)$ the criterion; `rpart()`'s `cp` is $\alpha$ divided by
   the RSS of the root. For classes, $K$ is the number of classes,
-  $\hat p_{mk}$ the proportion of class $k$ in $R_m$, $n_m$ the number of
-  training observations in $R_m$, and the impurities are $E_m$ (classification
-  error rate), $G_m$ (Gini index) and $D_m$ (entropy, natural log); $Q$
+  $\hat p_{\ell k}$ the proportion of class $k$ in $R_\ell$, $n_\ell$ the
+  number of training observations in $R_\ell$, and the impurities are $E_\ell$
+  (classification error rate), $G_\ell$ (Gini index) and $D_\ell$ (entropy,
+  natural log); $\ell$ also indexes the folds of cross-validation in the
+  Cross-validation and Boosting lectures, where no region is indexed; $Q$
   stands for any one of the three, with $Q_1, Q_2$ its values in the two
   regions of a split (not $I$, which would read as the indicator
   $\mathrm{I}(\cdot)$). $D$ is
@@ -288,9 +294,7 @@ convention.
   one tree's prediction at $x$ and the correlation between two trees'
   predictions, not the error variance; the chapter says so where they are
   defined. $m$ is the number of explanatory variables tried at each split of
-  a random forest, as in the textbook, not the region index of the decision
-  trees chapter; this chapter does not index regions, and says so where $m$
-  is defined. $\mathcal{O}_i$ is the set of bootstrap samples that leave out
+  a random forest, as in the textbook. $\mathcal{O}_i$ is the set of bootstrap samples that leave out
   observation $i$ (out of bag), with $\hat f_{\text{OOB}}(x_i)$ the
   out-of-bag prediction. The observation words are those of the decision
   trees chapter (specimen, penguin, halving), and its training and test

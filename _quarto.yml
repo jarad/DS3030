@@ -6,6 +6,8 @@ book:
   title: "DS 3030 - Concepts and Applications of Machine Learning"
   site-url: "https://jarad.github.io/DS3030/"
   repo-url: "https://github.com/jarad/DS3030"
+  sidebar:
+    collapse-level: 1
   chapters:
     - index.qmd
     - part: "Statistical Learning"

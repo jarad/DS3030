@@ -125,24 +125,24 @@ The dark, weak specimens sit at the left, at young ages, and in the bottom band 
 ## Regions and predictions
 
 ::: {style="font-size: 0.75em"}
-$$\widehat f(x) = \sum_{m=1}^{J} \widehat y_{R_m}\,\mathrm{I}\left(x \in R_m\right),$$
+$$\widehat f(x) = \sum_{\ell=1}^{L} \widehat y_{R_\ell}\,\mathrm{I}\left(x \in R_\ell\right),$$
 :::
 
 ::: {style="font-size: 0.6em"}
 - $x$ — value of the $p$ explanatory variables $X = (X_1, \ldots, X_p)$
-- $R_m$ — $m$th region, a rectangle in the $p$ explanatory variables
-- $\widehat y_{R_m}$ — mean response of the training observations in $R_m$
-- $\mathrm{I}\left(x \in R_m\right)$ — 1 if $x$ falls in $R_m$, 0 otherwise
+- $R_\ell$ — $\ell$th region, a rectangle in the $p$ explanatory variables
+- $\widehat y_{R_\ell}$ — mean response of the training observations in $R_\ell$
+- $\mathrm{I}\left(x \in R_\ell\right)$ — 1 if $x$ falls in $R_\ell$, 0 otherwise
 :::
 
 ::: {.fragment}
 ::: {style="font-size: 0.7em"}
-$$\text{RSS} = \sum_{m=1}^{J}\sum_{i:\, x_i \in R_m}\left(y_i - \widehat y_{R_m}\right)^2.$$
+$$\text{RSS} = \sum_{\ell=1}^{L}\sum_{i:\, x_i \in R_\ell}\left(y_i - \widehat y_{R_\ell}\right)^2.$$
 :::
 :::
 
 ::: notes
-A regression tree turns those lines into a model. It divides the values of the explanatory variables into J non-overlapping rectangles, the regions R_1, ..., R_J, and predicts the mean training response of a region for every observation that falls in it. A tree splits on the explanatory variables as recorded, so here each feature is an explanatory variable; observation i has values x_i = (x_i1, ..., x_ip) and response y_i. Within one region, the sum of (y_i − c)² has derivative −2 times the sum of (y_i − c) in c, which is zero at the region's mean, so the mean is the constant with the smallest RSS in that region. The regions themselves are harder: there are too many ways to partition the values into rectangles to search them all, so a tree builds its regions one split at a time.
+A regression tree turns those lines into a model. It divides the values of the explanatory variables into L non-overlapping rectangles, the regions R_1, ..., R_L, and predicts the mean training response of a region for every observation that falls in it. A tree splits on the explanatory variables as recorded, so here each feature is an explanatory variable; observation i has values x_i = (x_i1, ..., x_ip) and response y_i. Within one region, the sum of (y_i − c)² has derivative −2 times the sum of (y_i − c) in c, which is zero at the region's mean, so the mean is the constant with the smallest RSS in that region. The regions themselves are harder: there are too many ways to partition the values into rectangles to search them all, so a tree builds its regions one split at a time.
 :::
 
 ## Best split
@@ -334,12 +334,12 @@ The figure plots the training and test MSE of the subtrees met while pruning the
 ## Cost-complexity pruning
 
 ::: {style="font-size: 0.7em"}
-$$C_\alpha(T) = \sum_{m=1}^{|T|}\sum_{i:\, x_i \in R_m}\left(y_i - \widehat y_{R_m}\right)^2 + \alpha|T|,$$
+$$C_\alpha(T) = \sum_{\ell=1}^{|T|}\sum_{i:\, x_i \in R_\ell}\left(y_i - \widehat y_{R_\ell}\right)^2 + \alpha|T|,$$
 :::
 
 ::: {style="font-size: 0.6em"}
 - $T$ — subtree of the full tree $T_0$, some internal nodes turned into leaves
-- $|T|$ — number of leaves of $T$; $R_m$ — its $m$th leaf
+- $|T|$ — number of leaves of $T$; $R_\ell$ — its $\ell$th leaf
 - $\alpha$ — tuning parameter, the RSS a leaf must remove to be worth keeping
 :::
 
@@ -462,35 +462,35 @@ The training penguins are 102 Adelie, 48 Chinstrap, and 90 Gentoo. Gentoo pengui
 ## Most common class
 
 ::: {style="font-size: 0.75em"}
-$$\widehat p_{mk} = \frac{1}{n_m}\sum_{i:\, x_i \in R_m}\mathrm{I}\left(y_i = k\right),$$
+$$\widehat p_{\ell k} = \frac{1}{n_\ell}\sum_{i:\, x_i \in R_\ell}\mathrm{I}\left(y_i = k\right),$$
 :::
 
 ::: {style="font-size: 0.6em"}
 - $K$ — number of classes, indexed $k = 1, \ldots, K$
-- $n_m$ — training observations in region $R_m$
-- $\widehat p_{mk}$ — proportion of them in class $k$
+- $n_\ell$ — training observations in region $R_\ell$
+- $\widehat p_{\ell k}$ — proportion of them in class $k$
 :::
 
 ::: {.fragment}
 ::: {style="font-size: 0.7em"}
-- Prediction for $R_m$: the class $k$ with the largest $\widehat p_{mk}$
+- Prediction for $R_\ell$: the class $k$ with the largest $\widehat p_{\ell k}$
 :::
 :::
 
 ::: notes
-A classification tree splits the explanatory variables into regions in the same way, and predicts for a region its most common class among the training observations in it. The proportions themselves estimate the probability of each class for an observation in R_m. Here K = 3.
+A classification tree splits the explanatory variables into regions in the same way, and predicts for a region its most common class among the training observations in it. The proportions themselves estimate the probability of each class for an observation in R_ℓ. Here K = 3.
 :::
 
 ## Node impurity
 
 ::: {style="font-size: 0.65em"}
-$$E_m = 1 - \max_k \widehat p_{mk}, \qquad G_m = \sum_{k=1}^K \widehat p_{mk}\left(1 - \widehat p_{mk}\right), \qquad D_m = -\sum_{k=1}^K \widehat p_{mk}\log \widehat p_{mk}$$
+$$E_\ell = 1 - \max_k \widehat p_{\ell k}, \qquad G_\ell = \sum_{k=1}^K \widehat p_{\ell k}\left(1 - \widehat p_{\ell k}\right), \qquad D_\ell = -\sum_{k=1}^K \widehat p_{\ell k}\log \widehat p_{\ell k}$$
 :::
 
 ::: {style="font-size: 0.6em"}
-- $E_m$ — classification error rate
-- $G_m$ — Gini index
-- $D_m$ — entropy, natural log, $0\log 0 = 0$
+- $E_\ell$ — classification error rate
+- $G_\ell$ — Gini index
+- $D_\ell$ — entropy, natural log, $0\log 0 = 0$
 :::
 
 ::: {.fragment}

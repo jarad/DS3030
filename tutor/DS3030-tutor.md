@@ -101,11 +101,11 @@ read consistently with the notes:
   $g(\mu_i) = \eta_i$; ISLR2 instead writes $\eta$ for the link and
   $\lambda$ for the Poisson mean. $e^{\beta_j}$ in Poisson regression is a
   **rate ratio**.
-- In decision trees, regions (leaves) are $R_1, \ldots, R_J$ indexed by $m$,
+- In decision trees, regions (leaves) are $R_1, \ldots, R_L$ indexed by $\ell$,
   because $j$ indexes the explanatory variable a split uses (split at cut
   point $s$); $x$ is a value of $X = (X_1, \ldots, X_p)$, and $x_i$ the values
-  of observation $i$; $\hat y_{R_m}$ is a region's mean training response,
-  $\hat p_{mk}$ its proportion of class $k$, $|T|$ the number of leaves of a
+  of observation $i$; $\hat y_{R_\ell}$ is a region's mean training response,
+  $\hat p_{\ell k}$ its proportion of class $k$, $|T|$ the number of leaves of a
   subtree $T$, $T_0$ the full tree, and $\alpha$ the cost-complexity tuning
   parameter (`rpart()`'s `cp` is $\alpha$ divided by the root's RSS). The
   impurities are $E$ (classification error rate), $G$ (Gini index) and $D$
@@ -1287,7 +1287,7 @@ and least squares. With all eight explanatory variables the tree beats least
 squares, and pruning matters less when the explanatory variables leave little
 for small leaves to fit. Classification trees on `modeldata::penguins`
 (species from bill length, bill depth, flipper length, body mass): predict
-the most common class of a region, with class proportions $\hat p_{mk}$;
+the most common class of a region, with class proportions $\hat p_{\ell k}$;
 compute the classification error rate $E$, Gini index $G$ and entropy $D$ of
 a node and the weighted impurity of a split; explain why Gini and entropy
 (strictly concave) rather than the error rate grow a tree, since a split

@@ -772,8 +772,6 @@ for that split, where
 - $p$ is the number of explanatory variables, and
 - $m \le p$ is the number tried at each split.
 
-In this lecture $m$ is this number, as in the textbook; in the Decision Trees
-lecture it indexed the regions, which this lecture does not index.
 $m = p$ is bagging. A strong explanatory variable such as age is not
 available at many splits, including the first split of many trees, so the
 trees differ more, at the cost of some accuracy in each tree.

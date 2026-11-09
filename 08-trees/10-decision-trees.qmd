@@ -84,7 +84,7 @@ okabe_ito <- c("#E69F00",
 After this lecture you should be able to
 
 - **describe** a regression tree as a partition of the values of the
-explanatory variables into regions $R_1, \ldots, R_J$, with the mean training
+explanatory variables into regions $R_1, \ldots, R_L$, with the mean training
 response of a region as the prediction for every observation in it, and
 **read** a prediction from a fitted tree's printout or diagram,
 - **derive** the best single split, the explanatory variable $j$ and cut
@@ -314,19 +314,19 @@ already separate much of the weak concrete from the strong.
 ### Regions and predictions
 
 A regression tree turns those lines into a model. It divides the values of
-the explanatory variables into $J$ non-overlapping rectangles, the regions
-$R_1, \ldots, R_J$, and predicts the mean training response of a region for
+the explanatory variables into $L$ non-overlapping rectangles, the regions
+$R_1, \ldots, R_L$, and predicts the mean training response of a region for
 every observation that falls in it:
 
-$$\hat f(x) = \sum_{m=1}^{J} \hat y_{R_m}\,\mathrm{I}\left(x \in R_m\right),$$
+$$\hat f(x) = \sum_{\ell=1}^{L} \hat y_{R_\ell}\,\mathrm{I}\left(x \in R_\ell\right),$$
 
 where
 
 - $x$ is a value of the $p$ explanatory variables $X = (X_1, \ldots, X_p)$,
-- $R_m$ is the $m$th region, a rectangle in the $p$ explanatory variables,
-- $\hat y_{R_m}$ is the mean response of the training observations in $R_m$,
+- $R_\ell$ is the $\ell$th region, a rectangle in the $p$ explanatory variables,
+- $\hat y_{R_\ell}$ is the mean response of the training observations in $R_\ell$,
 and
-- $\mathrm{I}\left(x \in R_m\right)$ is 1 if $x$ falls in $R_m$ and 0 otherwise.
+- $\mathrm{I}\left(x \in R_\ell\right)$ is 1 if $x$ falls in $R_\ell$ and 0 otherwise.
 
 A tree splits on the explanatory variables as recorded, so in this chapter
 each feature is an explanatory variable. Observation $i$ has values
@@ -335,10 +335,10 @@ variable $X_j$, and response $y_i$.
 
 For given regions, the tree's training RSS is
 
-$$\text{RSS} = \sum_{m=1}^{J}\sum_{i:\, x_i \in R_m}\left(y_i - \hat y_{R_m}\right)^2.$$
+$$\text{RSS} = \sum_{\ell=1}^{L}\sum_{i:\, x_i \in R_\ell}\left(y_i - \hat y_{R_\ell}\right)^2.$$
 
-Within one region, $\sum_{i:\, x_i \in R_m}\left(y_i - c\right)^2$ has
-derivative $-2\sum_{i:\, x_i \in R_m}\left(y_i - c\right)$ in $c$, which is
+Within one region, $\sum_{i:\, x_i \in R_\ell}\left(y_i - c\right)^2$ has
+derivative $-2\sum_{i:\, x_i \in R_\ell}\left(y_i - c\right)$ in $c$, which is
 zero at the region's mean, so the mean is the constant with the smallest RSS in
 that region. The regions themselves are harder: there are too many ways to
 partition the values into rectangles to search them all, so a tree builds its
@@ -803,13 +803,13 @@ splits below it that remove much more, and a stopping rule never sees them.
 **Cost-complexity pruning** instead grows $T_0$ and cuts it back. For each
 $\alpha \ge 0$ it finds the subtree $T \subseteq T_0$ that minimizes
 
-$$C_\alpha(T) = \sum_{m=1}^{|T|}\sum_{i:\, x_i \in R_m}\left(y_i - \hat y_{R_m}\right)^2 + \alpha|T|,$$
+$$C_\alpha(T) = \sum_{\ell=1}^{|T|}\sum_{i:\, x_i \in R_\ell}\left(y_i - \hat y_{R_\ell}\right)^2 + \alpha|T|,$$
 
 where
 
 - $T$ is a subtree of $T_0$, obtained by turning some internal nodes into
 leaves (collapsing everything below them),
-- $|T|$ is the number of leaves of $T$, and $R_m$ its $m$th leaf, and
+- $|T|$ is the number of leaves of $T$, and $R_\ell$ its $\ell$th leaf, and
 - $\alpha$ is the tuning parameter, the RSS a leaf must remove to be worth
 keeping.
 
@@ -1259,34 +1259,34 @@ A classification tree splits the explanatory variables into regions in the
 same way, and predicts for a region its most common class among the
 training observations in it. The class proportions in a region are
 
-$$\hat p_{mk} = \frac{1}{n_m}\sum_{i:\, x_i \in R_m}\mathrm{I}\left(y_i = k\right),$$
+$$\hat p_{\ell k} = \frac{1}{n_\ell}\sum_{i:\, x_i \in R_\ell}\mathrm{I}\left(y_i = k\right),$$
 
 where
 
 - $K$ is the number of classes, here $K = `r nlevels(penguins$species)`$,
 indexed $k = 1, \ldots, K$,
-- $n_m$ is the number of training observations in region $R_m$, and
-- $\hat p_{mk}$ is the proportion of them in class $k$.
+- $n_\ell$ is the number of training observations in region $R_\ell$, and
+- $\hat p_{\ell k}$ is the proportion of them in class $k$.
 
-The prediction for region $R_m$ is the class $k$ with the largest
-$\hat p_{mk}$, and the proportions themselves estimate the probability of
-each class for an observation in $R_m$.
+The prediction for region $R_\ell$ is the class $k$ with the largest
+$\hat p_{\ell k}$, and the proportions themselves estimate the probability of
+each class for an observation in $R_\ell$.
 
 ### Node impurity
 
 A regression tree chooses the split with the smallest RSS. A classification
 tree chooses the split with the smallest **impurity**, a measure of how
 mixed the classes in a region are. Three measures of the impurity of region
-$m$ are
+$\ell$ are
 
-$$E_m = 1 - \max_k \hat p_{mk}, \qquad G_m = \sum_{k=1}^K \hat p_{mk}\left(1 - \hat p_{mk}\right), \qquad D_m = -\sum_{k=1}^K \hat p_{mk}\log \hat p_{mk},$$
+$$E_\ell = 1 - \max_k \hat p_{\ell k}, \qquad G_\ell = \sum_{k=1}^K \hat p_{\ell k}\left(1 - \hat p_{\ell k}\right), \qquad D_\ell = -\sum_{k=1}^K \hat p_{\ell k}\log \hat p_{\ell k},$$
 
 where
 
-- $E_m$ is the **classification error rate**, the share of the region's
+- $E_\ell$ is the **classification error rate**, the share of the region's
 training observations not in its most common class,
-- $G_m$ is the **Gini index**, and
-- $D_m$ is the **entropy**, with the natural log and $0\log 0 = 0$.
+- $G_\ell$ is the **Gini index**, and
+- $D_\ell$ is the **entropy**, with the natural log and $0\log 0 = 0$.
 
 All three are zero when every observation in the region is in one class
 (a **pure** node), and largest when the classes are equally common. The
@@ -1507,7 +1507,7 @@ stopifnot(as.character(penguin_fit$frame$var[1]) == root_var,
 
 Each line gives a node's number of training penguins, the number not in its
 most common class (`loss`), that class (`yval`), and the class proportions
-$\hat p_{mk}$ in the order `r and_list(species_levels)`. The tree has
+$\hat p_{\ell k}$ in the order `r and_list(species_levels)`. The tree has
 `r n_leaves(penguin_fit)` leaves and splits on
 `r and_list(code(penguin_vars))`; `r code(setdiff(measurements, penguin_vars))`
 is not used. Its first split is the one in the impurity table. The diagram

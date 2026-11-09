@@ -4,7 +4,7 @@
 
 Outline for `10-decision-trees_slides.qmd` (Mon 2026-11-09, the first lecture on tree-based methods; ISLR2 Section 8.1). **This file is the spec; the deck is built from it, and this file describes the deck as it stands.** Edit it freely and ask for the deck to be refreshed.
 
-Drafted against `10-decision-trees.qmd`, the deck's `derived-from` comment records the chapter's commit (`80ba0d7`). The frozen output `_freeze/08-trees/10-decision-trees/execute-results/html.json` is current: its recorded `hash` (`0f5fa069359ca407e965ac3c711e94e7`) equals the md5 of the chapter file as it stands, which includes the "Slides for this lecture" link (`10-decision-trees_slides.html`) on the line after `# Decision Trees`.
+Drafted against `10-decision-trees.qmd`, the deck's `derived-from` comment records the chapter's commit (`80ba0d7`). The frozen output `_freeze/08-trees/10-decision-trees/execute-results/html.json` is current: its recorded `hash` (`477f25477b28f4e423a93869b7096764`) equals the md5 of the chapter file as it stands, which includes the "Slides for this lecture" link (`10-decision-trees_slides.html`) on the line after `# Decision Trees`.
 
 **What the deck is.** 41 slides including the title: the agenda, five transitions, 33 content slides and the Conclusion. It reuses all 20 figures the chapter renders, both kable tables (`compare_table` and `impurity_table`), and seven code slides: the basic `rpart()` code of the chapter's visible chunks with their console output. The deck has no new content: every `show:` is a figure, table, equation, code chunk or console printout the chapter already has, or a list cut from the chapter's own sentences. The chapter has two running examples: `modeldata::concrete` for regression trees (700 training and 305 test specimens; the response is `compressive_strength` in MPa; the explanatory variables are seven ingredients in kg per cubic meter and `age` in days) and `modeldata::penguins` for classification trees (240 training and 102 test penguins; the response is `species`; four body measurements are the explanatory variables).
 
@@ -78,7 +78,7 @@ Entries are numbered by content slide; the title and the transitions are not num
 
 - **tag:** core (2)
 - **show:** equation — the chapter's $\widehat f(x)$ display, then the training RSS display, each with the chapter's symbol legend compressed to labels
-- **words:** "$x$ — value of the $p$ explanatory variables $X = (X_1, \ldots, X_p)$"; "$R_m$ — $m$th region, a rectangle in the $p$ explanatory variables"; "$\widehat y_{R_m}$ — mean response of the training observations in $R_m$"; "$\mathrm{I}\left(x \in R_m\right)$ — 1 if $x$ falls in $R_m$, 0 otherwise"
+- **words:** "$x$ — value of the $p$ explanatory variables $X = (X_1, \ldots, X_p)$"; "$R_\ell$ — $\ell$th region, a rectangle in the $p$ explanatory variables"; "$\widehat y_{R_\ell}$ — mean response of the training observations in $R_\ell$"; "$\mathrm{I}\left(x \in R_\ell\right)$ — 1 if $x$ falls in $R_\ell$, 0 otherwise"
 - **reveal:** on arrival: the $\widehat f(x)$ display and its legend; click 1: the RSS display
 - **say:** a tree turns those lines into a model; it predicts the mean training response of a region for every observation in it; the mean is the constant with the smallest RSS in a region (derivative $-2\sum(y_i - c)$ is zero at the mean); too many partitions to search, so a tree builds its regions one split at a time; a tree splits on the explanatory variables as recorded, so here each feature is an explanatory variable
 - **note:** both displays copied from the chapter's `### Regions and predictions` with `\hat` written `\widehat`. The legend is the chapter's bullet list cut to labels.
@@ -168,7 +168,7 @@ Entries are numbered by content slide; the title and the transitions are not num
 
 - **tag:** core (2)
 - **show:** equation — the chapter's $C_\alpha(T)$ display with its legend compressed to labels
-- **words:** "$T$ — subtree of the full tree $T_0$, some internal nodes turned into leaves"; "$|T|$ — number of leaves of $T$; $R_m$ — its $m$th leaf"; "$\alpha$ — tuning parameter, the RSS a leaf must remove to be worth keeping"; then "$\alpha = 0$: the minimizer is $T_0$; larger $\alpha$, fewer leaves, down to the root alone" and "`rpart()`: `cp` is $\alpha$ divided by the RSS of the root"
+- **words:** "$T$ — subtree of the full tree $T_0$, some internal nodes turned into leaves"; "$|T|$ — number of leaves of $T$; $R_\ell$ — its $\ell$th leaf"; "$\alpha$ — tuning parameter, the RSS a leaf must remove to be worth keeping"; then "$\alpha = 0$: the minimizer is $T_0$; larger $\alpha$, fewer leaves, down to the root alone" and "`rpart()`: `cp` is $\alpha$ divided by the RSS of the root"
 - **reveal:** on arrival: the display and its legend; click 1: the last two lines
 - **say:** stopping early is a poor remedy since a split that removes little RSS can lead to splits below it that remove much more; like $\lambda$ in ridge regression and the lasso, $\alpha$ trades fit against a penalty, here counting leaves as the subset selection criteria count features; the minimizing subtrees are nested and found by weakest link pruning in one pass over $T_0$, one subtree per row of the table on the next slide; the default `cp = 0.01` is the default tree's stopping rule
 - **note:** the display is copied from the chapter with `\hat` written `\widehat`; the legend is cut to labels; the last two lines are the chapter's sentences "With $\alpha = 0$ the minimizer is $T_0$ ..." and "its complexity parameter `cp` is $\alpha$ divided by the root's RSS" shortened.
@@ -240,17 +240,17 @@ Entries are numbered by content slide; the title and the transitions are not num
 ## 22. Most common class
 
 - **tag:** core (1.5)
-- **show:** equation — the chapter's $\widehat p_{mk}$ display with its legend compressed to labels
-- **words:** "$K$ — number of classes, indexed $k = 1, \ldots, K$"; "$n_m$ — training observations in region $R_m$"; "$\widehat p_{mk}$ — proportion of them in class $k$"; then "Prediction for $R_m$: the class $k$ with the largest $\widehat p_{mk}$"
+- **show:** equation — the chapter's $\widehat p_{\ell k}$ display with its legend compressed to labels
+- **words:** "$K$ — number of classes, indexed $k = 1, \ldots, K$"; "$n_\ell$ — training observations in region $R_\ell$"; "$\widehat p_{\ell k}$ — proportion of them in class $k$"; then "Prediction for $R_\ell$: the class $k$ with the largest $\widehat p_{\ell k}$"
 - **reveal:** on arrival: the display and its legend; click 1: the prediction line
-- **say:** the proportions themselves estimate the probability of each class for an observation in $R_m$; here $K = 3$
-- **note:** the display is copied from the chapter with `\hat` written `\widehat`; the last line is the chapter's sentence "The prediction for region $R_m$ is the class $k$ with the largest $\hat p_{mk}$" shortened.
+- **say:** the proportions themselves estimate the probability of each class for an observation in $R_\ell$; here $K = 3$
+- **note:** the display is copied from the chapter with `\hat` written `\widehat`; the last line is the chapter's sentence "The prediction for region $R_\ell$ is the class $k$ with the largest $\hat p_{\ell k}$" shortened.
 
 ## 23. Node impurity
 
 - **tag:** core (2)
-- **show:** equation — the chapter's display of $E_m$, $G_m$ and $D_m$, then the weighted impurity of a split
-- **words:** "$E_m$ — classification error rate"; "$G_m$ — Gini index"; "$D_m$ — entropy, natural log, $0\log 0 = 0$"; then "Impurity of a split: $Q$ is any of the three, $Q_1$ and $Q_2$ its values in the two regions"
+- **show:** equation — the chapter's display of $E_\ell$, $G_\ell$ and $D_\ell$, then the weighted impurity of a split
+- **words:** "$E_\ell$ — classification error rate"; "$G_\ell$ — Gini index"; "$D_\ell$ — entropy, natural log, $0\log 0 = 0$"; then "Impurity of a split: $Q$ is any of the three, $Q_1$ and $Q_2$ its values in the two regions"
 - **reveal:** on arrival: the three-measure display and its legend; click 1: the weighted-impurity display and its label
 - **say:** a regression tree chooses the split with the smallest RSS; a classification tree chooses the split with the smallest impurity, a measure of how mixed the classes in a region are; all three are zero for a pure node and largest when the classes are equally common; the impurity of a split is the average of the two regions' impurities weighted by their numbers of observations
 - **note:** both displays copied from the chapter with `\hat` written `\widehat`; the first display is set at 0.65em so that it fits on one line, as the chapter writes it.
