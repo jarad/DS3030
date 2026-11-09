@@ -43,7 +43,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 08-trees/20-bagging-and-random-forests.qmd @ c92488a -->
+<!-- derived-from: 08-trees/20-bagging-and-random-forests.qmd @ 5524cc4 -->
 
 ::: {.columns}
 ::: {.column width="34%"}
