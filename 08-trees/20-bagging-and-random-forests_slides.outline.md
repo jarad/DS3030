@@ -6,15 +6,15 @@ Outline for `20-bagging-and-random-forests_slides.qmd` (Wed 2026-11-11, the seco
 
 Drafted against `20-bagging-and-random-forests.qmd`, the deck's `derived-from` comment records the chapter's commit (`5524cc4`). The frozen output `_freeze/08-trees/20-bagging-and-random-forests/execute-results/html.json` is current: its recorded `hash` (`64500bd49408b18535dd177754ee2766`) equals the md5 of the chapter file as it stands, which includes the "Slides for this lecture" link (`20-bagging-and-random-forests_slides.html`) on the line after `# Bagging and Random Forests`.
 
-**What the deck is.** 39 slides including the title: the agenda, seven transitions, 30 content slides (the last is the Conclusion). It reuses all 11 figures the chapter renders (the `halves-figure` and `average-figure` share one tabset), four of its five kable tables (`correlation_table`, `penguin_m_table`, `concrete_table`, `penguin_table`; the `settle_display` table is left out) and seven code slides: the basic `rpart()` and `randomForest()` code of the chapter's visible chunks with their console output. The deck has no new content: every `show:` is a figure, table, equation, code chunk or console printout the chapter already has, or a list cut from the chapter's own sentences. The chapter has two running examples on the Decision Trees lecture's data and splits: `modeldata::concrete` for bagging and forests with a numeric response (700 training and 305 test specimens; the response is `compressive_strength` in MPa; the explanatory variables are seven ingredients in kg per cubic meter and `age` in days) and `modeldata::penguins` for classification forests (240 training and 102 test penguins; the response is `species`; four body measurements are the explanatory variables).
+**What the deck is.** 34 slides including the title: the agenda, six transitions, 26 content slides (the last is the Conclusion). It reuses 10 of the 11 figures the chapter renders (the `halves-figure` and `average-figure` share one tabset; the `penguin-figure` is not used), two of its five kable tables (`correlation_table` and `concrete_table`; `settle_display`, `penguin_m_table` and `penguin_table` are left out) and five code slides: the basic `rpart()` and `randomForest()` code of the chapter's visible chunks with their console output. The deck has no new content: every `show:` is a figure, table, equation, code chunk or console printout the chapter already has, or a list cut from the chapter's own sentences. The deck uses the chapter's running example on the Decision Trees lecture's data and split: `modeldata::concrete` (700 training and 305 test specimens; the response is `compressive_strength` in MPa; the explanatory variables are seven ingredients in kg per cubic meter and `age` in days). The chapter's other example is left out (see "Not in this deck").
 
-**Timing.** One 50-minute period: the 28 core slides (the agenda and 27 content slides) come to about 45 minutes at the estimates below, and the three optional slides add about 3 more, so the period is full but not over. If time is short, drop in this order: (1) Choosing $m$ for penguins, (2) One tree, (3) Penguin species, (4) Appearances in a bootstrap sample (say the 243 of 700 left out, 34.7%, while on Bootstrap samples), (5) Split restriction: correlation (say the two correlation estimates, 0.09 and 0.04, on Split restriction), (6) Interpretability and cost (say it on the Conclusion). The natural break if the chapter is taught over two days is after Choosing $m$ (slide 17), where the concrete forest is complete.
+**Timing.** One 50-minute period: the 25 core slides (the agenda and 24 content slides) come to about 40 minutes at the estimates below, and the two optional slides add about 2.5 more, so the period is not full. If time is short, drop in this order: (1) One tree, (2) Appearances in a bootstrap sample (say the 243 of 700 left out, 34.7%, while on Bootstrap samples), (3) Split restriction: correlation (say the two correlation estimates, 0.09 and 0.04, on Split restriction), (4) Interpretability and cost (say it on the Conclusion). The natural break if the chapter is taught over two days is after Choosing $m$ (slide 17), where the concrete forest is complete.
 
-**Code slides.** The seven code slides are entries 7 (`bagging`), 10 (`oob-prediction`), 15 (`forest-fit`), 18 (`one-tree`, optional), 20 (`importance`), 24 (`penguin-forest`) and 25 (`penguin-test`). Each shows the chunk's source copied verbatim from the chapter (without the `#|` lines) in a ` ```r ` block, which is not executed, followed by the chunk's console output copied verbatim from the frozen markdown in a plain ` ``` ` block (the two outputs of `forest-fit` and of `penguin-test` are joined in order, as R shows them). Nothing is trimmed. All seven are at the deck's normal code size (22 px); entries 15 and 24 are wrapped in a new `.code-wrap` class (`white-space: pre-wrap`) because the `Call:` line of a `randomForest()` printout is one long line (about 90 characters on entry 15, about 150 on entry 24) that would run off the slide at that size; wrapping changes where the line breaks, not its text. The `.code-small` class is not needed.
+**Code slides.** The five code slides are entries 7 (`bagging`), 10 (`oob-prediction`), 15 (`forest-fit`), 18 (`one-tree`, optional) and 20 (`importance`). Each shows the chunk's source copied verbatim from the chapter (without the `#|` lines) in a ` ```r ` block, which is not executed, followed by the chunk's console output copied verbatim from the frozen markdown in a plain ` ``` ` block (the two outputs of `forest-fit` are joined in order, as R shows them). Nothing is trimmed. All five are at the deck's normal code size (22 px); entry 15 is wrapped in a new `.code-wrap` class (`white-space: pre-wrap`) because the `Call:` line of a `randomForest()` printout is one long line (about 90 characters) that would run off the slide at that size; wrapping changes where the line breaks, not its text. The `.code-small` class is not needed.
 
-**Not in this deck.** The chapter's visible chunks `split` and `penguin-split` (the splits show as the 700, 305, 240 and 102 on the Data slide; the `penguin-split` comment about the hidden replay chunk is therefore not on a slide) and `out-of-bag` (the counts of left-out specimens, in `say:` only); every collapsed `### Code` callout (including the `replay` chunk, the `settle_display` table and the penguin importance and `mtry` numbers); the `### Beyond this course` callout; the chapter has no `### For example,` callout. The bootstrap-sample probability's limit argument, the estimation of $\hat\rho$ and $\hat\sigma^2$, the penguin importance ranks and the `nodesize` defaults are in `say:` only.
+**Not in this deck.** The chapter's `## Classification forests` section, with its `penguin-split`, `penguin-forest` and `penguin-test` chunks, the `penguin_m_table` and `penguin_table` tables and the `penguin-figure`, is left out because the instructor has no time for it; it stays in the chapter. Also left out: the visible chunks `split` (the splits show as the 700 and 305 on the Data slide) and `out-of-bag` (the counts of left-out specimens, in `say:` only); every collapsed `### Code` callout (including the `replay` chunk, the `settle_display` table and the `mtry` numbers); the `### Beyond this course` callout; the chapter has no `### For example,` callout. The bootstrap-sample probability's limit argument, the estimation of $\hat\rho$ and $\hat\sigma^2$ and the `nodesize` default are in `say:` only.
 
-**Response variable and explanatory variables.** The response is `compressive_strength` (MPa) for concrete and `species` for penguins; the explanatory variables are the 7 ingredients and `age`, $p = 8$, and the four penguin measurements. A tree and a forest split on the explanatory variables as recorded, so each feature is an explanatory variable.
+**Response variable and explanatory variables.** The response is `compressive_strength` (MPa); the explanatory variables are the 7 ingredients and `age`, $p = 8$. A tree and a forest split on the explanatory variables as recorded, so each feature is an explanatory variable.
 
 ## How to read an entry
 
@@ -33,24 +33,24 @@ Entries are numbered by content slide; the title and the transitions are not num
 
 - **tag:** core (0.5)
 - **show:** none, a nested bulleted list in three columns
-- **words:** Data; Bagging (Unstable trees, Averaging, Bootstrap samples, Bagged trees); Out-of-bag error (Out-of-bag prediction, Out-of-bag and test error); Random forests (Correlated trees, Split restriction, Fitting a random forest, Forest size, Choosing $m$); Variable importance (Two measures, Interpretation); Classification forests (Penguin forest, Test confusion matrix); Comparison (Test error, Extrapolation, Interpretability and cost)
-- **say:** distilled from the chapter's six learning objectives; the Decision Trees lecture ended with a weakness, that trees fit to different training samples differ, and this lecture averages many trees to reduce that variance; the one-tree split counts, the penguin data figure and the penguin choice of $m$ (all optional), the left-out counts, the forest-size table, the Beyond this course callout and the hand-off to the next lecture are in the notes and not in the agenda
-- **note:** relies on the chapter's `## Data`, `## Bagging`, `## Out-of-bag error`, `## Random forests`, `## Variable importance`, `## Classification forests` and `## Comparison` headings and the `###` children the deck spends slides on. Three columns because the 25 lines do not fit one or two; the agenda's lowest line ends at 523 px of 720. The Conclusion is not an agenda item.
+- **words:** Data; Bagging (Unstable trees, Averaging, Bootstrap samples, Bagged trees); Out-of-bag error (Out-of-bag prediction, Out-of-bag and test error); Random forests (Correlated trees, Split restriction, Fitting a random forest, Forest size, Choosing $m$); Variable importance (Two measures, Interpretation); Comparison (Test error, Extrapolation, Interpretability and cost)
+- **say:** distilled from the chapter's six learning objectives; the Decision Trees lecture ended with a weakness, that trees fit to different training samples differ, and this lecture averages many trees to reduce that variance; the one-tree split counts (optional), the left-out counts, the forest-size table, the Beyond this course callout and the hand-off to the next lecture are in the notes and not in the agenda
+- **note:** relies on the chapter's `## Data`, `## Bagging`, `## Out-of-bag error`, `## Random forests`, `## Variable importance` and `## Comparison` headings and the `###` children the deck spends slides on. Three columns because the 22 lines do not fit one or two, split between parts as Data and Bagging, then Out-of-bag error and Random forests, then Variable importance and Comparison; the tallest column has nine lines. The Conclusion is not an agenda item.
 
 # Data
 
 - **tag:** transition (0)
 - **show:** none (transition slide, title only)
-- **say:** the data and splits are those of the Decision Trees lecture, so its numbers can be compared with this lecture's; the question is whether an average of many trees predicts the strength of concrete and the species of a penguin better than one tree
+- **say:** the data and splits are those of the Decision Trees lecture, so its numbers can be compared with this lecture's; the question is whether an average of many trees predicts the strength of concrete better than one tree
 - **note:** relies on the chapter's `**Question.**` paragraph under `## Data`.
 
-## 1. Concrete specimens and penguins
+## 1. Concrete specimens
 
 - **tag:** core (1)
-- **show:** none, a words-only data slide (two itemized lines)
-- **words:** "Concrete: response `compressive_strength`; seven ingredients and `age`; 700 training specimens, 305 test specimens"; "Penguins: response `species`; four body measurements; 240 training penguins, 102 test penguins"
-- **say:** 7 ingredient amounts (kg per cubic meter) and the age (days), $p = 8$; exact duplicate rows removed; the training specimens are the first random draw after `set.seed(20261031)`, as in the Decision Trees lecture; the penguin split of that lecture came after several random draws (the jitter of its figures and the 10-fold cross-validation inside four `rpart()` fits), which a collapsed callout in the chapter repeats in order so the split is the same, and recomputes that lecture's test results to confirm: 106.4 for least squares, 48.5 with $\log(\texttt{age})$, 86.8 for the default tree, 40.3 and 42.2 for the full and pruned trees, and 95.1% and 96.1% test accuracy for the default and pruned penguin trees; 342 penguins
-- **note:** the chapter's `### Concrete specimens` and `### Penguins` paragraphs compressed to two lines; 700, 305, 240 and 102 are inline R in the chapter, quoted from the frozen markdown. The title is not a chapter heading (it names the two subsections); the chapter's `## Data` is the transition. The `penguin-split` chunk is not a slide.
+- **show:** none, a words-only data slide (one itemized line)
+- **words:** "Response `compressive_strength`; seven ingredients and `age`; 700 training specimens, 305 test specimens"
+- **say:** 7 ingredient amounts (kg per cubic meter) and the age (days), $p = 8$; exact duplicate rows removed; the training specimens are the first random draw after `set.seed(20261031)`, as in the Decision Trees lecture; a collapsed callout in the chapter recomputes that lecture's test results to confirm the split: 106.4 for least squares, 48.5 with $\log(\texttt{age})$, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees
+- **note:** the chapter's `### Concrete specimens` paragraph compressed to one line; 700 and 305 are inline R in the chapter, quoted from the frozen markdown. The title is the chapter's `### Concrete specimens`; the chapter's `## Data` is the transition.
 
 # Bagging
 
@@ -91,16 +91,16 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **show:** figure — `boot-figure` (how many of the 700 training specimens appear 0, 1, 2, ... times in one bootstrap sample), the figure alone
 - **words:** none
 - **say:** this bootstrap sample leaves out 243 of the 700 training specimens, 34.7%
-- **note:** the chapter's `boot-figure`, 7 by 3.8 inches, shown at `height=540`. **The title is not a chapter heading** (the figure sits under `### Bootstrap samples`). Fourth in the drop order.
+- **note:** the chapter's `boot-figure`, 7 by 3.8 inches, shown at `height=540`. **The title is not a chapter heading** (the figure sits under `### Bootstrap samples`). Second in the drop order.
 
 ## 6. Bagged trees
 
 - **tag:** core (1.5)
 - **show:** equation — the chapter's $\widehat f_{\text{bag}}(x)$ display with its legend compressed to labels
-- **words:** "$\widehat f^{*b}(x)$ — prediction at $x$ of the tree fit to bootstrap sample $b$"; "$\widehat f_{\text{bag}}(x)$ — bagged prediction"; then "Trees grown full, not pruned" and "For a class: majority vote of the trees"
-- **reveal:** on arrival: the display and its legend; click 1: the last two lines
-- **say:** bagging fits a tree to bootstrap sample $b$, for $b = 1, \ldots, B$, and predicts with their average; the star marks a quantity computed from a bootstrap sample; each tree has low bias and high variance, and the average removes much of the variance; for a class each tree predicts a class and the bagged prediction is the class most trees predict
-- **note:** the display is copied from the chapter with `\hat` written `\widehat`; the last two lines are the chapter's sentences "The trees are grown full and not pruned" and "the bagged prediction is the class most trees predict, a **majority vote**" shortened.
+- **words:** "$\widehat f^{*b}(x)$ — prediction at $x$ of the tree fit to bootstrap sample $b$"; "$\widehat f_{\text{bag}}(x)$ — bagged prediction"; then "Trees grown full, not pruned"
+- **reveal:** on arrival: the display and its legend; click 1: the last line
+- **say:** bagging fits a tree to bootstrap sample $b$, for $b = 1, \ldots, B$, and predicts with their average; the star marks a quantity computed from a bootstrap sample; each tree has low bias and high variance, and the average removes much of the variance
+- **note:** the display is copied from the chapter with `\hat` written `\widehat`; the last line is the chapter's sentence "The trees are grown full and not pruned" shortened.
 
 ## 7. Bagging from scratch
 
@@ -169,10 +169,10 @@ Entries are numbered by content slide; the title and the transitions are not num
 
 - **tag:** core (1.5)
 - **show:** none, the chapter's definition and symbol list
-- **words:** "At each split, a tree may use only $m$ of the $p$ explanatory variables, chosen at random anew for that split"; "$p$ — number of explanatory variables"; "$m \le p$ — number tried at each split"; then "$m = p$ is bagging"; then "Default `randomForest()`: $m = \lfloor p/3 \rfloor$ for a numeric response, $m = \lfloor\sqrt{p}\rfloor$ for a class"
-- **reveal:** on arrival: the definition and the two symbols; click 1: $m = p$ is bagging; click 2: the defaults
-- **say:** a random forest grows bagged trees with one change; $m$ here is the number tried at each split, as in the textbook (in the Decision Trees lecture it indexed the regions, which this lecture does not index); a strong variable such as age is not available at many splits, including the first split of many trees, so the trees differ more, at the cost of some accuracy in each; for the 8 concrete explanatory variables the default is $m = 2$; by its default `nodesize` `randomForest()` does not split a node with 5 or fewer observations for a numeric response, or 1 or fewer for a class, so its regression trees are nearly, not exactly, full
-- **note:** the chapter's bulleted $p$ and $m$ list and the sentences "$m = p$ is bagging" and "`randomForest()` uses $m = \lfloor p/3 \rfloor$ by default for a numeric response and $m = \lfloor\sqrt{p}\rfloor$ for a class", shortened; the 2 and the 5 and 1 are inline R, quoted from the frozen markdown. The title is the chapter's `### Split restriction`.
+- **words:** "At each split, a tree may use only $m$ of the $p$ explanatory variables, chosen at random anew for that split"; "$p$ — number of explanatory variables"; "$m \le p$ — number tried at each split"; then "$m = p$ is bagging"; then "Default `randomForest()`: $m = \lfloor p/3 \rfloor$ for a numeric response"
+- **reveal:** on arrival: the definition and the two symbols; click 1: $m = p$ is bagging; click 2: the default
+- **say:** a random forest grows bagged trees with one change; $m$ here is the number tried at each split, as in the textbook (in the Decision Trees lecture it indexed the regions, which this lecture does not index); a strong variable such as age is not available at many splits, including the first split of many trees, so the trees differ more, at the cost of some accuracy in each; for the 8 concrete explanatory variables the default is $m = 2$; by its default `nodesize` `randomForest()` does not split a node with 5 or fewer observations, so its regression trees are nearly, not exactly, full
+- **note:** the chapter's bulleted $p$ and $m$ list and the sentences "$m = p$ is bagging" and "`randomForest()` uses $m = \lfloor p/3 \rfloor$ by default for a numeric response", shortened (its class default is not used); the 2 and the 5 are inline R, quoted from the frozen markdown. The title is the chapter's `### Split restriction`.
 
 ## 14. Split restriction: correlation
 
@@ -180,7 +180,7 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **show:** table — the chapter's `correlation_table` ($m$, $\widehat\sigma^2$, $\widehat\rho$ and $\widehat\rho\widehat\sigma^2$ for bagging and the random forest), copied from the frozen markdown
 - **words:** none
 - **say:** estimated for trees fit to 350 specimens (a half) across 100 random halvings of the training specimens: a forest of 100 trees fit to the first half of each, with $m = p$ and the default $m$; at each test specimen the variance of one tree's prediction splits into the variance across halvings of a forest's expected prediction (shared by all its trees) and the variance among the trees of one forest; $\widehat\rho$ is 0.09 with $m = p$ and 0.04 with $m = 2$; $\widehat\sigma^2$ is larger with the restriction, and the part no number of trees removes, $\widehat\rho\widehat\sigma^2$, is 5.8 for bagging and 4.4 for the forest; these are variances across halvings of the 700 training specimens, which overlap, not across independent training samples, and they say nothing about bias; the restriction also changes each tree: a single tree of the forests of 500 trees has mean test MSE 68.2 with $m = p$ and 111.9 with $m = 2$
-- **note:** the table is copied verbatim from `result.markdown` with `\hat` in its headers written `\widehat`, wrapped in `.auto-table`; the values in `say:` are inline R in the chapter. **The title is the chapter's `### Split restriction` with a suffix.** Fifth in the drop order.
+- **note:** the table is copied verbatim from `result.markdown` with `\hat` in its headers written `\widehat`, wrapped in `.auto-table`; the values in `say:` are inline R in the chapter. **The title is the chapter's `### Split restriction` with a suffix.** Third in the drop order.
 
 ## 15. Fitting a random forest
 
@@ -219,15 +219,15 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **show:** code — the chapter's `one-tree` chunk (the default tree on all 8 explanatory variables and a count of its splits on each) and its table of counts
 - **words:** none
 - **say:** a single tree shows which explanatory variables it uses; the default tree of the Decision Trees lecture on all 8 has splits on age (5), blast_furnace_slag (2), cement (4) and water (3), and never splits on fly_ash, superplasticizer, coarse_aggregate or fine_aggregate
-- **note:** the chunk (5 lines) and its table output are copied verbatim, at the normal code size. The title is the chapter's `### One tree`. Second in the drop order.
+- **note:** the chunk (5 lines) and its table output are copied verbatim, at the normal code size. The title is the chapter's `### One tree`. First in the drop order.
 
 ## 19. Two measures
 
 - **tag:** core (1.5)
 - **show:** none, the chapter's two definitions
-- **words:** "**Decrease in RSS** (`IncNodePurity`; for a class, the decrease in the Gini index)" with "total decrease from the splits on the variable in a tree, averaged over the trees"; "**Permutation importance** (`%IncMSE`; for a class, `MeanDecreaseAccuracy`)" with "increase in a tree's OOB MSE when the variable is shuffled among its OOB observations, averaged over the trees"
+- **words:** "**Decrease in RSS** (`IncNodePurity`)" with "total decrease from the splits on the variable in a tree, averaged over the trees"; "**Permutation importance** (`%IncMSE`)" with "increase in a tree's OOB MSE when the variable is shuffled among its OOB observations, averaged over the trees"
 - **say:** both measures are computed by `randomForest()` with `importance = TRUE`; shuffling breaks the variable's relation to the response, and the tree is not refit; with `scale = FALSE` the increase is in the units of the MSE, by default `importance()` divides it by its standard error
-- **note:** the chapter's two bullets of `### Two measures` cut to a bold name, the names `randomForest()` prints and a nested line each. The title is the chapter's `### Two measures`.
+- **note:** the chapter's two bullets of `### Two measures` cut to a bold name, the name `randomForest()` prints and a nested line each (the names for a class are not used). The title is the chapter's `### Two measures`.
 
 ## 20. Two measures in R
 
@@ -253,45 +253,6 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** a large importance for water says that predictions get worse without it, not whether concrete gets stronger or weaker as water increases, with the others fixed, or by how much; the two measures order the variables differently here, because they measure different things: the fit to the training data within each tree and the loss of out-of-bag accuracy when the variable is shuffled
 - **note:** the chapter's sentence "Importance ranks the variables; it gives no direction and no effect size" cut into three lines. The title is the chapter's `### Interpretation`.
 
-# Classification forests
-
-- **tag:** transition (0)
-- **show:** none (transition slide, title only)
-- **say:** a random forest for a class works the same way as for a numeric response, with the Gini index for the splits, $m = \lfloor\sqrt{p}\rfloor$ by default and a majority vote over the trees
-- **note:** relies on the closing paragraph of the chapter's `### Penguin species`.
-
-## 23. Penguin species
-
-- **tag:** optional (1)
-- **show:** figure — `penguin-figure` (bill length against flipper length by species for the 240 training penguins), the figure alone
-- **words:** none
-- **say:** the penguins are those of the Decision Trees lecture: 240 training penguins and 4 body measurements
-- **note:** the chapter's `penguin-figure`, 7 by 4.2 inches, shown at `height=520`. The title is the chapter's `### Penguin species`. Third in the drop order.
-
-## 24. Penguin forest
-
-- **tag:** core (2)
-- **show:** code — the chapter's `penguin-forest` chunk (`randomForest()` on the four measurements with `importance = TRUE` and its printout)
-- **words:** none
-- **say:** the printout gives the OOB error rate, 3.33%, and the OOB confusion matrix, each training penguin classified by the trees for which it was out of bag; 500 trees, $m = 2$
-- **note:** the chunk (5 lines) and its printout are copied verbatim; the slide is wrapped in `.code-wrap` because the `Call:` line is about 150 characters and wraps onto a second line on the slide. The title is the chapter's `### Penguin forest`.
-
-## 25. Test confusion matrix
-
-- **tag:** core (1.5)
-- **show:** code — the chapter's `penguin-test` chunk (`predict()`, the test confusion matrix and the accuracy) and its two console outputs, joined
-- **words:** none
-- **say:** the forest classifies 99.0% of the 102 test penguins correctly, 101 of them; the default tree of the Decision Trees lecture classified 97 (95.1%) and the pruned tree 98 (96.1%), so the forest gets 3 more right than the better tree, which on 102 test penguins is small evidence; the decrease in Gini index and the permutation decrease in accuracy both rank the measurements bill_length_mm, flipper_length_mm, bill_depth_mm, body_mass_g
-- **note:** the chunk (4 lines) and its outputs (the 4-line matrix, then `accuracy 0.9901961`) are copied verbatim, at the normal code size. The title is the Decision Trees deck's slide title for the same step; the chunk sits under the chapter's `### Penguin forest`, so **the title is not a chapter heading**.
-
-## 26. Choosing $m$ for penguins
-
-- **tag:** optional (1)
-- **show:** table — the chapter's `penguin_m_table` (OOB error rate and test accuracy for each $m$ from 1 to 4), copied from the frozen markdown
-- **words:** none
-- **say:** the OOB error rates differ by at most 2 of the 240 training penguins and the test accuracies by at most 1 of the 102 test penguins, so no choice of $m$ stands out
-- **note:** the table is copied verbatim from `result.markdown`, wrapped in `.auto-table`. The title is the chapter's `### Choosing $m$ for penguins`. First in the drop order.
-
 # Comparison
 
 - **tag:** transition (0)
@@ -299,15 +260,15 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** this part compares bagging and random forests with a single tree and with least squares on test error, behavior outside the range of the training data, and interpretability and cost
 - **note:** relies on the chapter's `## Comparison` section.
 
-## 27. Test error
+## 23. Test error
 
 - **tag:** core (2)
-- **show:** tabset: "Concrete" (`concrete_table`, nine methods' test MSE) and "Penguins" (`penguin_table`, three methods' test accuracy), both copied from the frozen markdown
+- **show:** table — the chapter's `concrete_table` (nine methods' test MSE), copied from the frozen markdown
 - **words:** none
-- **say:** on concrete every average of trees beats every single tree and least squares on the original variables: the best average has test MSE 26.7 against 40.3 for the best single tree and 48.5 for least squares with a feature built for the curvature in age; the two bagging fits, 26.8 and 27.1, differ in their bootstrap samples and in node size (full trees against `randomForest()`'s `nodesize = 5`); the first and second 150 trees of the loop alone give 26.7 and 27.1, a spread at least as large
-- **note:** the two tables are copied verbatim from `result.markdown`, each wrapped in `.auto-table`; the concrete table is wrapped again in a 0.85em div so that its ten rows and the tab bar end at 646 px. **The tab names "Concrete" and "Penguins" are not chapter headings.** The title is the chapter's `### Test error`.
+- **say:** every average of trees beats every single tree and least squares on the original variables: the best average has test MSE 26.7 against 40.3 for the best single tree and 48.5 for least squares with a feature built for the curvature in age; the two bagging fits, 26.8 and 27.1, differ in their bootstrap samples and in node size (full trees against `randomForest()`'s `nodesize = 5`); the first and second 150 trees of the loop alone give 26.7 and 27.1, a spread at least as large
+- **note:** the table is copied verbatim from `result.markdown`, wrapped in `.auto-table` and in a 0.85em div so that its ten rows fit the slide. The title is the chapter's `### Test error`.
 
-## 28. Extrapolation
+## 24. Extrapolation
 
 - **tag:** core (2)
 - **show:** figure — `extrapolation-figure` (predicted strength at 28 days against cement from 100 to 800 kg per cubic meter for the OOB-chosen forest and for least squares with $\log(\texttt{age})$), the figure alone
@@ -315,15 +276,15 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** the other 6 ingredients are at their training medians and the dashed line is the largest cement content among the training specimens; the forest predicts 55.3 MPa at the largest training cement, 540, and 55.3 MPa at 800, while least squares continues its line; each tree predicts a constant beyond the largest value of an explanatory variable in its training sample, so a forest's average does too; no data check either fit past 540
 - **note:** the chapter's `extrapolation-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Extrapolation`.
 
-## 29. Interpretability and cost
+## 25. Interpretability and cost
 
 - **tag:** core (1)
 - **show:** none, a three-line list cut from the chapter's paragraph
 - **words:** "Gives up the single tree's interpretability: importance rankings only"; "Hundreds of trees to store and evaluate"; "Predictions still made of steps"
 - **say:** a forest gives up the single tree's interpretability, leaving only importance rankings; it fits hundreds of trees instead of one, each of which must be stored and evaluated to predict; its predictions are still made of steps
-- **note:** the chapter's three sentences of `### Interpretability and cost`, shortened. The chapter's `### Beyond this course` callout that follows is not used. Sixth in the drop order.
+- **note:** the chapter's three sentences of `### Interpretability and cost`, shortened. The chapter's `### Beyond this course` callout that follows is not used. Fourth in the drop order.
 
-## 30. Conclusion
+## 26. Conclusion
 
 - **tag:** core (1)
 - **show:** none, a flat list of six takeaways

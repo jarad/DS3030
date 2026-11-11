@@ -53,25 +53,22 @@ execute:
   - Averaging
   - Bootstrap samples
   - Bagged trees
+:::
+::: {.column width="33%"}
 - Out-of-bag error
   - Out-of-bag prediction
   - Out-of-bag and test error
-:::
-::: {.column width="33%"}
 - Random forests
   - Correlated trees
   - Split restriction
   - Fitting a random forest
   - Forest size
   - Choosing $m$
+:::
+::: {.column width="33%"}
 - Variable importance
   - Two measures
   - Interpretation
-:::
-::: {.column width="33%"}
-- Classification forests
-  - Penguin forest
-  - Test confusion matrix
 - Comparison
   - Test error
   - Extrapolation
@@ -80,7 +77,7 @@ execute:
 :::
 
 ::: notes
-Distilled from the chapter's six learning objectives and the slides this deck spends time on: the variance of an average of B predictions with common variance and pairwise correlation, and why averaging trees reduces variance and helps less when the trees are correlated; bagging (a full tree per bootstrap sample, predictions averaged or a majority vote), the share of observations a bootstrap sample leaves out, and bagging written with rpart(); the out-of-bag prediction and error as an estimate of test error without held-out data; a random forest that decorrelates its trees by choosing among m random explanatory variables at each split, fit with randomForest(), with m and the number of trees chosen from the out-of-bag error; the two variable importance measures as rankings without direction or effect size; and the comparison with a single tree and with least squares on test error, interpretability and behavior outside the range of the training data. The one-tree split counts, the penguin data figure and the penguin choice of m are optional slides and are not in the agenda. The left-out counts, the forest-size table, the Beyond this course callout and the hand-off to the next lecture are in the notes and not in the agenda. The Decision Trees lecture ended with a weakness: trees fit to different training samples differ, in their regions and in their predictions. This lecture averages many trees to reduce that variance; the reading is ISLR2 Sections 8.2.1 and 8.2.2.
+Distilled from the chapter's six learning objectives and the slides this deck spends time on: the variance of an average of B predictions with common variance and pairwise correlation, and why averaging trees reduces variance and helps less when the trees are correlated; bagging (a full tree per bootstrap sample, predictions averaged), the share of observations a bootstrap sample leaves out, and bagging written with rpart(); the out-of-bag prediction and error as an estimate of test error without held-out data; a random forest that decorrelates its trees by choosing among m random explanatory variables at each split, fit with randomForest(), with m and the number of trees chosen from the out-of-bag error; the two variable importance measures as rankings without direction or effect size; and the comparison with a single tree and with least squares on test error, interpretability and behavior outside the range of the training data. The one-tree split counts are an optional slide and are not in the agenda. The left-out counts, the forest-size table, the Beyond this course callout and the hand-off to the next lecture are in the notes and not in the agenda. The Decision Trees lecture ended with a weakness: trees fit to different training samples differ, in their regions and in their predictions. This lecture averages many trees to reduce that variance; the reading is ISLR2 Sections 8.2.1 and 8.2.2.
 
 Timing: the core slides come to about 45 minutes; the outline lists the order in which to drop the rest.
 :::
@@ -88,16 +85,15 @@ Timing: the core slides come to about 45 minutes; the outline lists the order in
 # Data
 
 ::: notes
-The data and splits are those of the Decision Trees lecture, so its numbers can be compared with this lecture's. Question: with the same data, can an average of many trees predict the compressive strength of concrete, and the species of a penguin, better than one tree can?
+The data and splits are those of the Decision Trees lecture, so its numbers can be compared with this lecture's. Question: with the same data, can an average of many trees predict the compressive strength of concrete better than one tree can?
 :::
 
-## Concrete specimens and penguins
+## Concrete specimens
 
-- Concrete: response `compressive_strength`; seven ingredients and `age`; 700 training specimens, 305 test specimens
-- Penguins: response `species`; four body measurements; 240 training penguins, 102 test penguins
+- Response `compressive_strength`; seven ingredients and `age`; 700 training specimens, 305 test specimens
 
 ::: notes
-modeldata::concrete records the compressive strength (MPa) of concrete specimens with 7 ingredient amounts (kg per cubic meter) and the age (days) as explanatory variables, p = 8 in all. Exact duplicate rows are removed, and the training specimens are a random sample, the first random draw after set.seed(20261031), as in the Decision Trees lecture. The penguin split of that lecture came after several random draws: the jitter of its figures and the 10-fold cross-validation inside four rpart() fits. A collapsed callout in the chapter repeats them in the same order, so the penguin split is the same, and recomputes that lecture's test results to confirm it: on the concrete test specimens, test MSE 106.4 for least squares, 48.5 for least squares with log(age) in place of age, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees; on the 342 penguins, 240 training and 102 test penguins, test accuracy 95.1% for the default tree and 96.1% for the pruned tree.
+modeldata::concrete records the compressive strength (MPa) of concrete specimens with 7 ingredient amounts (kg per cubic meter) and the age (days) as explanatory variables, p = 8 in all. Exact duplicate rows are removed, and the training specimens are a random sample, the first random draw after set.seed(20261031), as in the Decision Trees lecture. A collapsed callout in the chapter recomputes that lecture's test results to confirm the split: on the concrete test specimens, test MSE 106.4 for least squares, 48.5 for least squares with log(age) in place of age, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees.
 :::
 
 # Bagging
@@ -188,12 +184,11 @@ $$\widehat f_{\text{bag}}(x) = \frac{1}{B}\sum_{b=1}^B \widehat f^{*b}(x),$$
 ::: {.fragment}
 ::: {style="font-size: 0.7em"}
 - Trees grown full, not pruned
-- For a class: majority vote of the trees
 :::
 :::
 
 ::: notes
-Bagging fits a tree to bootstrap sample b, for b = 1, ..., B, and predicts with their average; the star marks a quantity computed from a bootstrap sample. The trees are grown full and not pruned: each has low bias and high variance, and the average removes much of the variance. For a class, each tree predicts a class, and the bagged prediction is the class most trees predict, a majority vote.
+Bagging fits a tree to bootstrap sample b, for b = 1, ..., B, and predicts with their average; the star marks a quantity computed from a bootstrap sample. The trees are grown full and not pruned: each has low bias and high variance, and the average removes much of the variance.
 :::
 
 ## Bagging from scratch
@@ -314,12 +309,12 @@ The figure counts the first split of each tree in two forests of 500 trees fit t
 
 ::: {.fragment}
 ::: {style="font-size: 0.8em"}
-- Default `randomForest()`: $m = \lfloor p/3 \rfloor$ for a numeric response, $m = \lfloor\sqrt{p}\rfloor$ for a class
+- Default `randomForest()`: $m = \lfloor p/3 \rfloor$ for a numeric response
 :::
 :::
 
 ::: notes
-A random forest grows bagged trees with one change. In this lecture m is this number, as in the textbook; in the Decision Trees lecture it indexed the regions, which this lecture does not index. A strong explanatory variable such as age is not available at many splits, including the first split of many trees, so the trees differ more, at the cost of some accuracy in each tree. For the 8 concrete explanatory variables the default is m = 2. By its default nodesize, randomForest() does not split a node with 5 or fewer observations for a numeric response, or 1 or fewer for a class, so its regression trees are nearly, not exactly, full.
+A random forest grows bagged trees with one change. In this lecture m is this number, as in the textbook; in the Decision Trees lecture it indexed the regions, which this lecture does not index. A strong explanatory variable such as age is not available at many splits, including the first split of many trees, so the trees differ more, at the cost of some accuracy in each tree. For the 8 concrete explanatory variables the default is m = 2. By its default nodesize, randomForest() does not split a node with 5 or fewer observations, so its regression trees are nearly, not exactly, full.
 :::
 
 ## Split restriction: correlation
@@ -410,9 +405,9 @@ A single tree shows which explanatory variables it uses. The chunk refits the de
 ## Two measures
 
 ::: {style="font-size: 0.8em"}
-- **Decrease in RSS** (`IncNodePurity`; for a class, the decrease in the Gini index)
+- **Decrease in RSS** (`IncNodePurity`)
   - total decrease from the splits on the variable in a tree, averaged over the trees
-- **Permutation importance** (`%IncMSE`; for a class, `MeanDecreaseAccuracy`)
+- **Permutation importance** (`%IncMSE`)
   - increase in a tree's OOB MSE when the variable is shuffled among its OOB observations, averaged over the trees
 :::
 
@@ -461,90 +456,6 @@ The figure plots both measures for the random forest of the Fitting subsection o
 A large importance for water says that predictions get worse without it, not whether concrete gets stronger or weaker as water increases, with the others fixed, or by how much. The two measures order the variables differently here: they measure different things, the fit to the training data within each tree and the loss of out-of-bag accuracy when the variable is shuffled.
 :::
 
-# Classification forests
-
-::: notes
-A random forest for a class works the same way as for a numeric response, with the Gini index for the splits, m = floor(sqrt(p)) by default, and a majority vote over the trees.
-:::
-
-## Penguin species
-
-![](../_freeze/08-trees/20-bagging-and-random-forests/figure-html/penguin-figure-1.png){height=520}
-
-::: notes
-The penguins are those of the Decision Trees lecture, 240 training penguins and 4 body measurements. The figure plots bill length against flipper length for the training penguins.
-:::
-
-## Penguin forest
-
-::: {.code-wrap}
-```r
-# A classification forest on the four measurements.
-penguin_rf <- randomForest(species ~ bill_length_mm + bill_depth_mm +
-                             flipper_length_mm + body_mass_g,
-                           data = penguin_train, importance = TRUE)
-penguin_rf
-```
-
-```
-
-Call:
- randomForest(formula = species ~ bill_length_mm + bill_depth_mm +      flipper_length_mm + body_mass_g, data = penguin_train, importance = TRUE) 
-               Type of random forest: classification
-                     Number of trees: 500
-No. of variables tried at each split: 2
-
-        OOB estimate of  error rate: 3.33%
-Confusion matrix:
-          Adelie Chinstrap Gentoo class.error
-Adelie        99         2      1  0.02941176
-Chinstrap      4        44      0  0.08333333
-Gentoo         0         1     89  0.01111111
-```
-:::
-
-::: notes
-The printout gives the OOB error rate, 3.33%, and the OOB confusion matrix, each training penguin classified by the trees for which it was out of bag.
-:::
-
-## Test confusion matrix
-
-```r
-# Predicted species of the test penguins, against their species.
-penguin_pred <- predict(penguin_rf, penguin_test)
-table(Predicted = penguin_pred, Observed = penguin_test$species)
-c(accuracy = mean(penguin_pred == penguin_test$species))
-```
-
-```
-           Observed
-Predicted   Adelie Chinstrap Gentoo
-  Adelie        49         1      0
-  Chinstrap      0        19      0
-  Gentoo         0         0     33
- accuracy 
-0.9901961 
-```
-
-::: notes
-The forest's OOB error rate is 3.33%, and it classifies 99.0% of the 102 test penguins correctly, 101 of them. The default tree of the Decision Trees lecture classified 97 correctly (95.1%) and the pruned tree 98 (96.1%): the forest gets 3 more test penguins right than the better tree. On 102 test penguins a difference of a few penguins is small evidence. The decrease in Gini index and the permutation decrease in accuracy both rank the measurements bill_length_mm, flipper_length_mm, bill_depth_mm, and body_mass_g.
-:::
-
-## Choosing $m$ for penguins
-
-::: {.auto-table}
-| $m$| OOB error rate| Test accuracy|
-|---:|--------------:|-------------:|
-|   1|           2.9%|         99.0%|
-|   2|           3.3%|         99.0%|
-|   3|           3.3%|         99.0%|
-|   4|           3.8%|         98.0%|
-:::
-
-::: notes
-The table gives the OOB error rate and test accuracy of a forest for each m from 1 to 4. The OOB error rates differ by at most 2 of the 240 training penguins, and the test accuracies by at most 1 of the 102 test penguins, so no choice of m stands out.
-:::
-
 # Comparison
 
 ::: notes
@@ -552,10 +463,6 @@ This part compares bagging and random forests with a single tree and with least 
 :::
 
 ## Test error
-
-::: {.panel-tabset}
-
-### Concrete
 
 ::: {.auto-table}
 ::: {style="font-size: 0.85em"}
@@ -573,20 +480,8 @@ This part compares bagging and random forests with a single tree and with least 
 :::
 :::
 
-### Penguins
-
-::: {.auto-table}
-|Method               | Test accuracy|    Correct|
-|:--------------------|-------------:|----------:|
-|Default tree         |         95.1%|  97 of 102|
-|Pruned tree          |         96.1%|  98 of 102|
-|Random forest, m = 2 |         99.0%| 101 of 102|
-:::
-
-:::
-
 ::: notes
-The tables give the test MSE on the concrete test specimens and the test accuracy on the test penguins. On concrete, every average of trees beats every single tree and least squares on the original variables; the best average has test MSE 26.7, against 40.3 for the best single tree and 48.5 for least squares with a feature built for the curvature in age. The two bagging fits, 26.8 and 27.1, differ in their bootstrap samples and in node size (full trees against randomForest()'s nodesize = 5); the first and second 150 trees of the loop alone give 26.7 and 27.1, a spread at least as large.
+The table gives the test MSE on the concrete test specimens. Every average of trees beats every single tree and least squares on the original variables; the best average has test MSE 26.7, against 40.3 for the best single tree and 48.5 for least squares with a feature built for the curvature in age. The two bagging fits, 26.8 and 27.1, differ in their bootstrap samples and in node size (full trees against randomForest()'s nodesize = 5); the first and second 150 trees of the loop alone give 26.7 and 27.1, a spread at least as large.
 :::
 
 ## Extrapolation
@@ -617,7 +512,7 @@ A forest gives up the single tree's interpretability, leaving only importance ra
 - Forests lose interpretability and cannot extrapolate
 
 ::: notes
-Averaging B predictions with variance sigma squared and pairwise correlation rho gives variance rho sigma squared + (1 − rho) sigma squared / B: averaging removes the second term and leaves the first. Bagging applies this to trees. It fits one full, unpruned tree to each of B bootstrap samples of the training data, each sample leaving out about 1/e of the observations, and averages their predictions, or takes a majority vote for a class. Adding trees does not overfit; the error levels off once the second term is small. The observations a bootstrap sample leaves out give each training observation an out-of-bag prediction from the trees that never saw it, so the out-of-bag error estimates the test error from the fit itself, the role cross-validation played for single models. Bagged trees tend to make the same strong splits, so they are correlated and the rho sigma squared term remains. A random forest lets each split choose among only m randomly chosen explanatory variables, which decorrelates the trees at some cost in the accuracy of each; m = p is bagging, and m is chosen by the out-of-bag error. A forest is read through variable importance, which ranks the variables but gives no direction or effect size. Forests usually predict better than one tree, at the cost of interpretability, and like a tree they cannot extrapolate.
+Averaging B predictions with variance sigma squared and pairwise correlation rho gives variance rho sigma squared + (1 − rho) sigma squared / B: averaging removes the second term and leaves the first. Bagging applies this to trees. It fits one full, unpruned tree to each of B bootstrap samples of the training data, each sample leaving out about 1/e of the observations, and averages their predictions. Adding trees does not overfit; the error levels off once the second term is small. The observations a bootstrap sample leaves out give each training observation an out-of-bag prediction from the trees that never saw it, so the out-of-bag error estimates the test error from the fit itself, the role cross-validation played for single models. Bagged trees tend to make the same strong splits, so they are correlated and the rho sigma squared term remains. A random forest lets each split choose among only m randomly chosen explanatory variables, which decorrelates the trees at some cost in the accuracy of each; m = p is bagging, and m is chosen by the out-of-bag error. A forest is read through variable importance, which ranks the variables but gives no direction or effect size. Forests usually predict better than one tree, at the cost of interpretability, and like a tree they cannot extrapolate.
 
 The next lecture, on Friday, covers boosting, which also combines many trees, but builds them one after another, each fit to the residuals of the trees before it, instead of in parallel on bootstrap samples.
 :::
