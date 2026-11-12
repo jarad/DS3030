@@ -314,7 +314,7 @@ convention.
   rate) is $\nu$, $0 < \nu \le 1$, not the textbook's $\lambda$, which is the
   ridge and lasso tuning parameter here. Tree size is the **depth** $\delta$,
   the largest number of splits on a path from the root to a leaf (`rpart()`'s
-  `maxdepth`; a **stump** has $\delta = 1$), not the textbook's number of
+  `maxdepth`, `xgboost`'s `max_depth`; a **stump** has $\delta = 1$), not the textbook's number of
   splits $d$, which is the number of features in the subset selection
   chapters; a tree of depth $\delta$ has at most $2^\delta$ leaves. It can
   split on more than $\delta$ explanatory variables in all, but each leaf is
@@ -326,15 +326,31 @@ convention.
   which always carry a subscript; the chapter says so.
   $\hat f^b$ is the $b$th tree (superscript, no star: it is not fit to a
   bootstrap sample, unlike $\hat f^{*b}$), $\hat f_b$ the boosted model after
-  $b$ trees, $\hat f_b = \hat f_{b-1} + \nu\hat f^b$ with $\hat f_0 = 0$, and
+  $b$ trees, $\hat f_b = \hat f_{b-1} + \nu\hat f^b$ with $\hat f_0 = 0$ (the loop;
+  `xgboost` starts from the mean response, `base_score`), and
   $r_i = y_i - \hat f_b(x_i)$ the current residual (not the lasso residual
   vector $r$, which carries no subscript). $a_j(x)$ is the sum of the
   shrunken stumps that split on $X_j$, a function of $x$ only through the
   value of $X_j$, so a model of stumps is $\sum_j a_j(x)$. It is written
   $a_j(x)$, not $g_j(x_j)$, because $g_j$ is the PLS simple regression
   estimate and the naive Bayes log density ratio, and a single subscript on
-  $x$ means an observation. Cross-validation uses $\text{CV}_{(10)}(B)$, folds
-  $\mathcal{F}_\ell$ and $\hat f_B^{(-\ell)}$ as in the resampling chapters;
+  $x$ means an observation. The `xgboost` arguments are mapped to these
+  symbols, never the other way round: `learning_rate` (alias `eta`) is
+  $\nu$, `max_depth` is $\delta$, `nrounds` is $B$. `xgboost`'s leaf
+  penalty is written as code, `lambda` (or $\texttt{lambda}$ inside math),
+  never as $\lambda$, which stays the ridge and lasso tuning parameter; a
+  leaf's value is $\sum_{i \in \text{leaf}} r_i/(n_{\text{leaf}} +
+  \texttt{lambda})$, and a split's **gain** (the word `xgboost` uses for
+  its decrease in RSS) is written with $S_1, S_2$, the residual sums of its
+  two parts, $S = S_1 + S_2$, and the Decision Trees chapter's $n_1, n_2$.
+  Variable importance is the decrease in RSS summed over the trees,
+  reported as `xgb.importance()`'s `Gain` share. Cross-validation uses
+  $\text{CV}_{(10)}(B)$, folds $\mathcal{F}_\ell$ of size $n_\ell$,
+  $\text{MSE}_\ell(B)$ the MSE on fold $\ell$, and $\hat f_B^{(-\ell)}$ as
+  in the resampling chapters; `xgb.cv()`'s `test_rmse_mean` and
+  `test_rmse_std` are written $\overline{\text{RMSE}}(B)$ and
+  $s_{\text{RMSE}}(B)$ (divisor 9), with
+  $\text{CV}_{(10)}(B) = \overline{\text{RMSE}}(B)^2 + \tfrac{9}{10}s_{\text{RMSE}}(B)^2$;
   $B_{\max}$ is the length of the run whose first $B$ trees give the model of
   $B$ trees. The curves of error against the number of trees use $b$ (the
   bagging chapter's $k$ would collide with the number of folds in the same

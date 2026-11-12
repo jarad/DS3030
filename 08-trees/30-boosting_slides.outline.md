@@ -1,22 +1,24 @@
 # Slide outline: Boosting
 
-(drafted 2026-11-01)
+(drafted 2026-11-01; refreshed 2026-11-12 for the `xgboost` revision of the chapter)
 
 Outline for `30-boosting_slides.qmd` (Fri 2026-11-13, the third lecture on tree-based methods; ISLR2 Section 8.2.3). **This file is the spec; the deck is built from it, and this file describes the deck as it stands.** Edit it freely and ask for the deck to be refreshed.
 
-Drafted against `30-boosting.qmd`, which is the deck's `derived-from` comment records the chapter's commit (`60e3dc3`). The frozen output `_freeze/08-trees/30-boosting/execute-results/html.json` is current: its recorded `hash` (`ecac1a4d4c083279497ad01bbc8c2bda`) equals the md5 of the chapter file as it stands, which includes the "Slides for this lecture" link (`30-boosting_slides.html`) on the line after `# Boosting`.
+Drafted against `30-boosting.qmd`; the deck's `derived-from` comment records the chapter's commit (`60e3dc3`), which is refreshed at commit time, because the chapter's revision around `xgboost` is not committed yet. The frozen output `_freeze/08-trees/30-boosting/execute-results/html.json` is current: its recorded `hash` (`b75a32a12ef5dc7939bab18e631d0ad6`) equals the md5 of the chapter file as it stands, which includes the "Slides for this lecture" link (`30-boosting_slides.html`) on the line after `# Boosting`.
 
-**What the deck is.** 33 slides including the title: the agenda, seven transitions, 24 content slides (the last is the Conclusion). It reuses all 18 figures the chapter renders (the four `earlier-fits` figures share one tabset, the five `residual-*` figures another and the `stumps-figure` and `depth-4-figure` a third; the `cement-age-figure` is the chapter's new figure), the one kable table that is displayed (`comparison_table`), and four code slides: the basic `rpart()` boosting loop and prediction of the chapter's visible chunks with their console output, the data split, and the importance shares. The deck has no new content: every `show:` is a figure, table, equation, code chunk or console printout the chapter already has, or a list cut from the chapter's own sentences. The chapter has one running example, `modeldata::concrete` on the Decision Trees lecture's data and split (700 training and 305 test specimens; the response is `compressive_strength` in MPa; the explanatory variables are seven ingredients in kg per cubic meter and `age` in days), and the chapter fits a numeric response only.
+**What the deck is.** 39 slides including the title: the agenda, eight transitions, 29 content slides (the last is the Conclusion). It reuses all 18 figures the chapter renders (the four `earlier-fits` figures share one tabset, the five `residual-*` figures another and the `stumps-figure` and `depth-4-figure` a third), the two kable tables that are displayed (`reproduction_table`, new, and `comparison_table`), and five code slides: the visible chunks `boosting` (the `rpart()` loop), `xgboost-fit`, `cv`, `chosen` and `importance`, each with its console output where it prints one. The deck has no new content: every `show:` is a figure, table, equation, code chunk or console printout the chapter already has, or a list cut from the chapter's own sentences. The chapter has one running example, `modeldata::concrete` on the Decision Trees lecture's data and split (700 training and 305 test specimens; the response is `compressive_strength` in MPa; the explanatory variables are seven ingredients in kg per cubic meter and `age` in days), and the chapter fits a numeric response only.
 
-**Timing.** One 50-minute period: the 22 core content slides and the agenda come to about 41 minutes at the estimates below, and the two optional slides add about 2.5 more, so the period has room to spare. If time is short, drop in this order: (1) Training and test specimens (the split; the 700 and 305 are on the previous slide), (2) RSS decrease in R, (3) Limits (say it on the Conclusion), (4) Cement and age (say the question while on Stumps), (5) Forest and tree importance (say it on Importance by variable). The natural break if the chapter is taught over two days is after Chosen model (entry 12), where the boosted model has been fit, tuned and chosen.
+**Timing.** One 50-minute period: the 25 core content slides and the agenda come to about 43.5 minutes at the estimates below, and the four optional slides add 5.5 more, 49 in all, so the period is full only if nothing is dropped. If time is short, drop in this order: (1) Limits (say it on the Conclusion), (2) Cement and age (say the question while on Stumps), (3) Leaf values (say what `lambda` does while on Loop reproduction), (4) RSS decrease: gain (the RSS decrease slide already says that `xgboost` calls the decrease a gain). The natural break if the chapter is taught over two days is after Chosen model in R (entry 16), where the boosted model has been fit, tuned and chosen.
 
-**Code slides.** The four code slides are entries 2 (`split`, optional), 6 (`boosting`), 7 (`boosting-predict`) and 14 (`importance`, optional). Each shows the chunk's source copied verbatim from the chapter (without the `#|` lines) in a ` ```r ` block, which is not executed, followed, where the chunk prints something, by the chunk's console output copied verbatim from the frozen markdown in a plain ` ``` ` block (the `split` and `boosting` chunks print nothing, so they show code only). Nothing is trimmed, including the `set.seed(20261031)` comment of `split`. All four are at the deck's normal code size (22 px); the `.code-small` and `.code-wrap` classes are not needed (the longest, `boosting`, is 17 lines with comments and ends at 576 px of 720).
+**Code slides.** The five code slides are entries 5 (`boosting`), 6 (`xgboost-fit`), 14 (`cv`), 16 (`chosen`) and 19 (`importance`). Each shows the chunk's source copied verbatim from the chapter (without the `#|` lines) in a ` ```r ` block, which is not executed, followed, where the chunk prints something, by the chunk's console output copied verbatim from the frozen markdown in a plain ` ``` ` block (the `boosting` chunk prints nothing). Nothing is trimmed, including the comments. All five are at the deck's normal code size (22 px); the `.code-small` and `.code-wrap` classes are not needed (the longest source line, in `cv`, is 74 characters, and the tallest slide, `boosting` with 14 lines of source (nine code lines), ends at 491 px of 720; `importance`, with its 10-line printout, ends at 473 px).
 
-**Not in this deck.** Every collapsed `### Code` callout (including the `earlier` replay of the Decision Trees lecture's random draws, the `boost()` function and every figure's plot code); the chapter's `### Beyond this course` callout, which is not used; the chapter has no `### For example,` callout. The numbers of the chapter's `Cross-validation estimate`, `Chosen model` and `Limits` prose are in `say:` only.
+**Not in this deck.** Every collapsed `### Code` callout (including `boosting-control` (the `rpart.control()` settings `small`), `xgboost-defaults`, `xgboost-check`, `reproduction`, `cv-check`, `importance-check`, `importance-plot`, and every figure's plot code); the visible chunk `split` (the 700 and 305 are on the Concrete specimens slide); the visible chunk `boosting-predict` (the loop's training and test MSE, 0.42 and 23.7, are the first row of the Loop reproduction table and are in `say:` of the Loop); the visible chunk `xgboost-loop` (the fit with the loop's settings; its table row and the 0.00007 gap after 200 trees are in `say:` of Loop reproduction, with `iterationrange = c(1, 200)` explained there); the chapter's `### Beyond this course` callout; the chapter has no `### For example,` callout. The chapter's early-stopping paragraph under Cross-validation estimate and its `Cover` and `Frequency` sentence are in `say:` only. The tutor entry and `CONVENTIONS.md` are not touched.
+
+**Display punctuation.** Every display keeps the chapter's trailing comma (the legend that follows plays the part of the chapter's "where"); step 3 of the Steps slide is set inline and ends in a period.
 
 **Response variable and explanatory variables.** The response is `compressive_strength` (MPa); the explanatory variables are the 7 ingredients and `age`, $p = 8$. A tree splits on the explanatory variables as recorded, so each feature is an explanatory variable.
 
-**Figure legibility.** Effective tick size is 8.8/72 times the display height in px over the figure height in inches (14 px or more is the target); every reused figure is at 14.1 px or more.
+**Figure legibility.** Effective tick size is 8.8/72 times the display height in px over the figure height in inches (14 px or more is the target); every reused figure is at 14.1 px or more. The figure PNGs are those rendered with the current chapter (heights 4.5, 4.2, 4.2 and 3.8 inches, as in the table); the display heights were measured in the rendered deck (layout px at 16:9, before reveal's scaling).
 
 | Figure | Height (in) | Display height (px) | Tick (px) |
 |:--|--:|--:|--:|
@@ -44,9 +46,9 @@ Entries are numbered by content slide; the title and the transitions are not num
 
 - **tag:** core (0.5)
 - **show:** none, a nested bulleted list in three columns
-- **words:** Data (Earlier fits); Algorithm (Residuals, Steps, Fitting); Tuning parameters (Shrinkage, Tree depth, Overfitting); Choosing $B$ (Cross-validation estimate, Chosen model); Variable importance (RSS decrease, Forest and tree importance); Additive structure (Cement and age, Stumps, Depth and interactions); Comparison (Bias and variance, Test error, Limits)
-- **say:** distilled from the chapter's five learning objectives; the Random Forests lecture averaged many large trees, each grown independently, and boosting also combines many trees but grows small ones, one after another; the split chunk, the code that computes the importance shares, the Beyond this course callout and the hand-off to the next lecture (support vector machines, ISLR2 Chapter 9) are in the notes and not in the agenda
-- **note:** relies on the chapter's `## Data`, `## Algorithm`, `## Tuning parameters`, `## Choosing $B$`, `## Variable importance`, `## Additive structure` and `## Comparison` headings and the `###` children the deck spends slides on. The Conclusion is not an agenda item. The agenda's lowest line ends at 551 px of 720.
+- **words:** Data (Earlier fits); Algorithm (Residuals, Steps, Loop); xgboost (Fitting, Loop reproduction); Tuning parameters (Shrinkage, Tree depth, Overfitting); Choosing $B$ (Cross-validation estimate, Chosen model); Variable importance (RSS decrease, Forest and tree importance, Interpretation); Additive structure (Cement and age, Stumps, Depth and interactions); Comparison (Bias and variance, Test error, Limits)
+- **say:** distilled from the chapter's six learning objectives; the Random Forests lecture averaged many large trees, each grown independently, and boosting also combines many trees but grows small ones, one after another; the lecture builds boosting from scratch with `rpart()`, then fits, tunes and summarizes it with `xgboost`; the `xgboost` defaults, the collapsed Code callouts, the Beyond this course callout and the hand-off to the next lecture (support vector machines, ISLR2 Chapter 9) are in the notes and not in the agenda
+- **note:** relies on the chapter's `## Data`, `## Algorithm`, `## xgboost`, `## Tuning parameters`, `## Choosing $B$`, `## Variable importance`, `## Additive structure` and `## Comparison` headings and the `###` children the deck spends slides on. Three columns, 9, 11 and 8 lines: Data, Algorithm and xgboost; then Tuning parameters, Choosing $B$ and Variable importance; then Additive structure and Comparison. The Conclusion is not an agenda item. The agenda's lowest line ends at 610 px of 720.
 
 # Data
 
@@ -58,22 +60,14 @@ Entries are numbered by content slide; the title and the transitions are not num
 ## 1. Concrete specimens
 
 - **tag:** core (1)
-- **show:** none, a words-only data slide (three itemized lines)
-- **words:** "Response: `compressive_strength`"; "Explanatory variables: seven ingredients and `age`"; "700 training specimens, 305 test specimens"
-- **say:** the data and split are those of the Decision Trees lecture, so the test MSEs of the three lectures can be compared; `modeldata::concrete` records the compressive strength (MPa) of concrete cylinders, with seven ingredient amounts (kg per cubic meter of mix) and the age (days) as explanatory variables, $p = 8$; a specimen is one cylinder of one mix, crushed at one age; rows that repeat an earlier row exactly are removed: the 25 exact duplicates removed leave 1,005 specimens
-- **note:** the chapter's `### Concrete specimens` paragraph compressed to three lines; 700, 305, 25 and 1,005 are inline R, quoted from the frozen markdown. The title is the chapter's `### Concrete specimens`.
+- **show:** none, a words-only data slide: two blocks of bullets with white space between them
+- **words:** "Response: `compressive_strength`" and "Explanatory variables ($p = 8$):" with the eight sub-bullets `cement`, `blast_furnace_slag`, `fly_ash`, `water`, `superplasticizer`, `coarse_aggregate`, `fine_aggregate`, `age`; then, after a gap, "Training specimens: 700" and "Test specimens: 305"
+- **say:** the data and split are those of the Decision Trees lecture, so the test MSEs of the three lectures can be compared; `modeldata::concrete` records the compressive strength (MPa) of concrete cylinders, with seven ingredient amounts (kg per cubic meter of mix) and the age (days) as explanatory variables, $p = 8$; a specimen is one cylinder of one mix, crushed at one age; rows that repeat an earlier row exactly are removed: the 25 exact duplicates removed leave 1,005 specimens; the seed is the Decision Trees lecture's, and a collapsed callout in the chapter repeats that lecture's random draws before its pruned tree, then sets this lecture's seed, and reproduces that lecture's test MSEs: 106.4 for least squares, 48.5 with $\log(\texttt{age})$ in place of age, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees
+- **note:** the chapter's `### Concrete specimens` paragraph as a data layout, as in the Random Forests deck, at 0.65em (it ends at 670 px of 720; at 0.75em it would end at 761 px), the second block set off by a 1em top margin; $p = 8$ is stated on the "Explanatory variables" line because $p$ is used on later slides. 25, 1,005, 700 and 305 are inline R, quoted from the frozen markdown. The title is the chapter's `### Concrete specimens`. The `split` chunk is not shown.
 
-## 2. Training and test specimens
+## 2. Earlier fits
 
-- **tag:** optional (1)
-- **show:** code — the chapter's `split` chunk (the seed, `distinct(modeldata::concrete)`, the 700 training specimens and the test specimens); the chunk prints nothing
-- **words:** none
-- **say:** the seed is the Decision Trees lecture's, so the training specimens are the same specimens; a collapsed callout in the chapter repeats the random draws that lecture made before its pruned tree, because `rpart()` draws its cross-validation folds at random, then sets this lecture's seed, and reproduces that lecture's test MSEs on all 8 explanatory variables: 106.4 for least squares, 48.5 with $\log(\texttt{age})$ in place of age, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees
-- **note:** the chunk (10 lines with comments and blanks) is copied verbatim, including the `set.seed(20261031)` comment, at the normal code size. **The title is not a chapter heading** (the chunk sits under `### Concrete specimens`). First in the drop order.
-
-## 3. Earlier fits
-
-- **tag:** core (3)
+- **tag:** core (2.5)
 - **show:** tabset, the chapter's own tabs: "Mean" (`mean-figure`), "Stump" (`stump-figure`), "Default tree" (`default-figure`) and "Random forest" (`forest-figure`)
 - **words:** none
 - **say:** the tabs plot the predicted against the observed strength of the 305 test specimens for four fits on all 8 explanatory variables: the mean training strength, a stump (a tree with a single split, so of depth 1), the default tree, and a random forest with $m$ chosen by its out-of-bag error; a point on the dashed line is predicted exactly; the mean predicts one value, the stump 2, the default tree 15, one per leaf; within a leaf the test strengths have pooled standard deviation 9.1 MPa against 15.9 MPa overall; the test MSEs are 254.7, 183.6, 86.8 and 27.5, the forest with $m = 5$ (bagging has 26.9); the forests are refit here, so their test MSEs differ from those of the previous lecture by up to 0.8; a small tree is a poor fit, bagging and random forests get past this by averaging large trees, and boosting instead keeps the trees small and adds them up one at a time, each fit to the part of the strength the trees before it have not yet explained
@@ -86,38 +80,62 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** boosting starts from the prediction 0 for every specimen, so its first residuals are the strengths themselves; it fits a small tree to the residuals, adds a shrunken copy of the tree's predictions to the fit, and recomputes the residuals; this part shows the residuals as trees are added, writes the algorithm out, and fits it with `rpart()`
 - **note:** relies on the opening paragraph of the chapter's `### Residuals`.
 
-## 4. Residuals
+## 3. Residuals
 
-- **tag:** core (3)
+- **tag:** core (2.5)
 - **show:** tabset, the chapter's own tabs: "No trees" (`residual-0-figure`), "1 tree" (`residual-1-figure`), "10 trees" (`residual-10-figure`), "100 trees" (`residual-100-figure`) and "1,000 trees" (`residual-1000-figure`)
 - **words:** none
-- **say:** the tabs plot the residuals of the training specimens against age: at the start, the strengths, then after 1, 10, 100 and 1,000 trees of depth 4 (each leaf reached through at most 4 splits), each tree's predictions multiplied by the shrinkage $\nu = 0.1$ before they are added; after one tree no residual moves by more than 6.6 MPa and the training MSE falls from 1,549.0 to 1,268.9, by 18%; a tree's predictions for its training data average to the mean of the residuals it is fit to, so after $b$ trees the mean fitted value is $1 - (1 - \nu)^b$ times the mean strength, and after 10 trees that factor is $1 - 0.9^{10} = 0.651$, a mean fitted value of 23.3 MPa against a mean training strength of 35.8; by 100 trees the rise with age is gone (correlation with $\log(\texttt{age})$ from 0.57 to 0.03) and after 1,000 trees the training MSE is 1.2
+- **say:** the tabs plot the residuals of the training specimens against age: at the start, the strengths, then after 1, 10, 100 and 1,000 trees of depth 4 (each leaf reached through at most 4 splits), each tree's predictions multiplied by the shrinkage $\nu = 0.1$ before they are added; after one tree no residual moves by more than 7.5 MPa and the training MSE falls from 1,549.0 to 1,268.9, by 18%; a tree's predictions for its training data average to the mean of the residuals it is fit to, so after $b$ trees the mean fitted value is $1 - (1 - \nu)^b$ times the mean strength, and after 10 trees that factor is $1 - 0.9^{10} = 0.651$, a mean fitted value of 23.3 MPa against a mean training strength of 35.8; by 100 trees the rise with age is gone (correlation with $\log(\texttt{age})$ from 0.57 to 0.03) and after 1,000 trees the training MSE is 0.42
 - **note:** the chapter's `### Residuals` tabs, five 8 by 4.2 inch figures with aligned panels, shown with `.mid-tabs`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Residuals`.
 
-## 5. Steps
+## 4. Steps
 
-- **tag:** core (2.5)
+- **tag:** core (2)
 - **show:** equation — the chapter's numbered steps of boosting, with the prediction $\widehat f_B(x)$, and a symbol legend
-- **words:** the three steps ("Set $\widehat f_0(x) = 0$ and $r_i = y_i$ for $i = 1, \ldots, n$"; "For $b = 1, \ldots, B$" with sub-steps a to c; "Predict with the boosted model"); then "$B$ — number of trees, indexed $b$"; "$\widehat f^b(x)$ — prediction at $x$ of the $b$th tree"; "$\nu$, $0 < \nu \le 1$ — shrinkage (learning rate)"; "$\delta$ — depth of each tree; $\delta = 1$ is a stump"; "$r_i$ — current residual of observation $i$"
+- **words:** the three steps ("Set $\widehat f_0(x) = 0$ and $r_i = y_i$ for $i = 1, \ldots, n$"; "For $b = 1, \ldots, B$" with sub-steps a to c; "Predict with the boosted model"); then "$x_i$, $y_i$ — explanatory variables and response of observation $i$; $n$ — number of observations"; "$B$ — number of trees, indexed $b$"; "$\widehat f^b(x)$ — prediction at $x$ of the $b$th tree; $\widehat f_b(x)$ — boosted model after $b$ trees"; "$\nu$, $0 < \nu \le 1$ — shrinkage (learning rate)"; "$\delta$ — depth of each tree; $\delta = 1$ is a stump"; "$r_i$ — current residual of observation $i$"
 - **reveal:** on arrival: the three steps; click 1: the legend
-- **say:** the tree at step $b$ depends on the trees before it through the residuals, so the trees are grown in sequence; $B$ is the number of trees, indexed $b$, as in the Random Forests lecture; the superscript of the $b$th tree names the tree and has no star, because the tree is not fit to a bootstrap sample; $r_i$ is not the lasso residual vector $r$; the shrinkage is what the textbook writes $\lambda$, which here is the ridge and lasso tuning parameter; the depth is the largest number of splits on a path from the root to a leaf; the textbook limits the number of splits, $d$, which here is the number of features of the subset selection lectures, and `rpart()` limits depth with `maxdepth`; a tree of depth $\delta$ has at most $2^\delta$ leaves; $\delta$ is unrelated to the discriminant functions $\delta_k(x)$ and the interaction estimates $\delta_j$, which carry a subscript
-- **note:** the chapter's list, with step 1's "for every $x$" and "for every training observation", step 2a's "to the training data, with the residuals ... as the response" and the display of step 3 (written inline, because with the display the slide ended at 787 px; the chapter displays it) shortened; `\hat` written `\widehat`; list at 0.7em, legend at 0.6em; the slide ends at 660 px of 720 after the click. The legend is the chapter's bullet list cut to labels. The title is the chapter's `### Steps`.
+- **say:** the tree at step $b$ depends on the trees before it through the residuals, so the trees are grown in sequence; $B$ is the number of trees, indexed $b$, as in the Random Forests lecture; the superscript of the $b$th tree names the tree and has no star, because the tree is not fit to a bootstrap sample; $r_i$ is not the lasso residual vector $r$; the shrinkage is what the textbook writes $\lambda$, which here is the ridge and lasso tuning parameter; the depth is the largest number of splits on a path from the root to a leaf; the textbook limits the number of splits, $d$, which here is the number of features of the subset selection lectures, and both `rpart()` and `xgboost` limit depth, with `maxdepth` and `max_depth`; a tree of depth $\delta$ has at most $2^\delta$ leaves; $\delta$ is unrelated to the discriminant functions $\delta_k(x)$ and the interaction estimates $\delta_j$, which carry a subscript
+- **note:** the chapter's list, with step 1's "for every $x$" and "for every training observation", step 2a's "to the training data, with the residuals ... as the response" and the display of step 3 (written inline; the chapter displays it) shortened; `\hat` written `\widehat`; list and legend both at 0.6em, so that the slide ends at 658 px (at 0.65em the longer legend ended at 716 px). The legend is the chapter's bullet list cut to labels, and defines $x_i$, $y_i$, $n$ and $\widehat f_b(x)$ for the later slides that use them. The title is the chapter's `### Steps`.
 
-## 6. Boosting from scratch
+## 5. Loop
 
-- **tag:** core (2.5)
+- **tag:** core (2)
 - **show:** code — the chapter's `boosting` chunk ($B = 1{,}000$ trees of depth 4 with shrinkage 0.1 fit to the residuals with `rpart()`); the chunk prints nothing
 - **words:** none
-- **say:** the chunk writes the algorithm out with `rpart()`, the fit of the Residuals tabs on all 8 explanatory variables; `cp = 0` lets the depth limit the tree, but `rpart()`'s defaults still apply (`minsplit = 20`, `minbucket = 7`), so $\delta$ is an upper bound on the depth; `xval = 0` skips the cross-validation and `maxcompete = 0` and `maxsurrogate = 0` skip the competing and surrogate splits, which speeds up the loop without changing any tree; the leaves of the first tree hold 11 to 161 training specimens
-- **note:** the chunk (17 lines with comments and blanks, a 5-line loop) is copied verbatim, at the normal code size. **The title is not a chapter heading** (the chunk sits under `### Fitting`); it takes the chunk's own comment, "Boosting from scratch", as the Random Forests deck's "Bagging from scratch" does. The chunk has no output.
+- **say:** the chunk writes the algorithm out with `rpart()`, the fit of the Residuals tabs on all 8 explanatory variables; the tree settings, `small`, are set in a collapsed callout of the chapter, `rpart.control(maxdepth = 4, cp = 0, minsplit = 2, minbucket = 1, xval = 0, maxcompete = 0, maxsurrogate = 0)`; `cp = 0`, `minsplit = 2` and `minbucket = 1` turn off `rpart()`'s other stopping rules, as for the full tree of the Decision Trees lecture, so each tree is grown until its leaves are at depth $\delta$ or hold specimens that no split separates; `xval = 0` skips the cross-validation and `maxcompete = 0` and `maxsurrogate = 0` skip the competing and surrogate splits, which speeds up the loop without changing any tree; the leaves of the first tree hold 6 to 161 training specimens; the boosted prediction sums the trees' predictions and multiplies by $\nu$, which the chapter's next chunk does for the test specimens: training MSE 0.42 and test MSE 23.7, against 86.8 for the default tree and 27.5 for the random forest, the first row of the Loop reproduction table
+- **note:** the chunk (14 lines with comments and blanks, nine code lines, a 5-line loop) is copied verbatim, at the normal code size; the `small <- rpart.control(...)` definition is in the chapter's collapsed `boosting-control` callout, which the chapter prose points to, so the visible chunk does not show it. The title is the chapter's `### Loop`. The chunk has no output. The chapter's `boosting-predict` chunk is not shown (see "Not in this deck").
 
-## 7. Boosted prediction
+# xgboost
 
-- **tag:** core (1.5)
-- **show:** code — the chapter's `boosting-predict` chunk (each tree's predictions for the test specimens, the boosted prediction, and the training and test MSE) and its output `train_mse 1.247399`, `test_mse 20.894387`
+- **tag:** transition (0)
+- **show:** none (transition slide, title only)
+- **say:** the `xgboost` package fits boosted trees in compiled code; its arguments name this lecture's tuning parameters differently: `learning_rate` (alias `eta`) is the shrinkage $\nu$, by default 0.3, `max_depth` is the depth $\delta$, by default 6, and `nrounds` is the number of trees $B$, with no default; this part fits the loop's $\nu$, $\delta$ and $B$ with it and shows how its defaults differ from the loop
+- **note:** relies on the opening paragraph of the chapter's `### Fitting` under `## xgboost`; 0.3 and 6 are inline R, quoted from the frozen markdown.
+
+## 6. Fitting
+
+- **tag:** core (2)
+- **show:** code — the chapter's `xgboost-fit` chunk (`xgb.DMatrix()` for the training and test data, `xgb.params()` with `learning_rate = 0.1`, `max_depth = 4`, `xgb.train()` with `nrounds = 1000`, and the test MSE) and its output `[1] 24.0684`
 - **words:** none
-- **say:** the boosted prediction sums the trees' predictions and multiplies by $\nu$; with $B = 1{,}000$ trees the training MSE is 1.2 and the test MSE 20.9, against 86.8 for the default tree and 27.5 for the random forest
-- **note:** the chunk (5 lines) and its 2-line output are copied verbatim, at the normal code size. **The title is not a chapter heading** (the chunk sits under `### Fitting`).
+- **say:** `xgb.DMatrix()` stores the explanatory variables with the response, `xgb.params()` collects the tuning parameters, and `xgb.train()` fits the model, with the squared-error loss by default for a numeric response; `learning_rate` is $\nu$, `max_depth` is $\delta$ and `nrounds` is $B$; `nthread = 1` runs it on one processor thread; the chunk fits the loop's $\nu$, $\delta$ and $B$; the test MSE is 24.1, against 23.7 for the loop: the two fits use the same $\nu$, $\delta$ and $B$, but are not the same model
+- **note:** the chunk (9 lines with comments and blanks) and its 1-line output are copied verbatim, at the normal code size; the slide ends at 387 px. The title is the chapter's `### Fitting`. The mapping of the arguments to $\nu$, $\delta$ and $B$ is in `say:` only, and the chunk's own comment says "B = 1,000 trees of depth 4 with shrinkage 0.1". The collapsed `xgboost-defaults` and `xgboost-check` callouts are not used.
+
+## 7. Leaf values
+
+- **tag:** optional (1.5)
+- **show:** equation — the chapter's display of a leaf's value in `xgboost`, with a legend
+- **words:** "the sum runs over the training specimens in the leaf"; "$n_{\text{leaf}}$ — their number"; "`lambda` — penalty that shrinks the leaf's value toward 0; default 1"
+- **reveal:** on arrival: the display; click 1: the legend
+- **say:** the chapter says `xgboost` differs from the loop in three ways, each a default: it starts from the mean training strength (its `base_score`), not from 0; it grows each tree from the first and second derivatives of the loss, which for the squared-error loss are $-r_i$ and 1, so the tree is fit to the residuals but a leaf predicts, before the shrinkage, the display, with `lambda`, by default 1, a penalty that shrinks the leaf's value toward 0 as ridge regression shrinks its estimates, and with `lambda = 0` the leaf predicts the mean of its residuals, as an `rpart()` leaf does (`lambda` is `xgboost`'s name, not the ridge $\lambda$ of these notes); and by default (`tree_method = "hist"`) it groups each explanatory variable's values into at most 256 bins and tries cut points only between bins; setting `lambda = 0`, `base_score = 0` and `tree_method = "exact"` removes all three, and the other defaults already match the loop (`min_child_weight = 1`, `minbucket = 1`; `gamma = 0`, `cp = 0`)
+- **note:** the display is copied from the chapter, at 0.75em, with its trailing comma; the legend is the chapter's three-bullet symbol list (nested under the Leaf values bullet) cut to labels. **The title is not a chapter heading**: it is the chapter's bold run-in label "Leaf values." in the list under `### Loop reproduction`. Third in the drop order.
+
+## 8. Loop reproduction
+
+- **tag:** core (2)
+- **show:** table — the chapter's `reproduction_table` (training and test MSE of the loop, `xgboost` with the loop's settings and `xgboost` with its defaults, each with 1,000 trees of depth 4 and shrinkage 0.1), copied from the frozen markdown
+- **words:** none
+- **say:** `iterationrange = c(1, 200)` predicts with trees 1 to 200 (counted from 1, both ends included); with the loop's settings, `xgboost` reproduces the loop to rounding through tree 232, and not after; training fits: after 200 trees the two training fits differ by at most 0.00007 MPa, a rounding difference, since `xgboost` computes in single precision; test predictions: of trees 20 to 232, 32 predict differently, by more than 0.001 MPa, for some test specimen while agreeing on every training specimen, because in a node both programs make the same partition of the training specimens with a different split; in tree 20 both split the root at the same place in `age`, `rpart()` cutting at 10.5 and `xgboost` at 11, with no specimen in between, and deeper both separate the same 2 training specimens from the rest of a node, `rpart()` with `water` at 201.75 and `xgboost` with `cement` at 275.4, which sends 1 test specimen to a different leaf; tree 233: both split the root on `age` at 2, and in the node of the other 699 training specimens two splits nearly tie: with the loop's residuals, `age` at 42 decreases the RSS by 0.624287 and `fine_aggregate` at 884.65 by 0.624186, so `rpart()` takes the first, and with `xgboost`'s residuals, which differ from the loop's by rounding, the decreases are 0.624227 and 0.624234, so `xgboost` takes the second, and from there the trees differ; the table compares the three fits after 1,000 trees, each with 1,000 trees of depth 4 and shrinkage 0.1; a leaf of `xgboost` predicts, before the shrinkage $\nu$, the sum of its residuals divided by $n_{\text{leaf}} + \texttt{lambda}$, where `lambda`, by default 1, is a penalty that shrinks the leaf's value toward 0, as ridge regression shrinks its estimates, and with `lambda = 0` the leaf predicts the mean of its residuals, as an `rpart()` leaf does (`lambda` is `xgboost`'s name, not the ridge $\lambda$ of these notes); the rest of the lecture uses `xgboost` with its defaults, apart from $\nu$, $\delta$ and $B$
+- **note:** the table is copied verbatim from `result.markdown` and wrapped in `.auto-table`, which sets the column widths from the content (the chapter's `tbl-colwidths: [26, 46, 14, 14]` appears in the frozen markdown only as an attribute on the `.cell` div, not in the pipe table). The table ends at 422 px. The `Settings` cells keep the chapter's backticks. The title is the chapter's `### Loop reproduction`. The chapter's section is now three bullets (training fits, test predictions, tree 233) under the sentence "reproduces the loop to rounding through tree 232, and not after"; all of it is in `say:`, with the values (32 trees, 0.001 MPa, 10.5 and 11, 201.75 and 275.4, 0.624287 and 0.624186, 0.624227 and 0.624234, trees 20 and 233) quoted from the frozen markdown. The `xgboost-loop` chunk is not shown (see "Not in this deck"). The loop-settings row's test MSE (25.0) is above the loop's (23.7), which the chapter explains by the tied splits, so the slide does not claim an exact reproduction.
 
 # Tuning parameters
 
@@ -126,93 +144,127 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** boosting has three tuning parameters, the number of trees $B$, the shrinkage $\nu$ and the depth $\delta$; this part shows how the test MSE changes with each
 - **note:** relies on the learning objective on the three tuning parameters and the `## Tuning parameters` section.
 
-## 8. Shrinkage
+## 9. Shrinkage
 
 - **tag:** core (2.5)
 - **show:** figure — `shrinkage-figure` (test MSE of the boosted model after $b$ trees against $b$ for $\nu = 0.5, 0.1, 0.01$ at depth 4, the random forest's test MSE dashed, the smallest of each curve circled), the figure alone
 - **words:** none
-- **say:** the smaller the shrinkage, the more trees the model needs: with $\nu = 0.5$ the test MSE is smallest, 20.2, after 179 trees; with $\nu = 0.1$ it is smallest, 20.6, after 1,504; with $\nu = 0.01$ it is 22.2 after 5,000 trees and still falling; the shrinkage controls how fast the model learns, each tree correcting only a fraction $\nu$ of what it estimates; after 100 trees the mean prediction for the test specimens is 21.7 MPa with $\nu = 0.01$ and 34.1 with $\nu = 0.1$, against a mean test strength of 34.1; as a large $\lambda$ does in ridge regression and the lasso, a small $\nu$ holds the fit near its starting point, here 0; part of the slow start with $\nu = 0.01$ is the start at 0: after 100 trees the mean fitted value of the training specimens is $1 - 0.99^{100} = 0.634$ times the mean training strength, 22.7 MPa; the `gbm` package starts instead from the mean of the response
+- **say:** `xgb.train()` records the curves with `evals = list(train = d_train, test = d_test)`, the MSE of each data set after every round, kept as the RMSE in the fit's `evaluation_log`; the smaller the shrinkage, the more trees the model needs: with $\nu = 0.5$ the test MSE is smallest, 21.0, after 83 trees; with $\nu = 0.1$ it is smallest, 23.9, after 573; with $\nu = 0.01$ it is 23.7 after 5,000 trees and still falling; the shrinkage controls how fast the model learns, each tree correcting only a fraction $\nu$ of what it estimates; after 100 trees the test MSE is 85.9 with $\nu = 0.01$ and 28.4 with $\nu = 0.1$, against 254.7 for the mean training strength, `xgboost`'s starting point; as a large $\lambda$ does in ridge regression and the lasso, a small $\nu$ holds the fit near its starting point, and more trees let it move further from it
 - **note:** the chapter's `shrinkage-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Shrinkage`.
 
-## 9. Tree depth
+## 10. Tree depth
 
 - **tag:** core (2)
 - **show:** figure — `depth-figure` (test MSE against the number of trees for depths 1, 2, 4 and 8 at $\nu = 0.1$), the figure alone
 - **words:** none
-- **say:** deeper trees learn faster: the test MSE is smallest after 305 trees of depth 8 (22.2), 1,504 of depth 4 (20.6) and 4,129 of depth 2 (23.6); the stumps' curve is still falling at 5,000 trees, where it is 32.3, but slowly, the last 1,000 trees lowering it by 0.6; depth 4 does best, and depth 8 reaches its smallest value early and then rises; the Additive structure part shows what the depth changes in the fitted model
+- **say:** deeper trees learn faster: the test MSE is smallest after 226 trees of depth 8 (28.2), 573 of depth 4 (23.9) and 4,626 of depth 2 (28.1); the curves for depths 1 and 2 are still falling at 5,000 trees, but slowly, the last 1,000 trees lowering them by 0.4 and 0.1; depth 4 does best, and depth 8 reaches its smallest value first and then stays within 1% of it up to 5,000 trees; the Additive structure part shows what the depth changes in the fitted model
 - **note:** the chapter's `depth-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Tree depth`.
 
-## 10. Overfitting
+## 11. Overfitting
 
-- **tag:** core (2)
+- **tag:** core (1.5)
 - **show:** figure — `overfitting-figure` (test MSE against the number of trees for $\nu = 0.5$ and $0.1$ at depth 4, on a linear axis), the figure alone
 - **words:** none
-- **say:** both curves reach a smallest value and then rise: with $\nu = 0.5$ the test MSE rises 12% from its smallest value, after 179 trees, to 5,000 trees, and with $\nu = 0.1$ 5%, after 1,504; the training MSE with $\nu = 0.5$ falls to 0.41 by 5,000 trees while its test MSE is 22.6, the late trees fitting what is left of the training residuals, which does not carry over to the test specimens; bagging's test error levels off instead, between 26.5 and 27.8 from 50 to its 500 trees; boosting overfits when $B$ is too large, and a smaller $\nu$ makes the rise slower
+- **say:** both curves reach a smallest value and then rise: with $\nu = 0.5$ the test MSE rises 8% from its smallest value, after 83 trees, to 5,000 trees, and with $\nu = 0.1$ 2%, after 573; the training MSE with $\nu = 0.5$ falls to 0.28 and stays there from about 583 trees on while its test MSE is 22.6, the late trees fitting what is left of the training residuals, which does not carry over to the test specimens; that training MSE is within 1% of the smallest any model of these explanatory variables can reach, since 11 training specimens share all 8 explanatory variables with another of a different strength and no split separates them; bagging's test error levels off instead, between 26.5 and 27.8 from 50 to its 500 trees; boosting overfits when $B$ is too large, and a smaller $\nu$ makes the rise slower
 - **note:** the chapter's `overfitting-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Overfitting`.
 
 # Choosing $B$
 
 - **tag:** transition (0)
 - **show:** none (transition slide, title only)
-- **say:** $B$ is chosen without the test data by 10-fold cross-validation; this part defines the cross-validation estimate and shows the model it chooses
-- **note:** relies on the opening sentence of the chapter's `### Cross-validation estimate`.
+- **say:** $B$ is chosen without the test data by 10-fold cross-validation: split the training observations at random into 10 folds of equal size, and for each fold $\ell$ run boosting on the other nine folds and record the error on fold $\ell$ after every number of trees; this part defines the cross-validation estimate, computes it with `xgb.cv()` and shows the model it chooses
+- **note:** relies on the opening paragraph of the chapter's `### Cross-validation estimate`.
 
-## 11. Cross-validation estimate
+## 12. Cross-validation estimate
+
+- **tag:** core (1.5)
+- **show:** equation — the chapter's $\text{CV}_{(10)}(B)$ display with $\text{MSE}_\ell(B)$, with the legend
+- **words:** "$\mathcal{F}_\ell$ — training observations in fold $\ell$; $n_\ell$ — their number, $n/10$"; "$\widehat f_B^{(-\ell)}$ — boosted model of $B$ trees fit to the observations outside fold $\ell$"; "$\text{MSE}_\ell(B)$ — its MSE on fold $\ell$"
+- **reveal:** on arrival: the display; click 1: the legend
+- **say:** the estimate for $B$ trees is the display; one run of $B_{\max}$ trees per fold gives the estimate for every $B \le B_{\max}$, because the model of $B$ trees is the first $B$ trees of the longer run; here $B_{\max} = 5{,}000$, with $\nu = 0.1$ and $\delta = 4$, the `params` of the Fitting slide; the folds are drawn with R's random numbers, so the seed set at the start of the lecture fixes them
+- **note:** the display is the chapter's, one line with both parts, `\widehat` in place of the chapter's `\hat`, at 0.7em, with its trailing comma; the legend is the chapter's three bullets cut to labels, the first two joined. The title is the chapter's `### Cross-validation estimate`.
+
+## 13. Cross-validation: RMSE
+
+- **tag:** core (1)
+- **show:** equation — the chapter's second display, $\text{CV}_{(10)}(B)$ as $\overline{\text{RMSE}}(B)^2 + \tfrac{9}{10}s_{\text{RMSE}}(B)^2$, with the legend
+- **words:** "$\overline{\text{RMSE}}(B)$ — mean over the folds of $\sqrt{\text{MSE}_\ell(B)}$ (`test_rmse_mean`)"; "$s_{\text{RMSE}}(B)$ — their standard deviation, divisor $10 - 1 = 9$ (`test_rmse_std`)"
+- **reveal:** on arrival: the display; click 1: the legend
+- **say:** `xgb.cv()` grows the models of the 10 folds side by side and records, after every round, the mean and the standard deviation over the folds of the RMSE as `test_rmse_mean` and `test_rmse_std` (`xgboost`'s word `test` there names the held-out fold, not the test specimens); the mean of the squares is the square of the mean plus the variance with divisor 10, so the display holds, and the next slide uses it
+- **note:** the display is copied from the chapter, at 0.7em, with its trailing comma. **The title is not a chapter heading**: the display sits under `### Cross-validation estimate`.
+
+## 14. Cross-validation estimate in R
 
 - **tag:** core (2)
-- **show:** equation — the chapter's $\text{CV}_{(10)}(B)$ display, with the legend
-- **words:** "$\mathcal{F}_\ell$ — training observations in fold $\ell$"; "$\widehat f_B^{(-\ell)}$ — boosted model of $B$ trees fit to the observations outside fold $\ell$"
-- **reveal:** on arrival: the display; click 1: the legend
-- **say:** split the training observations at random into 10 folds; for each fold $\ell$, run boosting on the other nine folds and record the error on fold $\ell$ after every number of trees; one run of $B_{\max}$ trees per fold gives the estimate for every $B \le B_{\max}$, because the model of $B$ trees is the first $B$ trees of the longer run; here $B_{\max} = 5{,}000$, with $\nu = 0.1$ and $\delta = 4$
-- **note:** the display is copied from the chapter with `\hat` written `\widehat`, at 0.75em; the legend is the chapter's two bullets cut to labels. The title is the chapter's `### Cross-validation estimate`.
+- **show:** code — the chapter's `cv` chunk (`xgb.cv()` for 5,000 trees with 10 folds, the cross-validation estimate from the display, and the best $B$) and its output `B 1194.00000`, `cv 20.03447`
+- **words:** none
+- **say:** the chunk runs `xgb.cv()` for 5,000 trees with 10 folds and applies the previous display to its evaluation log; the smallest estimate is 20.0, at $B = 1{,}194$, and the estimate is within 1% of its minimum for every $B$ from 546 to 5,000, so $B = 1{,}194$ is not sharply determined; minimizing the mean RMSE alone would choose $B = 1{,}312$; `xgb.cv()` can also stop early: with `early_stopping_rounds = 100` it stops once its estimate has not improved for 100 rounds, which saves growing trees far beyond the minimum, but running the full $B_{\max}$ trees shows the whole curve
+- **note:** the chunk (8 lines with comments and blanks, the longest 74 characters) and its 2-line output are copied verbatim, at the normal code size, with the output's trailing spaces; the slide ends at 387 px. **The title is not a chapter heading** (the chunk sits under `### Cross-validation estimate`); it follows the "in R" suffix of the Importance slide.
 
-## 12. Chosen model
+## 15. Chosen model
 
 - **tag:** core (2)
 - **show:** figure — `cv-figure` (the cross-validation estimate and the test MSE against the number of trees, the chosen $B$ circled), the figure alone
 - **words:** none
-- **say:** the cross-validation estimate is smallest, 20.8, at $B = 1{,}207$; the model of the first 1,207 trees fit to all the training specimens has test MSE 20.8, and the smallest test MSE over every number of trees, which cross-validation cannot know, is 20.6 after 1,504 trees; the estimate equals the test MSE to one decimal; both measure predictions for mixes like those tested: 73% of the training specimens share their mix with a training specimen in another fold, and 68% of the test specimens have a mix that some training specimen also has
+- **say:** the cross-validation estimate is smallest, 20.0, at $B = 1{,}194$; the next slide refits that model to all the training specimens, whose test MSE is 24.1; the smallest test MSE over every number of trees, which cross-validation cannot know, is 23.9 after 573 trees; the estimate is within 1% of its minimum for every $B$ from 546 to 5,000, so $B = 1{,}194$ is not sharply determined, and minimizing the mean RMSE alone would choose $B = 1{,}312$; the cross-validation estimate is below the test MSE by 4.1, and the lecture does not fully explain the gap: cross-validation reports the minimum of a noisy curve, and the test MSE comes from one sample of 305 specimens; repeated mixes do not explain it by themselves, since 72% of the training specimens share their mix with a training specimen in another fold and 68% of the test specimens have a mix that some training specimen also has
 - **note:** the chapter's `cv-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Chosen model`.
+
+## 16. Chosen model in R
+
+- **tag:** core (1)
+- **show:** code — the chapter's `chosen` chunk (`xgb.train()` with `B_cv` trees and the test MSE) and its output `[1] 24.14392`
+- **words:** none
+- **say:** the chosen model is refit to all the training specimens, with 1,194 trees; its test MSE is 24.1, and the smallest test MSE over every number of trees, which cross-validation cannot know, is 23.9, after 573 trees; the cross-validation estimate (20.0) is below this test MSE by 4.1, and the lecture does not fully explain the gap, since cross-validation reports the minimum of a noisy curve and the test MSE comes from one sample of 305 specimens
+- **note:** the chunk (3 lines with a comment) and its 1-line output are copied verbatim, at the normal code size. **The title is not a chapter heading** (the chunk sits under `### Chosen model`). The natural break for a two-day schedule follows this slide.
 
 # Variable importance
 
 - **tag:** transition (0)
 - **show:** none (transition slide, title only)
-- **say:** the importance of an explanatory variable in a boosted model is read from the trees' splits, as for a forest
-- **note:** relies on the chapter's `## Variable importance` section.
+- **say:** a boosted model of hundreds of trees has no single tree to read; its variable importance summarizes which explanatory variables its splits use, and how much those splits improve the fit
+- **note:** relies on the opening paragraph of the chapter's `### RSS decrease`. The Random Forests lecture's importance slides were not taught, so the part defines importance itself.
 
-## 13. RSS decrease
+## 17. RSS decrease
 
-- **tag:** core (1.5)
-- **show:** equation — the chapter's inline expression for a split's decrease in RSS, set as a display
-- **words:** "A split's decrease in RSS"; then "Importance of a variable: its decreases in RSS, summed over the $B$ trees"
-- **reveal:** on arrival: the display and its label; click 1: the definition of importance
-- **say:** a split's decrease in RSS is the display, as in the Decision Trees lecture, where $n_1$, $n_2$ and the two means are the sizes and means of the two regions of the split; in boosting the RSS is that of the residuals the tree is fit to; the importance of an explanatory variable is the decrease in RSS from all its splits, summed over the $B$ trees; a random forest's `IncNodePurity` averages the same decrease over its trees; with `maxsurrogate = 0`, the `variable.importance` of an `rpart()` fit is this sum for one tree
-- **note:** the display is the chapter's inline `$n_1n_2\left(\bar y_1 - \bar y_2\right)^2/\left(n_1 + n_2\right)$`, copied verbatim as a display (it has no `\hat`); the chapter does not define its symbols (it points to the Decision Trees lecture), so the slide does not either. The title is the chapter's `### RSS decrease`.
+- **tag:** core (2)
+- **show:** equation — the chapter's display of a split's decrease in RSS, with a legend and two lines
+- **words:** "$n_1$, $n_2$ — training specimens in the two parts of the node"; "$\bar r_1$, $\bar r_2$ — their mean residuals"; then "Importance of explanatory variable $X_j$: the sum of these decreases over every split on $X_j$ in all $B$ trees, as a share of the total over the $p$ variables"; "`xgboost` calls the decrease a split's gain; the `Gain` column of `xgb.importance()` is each variable's share"
+- **reveal:** on arrival: the display; click 1: the legend; click 2: the two lines
+- **say:** a split of a node of a tree fit to residuals decreases their RSS by the display, where $n_1$ and $n_2$ are the numbers of training specimens in the two parts of the node and $\bar r_1$ and $\bar r_2$ are their mean residuals; this is the decrease of the Decision Trees lecture with the residuals as the response; the importance of explanatory variable $X_j$ is the sum of these decreases over every split on $X_j$ in all $B$ trees, usually reported as a share of the total over the $p$ variables; `xgboost` calls a split's decrease its gain, and its `Gain` column is the variable's total gain over all splits and trees divided by the total over all variables, so the column sums to 1; the other two columns, `Cover` and `Frequency`, measure how many training specimens pass through a variable's splits and how many splits use it, and the lecture uses `Gain`
+- **note:** the display is the chapter's (`\bar r`, no `\hat`), at 0.75em, with its trailing comma; the legend and the two lines are at 0.7em. The two lines are the chapter's sentences "The importance of explanatory variable $X_j$ is the sum of these decreases ... usually reported as a share of the total over the $p$ variables" and "`xgboost` calls a split's decrease its gain ... its `Gain` column", cut down. The slide ends at 460 px. The title is the chapter's `### RSS decrease`.
 
-## 14. RSS decrease in R
+## 18. RSS decrease: gain
 
 - **tag:** optional (1.5)
-- **show:** code — the chapter's `importance` chunk (the decrease in RSS of each variable's splits summed over the trees, as a share of the total) and its 4-line printout
-- **words:** none
-- **say:** for the 1,000 trees of the loop of the Fitting subsection, as shares of the total; the figure on the next slide uses the chosen model of 1,207 trees instead
-- **note:** the chunk (5 lines) and its output are copied verbatim, at the normal code size; the output's lines keep their trailing spaces. **The title is the chapter's `### RSS decrease` with a suffix.** Second in the drop order.
+- **show:** equation — the chapter's display of a split's gain in `xgboost`, with a legend and one line
+- **words:** "$S_1$, $S_2$ — sums of the residuals in the two parts"; "$S = S_1 + S_2$ — sum over the node"; "`lambda` — the leaf penalty of the Leaf values slide"; "`lambda = 0`: the gain equals the decrease in RSS"
+- **reveal:** on arrival: the display; click 1: the legend and the line
+- **say:** `xgboost` calls a split's decrease its gain: the display, where $S_1$ and $S_2$ are the sums of the residuals in the two parts, $S = S_1 + S_2$ is the sum over the node, and `lambda` is the leaf penalty of the Leaf values slide, which shrinks the leaf's value toward 0 as ridge regression shrinks its estimates; with `lambda = 0`, $S_k^2/n_k = n_k\bar r_k^2$, and the gain is $n_1\bar r_1^2 + n_2\bar r_2^2 - (n_1 + n_2)\bar r^2$, which equals the decrease in RSS above; with the default `lambda = 1` each denominator is one larger, a small change for nodes of many specimens
+- **note:** the display is copied from the chapter, at 0.7em, with its trailing comma; `lambda` is written `\texttt{lambda}` inside math, never $\lambda$. **The title is not a chapter heading** (the display sits under `### RSS decrease`); the legend follows the chapter's three-bullet symbol list, with the third item pointing at the Leaf values slide (the chapter says "the Loop reproduction subsection"). Fourth in the drop order.
 
-## 15. Importance by variable
+## 19. RSS decrease in R
 
 - **tag:** core (1.5)
-- **show:** figure — `importance-figure` (dot charts of the shares of the total decrease in RSS for the boosted model of the chosen 1,207 trees, the random forest with $m = 5$ and the pruned tree, the variables in the order of the boosting shares), the figure alone
+- **show:** code — the chapter's `importance` chunk (`xgb.importance()` of the chosen model, its `Feature` and `Gain` columns) and its 10-line printout
 - **words:** none
-- **say:** the shares are those of the chosen boosted model of 1,207 trees, of the random forest with $m = 5$, and of the pruned tree of the Decision Trees lecture
-- **note:** the chapter's `importance-figure`, 9 by 3.8 inches, shown at `height=500` (width-limited at 1185 px). The `40%` of one panel and the `0%` of the next sit close together on the axis (see the report). **The title is not a chapter heading** (the figure sits under `### RSS decrease`).
+- **say:** `xgb.importance()` returns one row per explanatory variable, here for the chosen model of 1,194 trees; its `Gain` column is the variable's total gain over all splits and trees, divided by the total over all variables, so the column sums to 1
+- **note:** the chunk (3 lines with a comment) and its output are copied verbatim, at the normal code size; the output's lines keep their trailing spaces. The slide ends at 473 px. **The title is the chapter's `### RSS decrease` with a suffix.**
 
-## 16. Forest and tree importance
+## 20. Forest and tree importance
+
+- **tag:** core (1.5)
+- **show:** figure — `importance-figure` (dot charts of the shares of the total decrease in RSS for the boosted model of the chosen 1,194 trees, the random forest with $m = 5$ and the pruned tree, the variables in the order of the boosting shares), the figure alone
+- **words:** none
+- **say:** the same decrease in RSS measures the importance of a variable in a single tree, summed over its splits, and in a random forest, summed over the splits of each tree and averaged over the trees (`randomForest()` reports it as `IncNodePurity`); the figure plots the shares for the chosen boosted model (`Gain`), for the random forest with $m = 5$ and for the pruned tree of the Decision Trees lecture; boosting ranks the variables age, cement, superplasticizer, water, blast_furnace_slag, fine_aggregate, fly_ash and coarse_aggregate; the random forest ranks them age, cement, water, superplasticizer, blast_furnace_slag, fine_aggregate, coarse_aggregate and fly_ash; the pruned tree ranks them cement, age, water, blast_furnace_slag, superplasticizer, fine_aggregate, coarse_aggregate and fly_ash; all three put age and cement in the first two places, with 66% of the boosted model's decrease in RSS, 63% of the forest's and 71% of the tree's; below them the orders differ
+- **note:** the chapter's `importance-figure`, 9 by 3.8 inches, shown at `height=500` (width-limited at 1185 px). The `40%` of one panel and the `0%` of the next sit close together on the axis in the chapter's PNG, which is not edited here. The title is the chapter's `### Forest and tree importance`, the subsection the figure sits under. The ranks and shares are inline R, quoted from the frozen markdown.
+
+## 21. Interpretation
 
 - **tag:** core (1)
 - **show:** none, a three-line list
 - **words:** "Importance ranks the variables"; "No direction"; "No effect size"
-- **say:** boosting ranks the variables age, cement, superplasticizer, water, blast_furnace_slag, fine_aggregate, coarse_aggregate and fly_ash; the random forest ranks them age, cement, water, superplasticizer, blast_furnace_slag, fine_aggregate, coarse_aggregate and fly_ash; the pruned tree ranks them cement, age, water, blast_furnace_slag, superplasticizer, fine_aggregate, coarse_aggregate and fly_ash; all three put age and cement in the first two places, with 65% of the boosted model's decrease in RSS, 63% of the forest's and 71% of the tree's; below them the orders differ; as for a forest, importance ranks the variables and gives no direction or effect size
-- **note:** the chapter's sentence "importance ranks the variables and gives no direction or effect size" cut into three lines, as the Random Forests deck's Interpretation slide does; the ranks and shares are inline R, quoted from the frozen markdown. The title is the chapter's `### Forest and tree importance`. Fifth in the drop order.
+- **say:** importance ranks the variables; it gives no direction and no effect size; a large share for age says that the trees' splits on age decrease the RSS by a large total, not whether concrete gets stronger or weaker with age, with the other ingredients fixed, or by how much; the Additive structure part shows what the model predicts as age changes
+- **note:** the chapter's sentence "Importance ranks the variables; it gives no direction and no effect size" cut into three lines, as the Random Forests deck's Interpretation slide does. The title is the chapter's new `### Interpretation`.
 
 # Additive structure
 
@@ -221,37 +273,37 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** the chapter's question: does the effect of cement on strength depend on age? This part asks it of the raw data, and then of boosted models of stumps and of trees of depth 4
 - **note:** relies on the chapter's one-line question under `### Cement and age`.
 
-## 17. Cement and age
+## 22. Cement and age
 
-- **tag:** core (1.5)
+- **tag:** optional (1.5)
 - **show:** figure — `cement-age-figure` (strength of the training specimens in the lowest and the highest third of cement content against age, with the mean strength of each third at every age with at least 5 specimens in both thirds), the figure alone
 - **words:** none
 - **say:** the high-cement third is stronger at every such age, by 8.5 MPa at 90 days and by about 22 MPa at 7 and 28 days; the two thirds also differ in other ingredients, chiefly fly ash and blast furnace slag, of which the high-cement third has less, so this raw comparison does not isolate cement; a model can
-- **note:** the chapter's new `cement-age-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Cement and age`. Fourth in the drop order.
+- **note:** the chapter's `cement-age-figure`, 8 by 4.2 inches, shown at `height=560`; the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Cement and age`. Second in the drop order.
 
-## 18. Stumps
+## 23. Stumps
 
 - **tag:** core (1.5)
 - **show:** equation — the chapter's display of a boosted model of stumps as a sum of functions $a_j(x)$, with a label
 - **words:** "$a_j(x)$ — sum of the shrunken stumps that split on $X_j$, a function of $x$ only through $X_j$"; then "Additive model: the change in the prediction when $X_j$ changes does not depend on the other variables"
-- **reveal:** on arrival: the display and the label of $a_j(x)$; click 1: the additive-model line
-- **say:** the figure on the previous slide asks whether the gap in strength between high- and low-cement mixes changes with age, and a boosted model of stumps cannot let it change; a stump depends on one explanatory variable, and collecting the stumps that split on each variable, a boosted model of stumps is a sum of functions that each depend on one variable; this is an additive model; the function is written $a_j(x)$, not $g_j(x_j)$, because $g_j$ is the PLS simple regression estimate and the naive Bayes log density ratio, and a single subscript on $x$ means an observation
-- **note:** the display is copied from the chapter with `\hat` written `\widehat`, at 0.75em; the label is the chapter's "where $a_j(x)$ is the sum of the shrunken stumps that split on $X_j$, which depends on $x$ only through the value of $X_j$" shortened; the last line is the chapter's definition of an **additive model**. The title is the chapter's `### Stumps`.
+- **reveal:** on arrival: the display; click 1: the label of $a_j(x)$; click 2: the additive-model line
+- **say:** the question of the Cement and age figure is whether the effect of cement on strength depends on age; it compares the lowest and the highest third of cement content, and the high-cement third is stronger at every age with at least 5 specimens in both thirds, by 8.5 MPa at 90 days and by about 22 MPa at 7 and 28 days, though the two thirds also differ in other ingredients, so this raw comparison does not isolate cement; the figure on the previous slide asks whether the gap in strength between high- and low-cement mixes changes with age, and a boosted model of stumps cannot let it change; a stump depends on one explanatory variable, and collecting the stumps that split on each variable, a boosted model of stumps is a sum of functions that each depend on one variable (`xgboost`'s start at the mean strength adds a constant, which belongs to no variable and changes no difference); this is an additive model; the function is written $a_j(x)$, not $g_j(x_j)$, because $g_j$ is the PLS simple regression estimate and the naive Bayes log density ratio, and a single subscript on $x$ means an observation
+- **note:** the display is copied from the chapter with `\hat` written `\widehat`, at 0.75em, with its trailing comma; the label is the chapter's "where $a_j(x)$ is the sum of the shrunken stumps that split on $X_j$, which depends on $x$ only through the value of $X_j$" shortened, and both lines are at 0.7em; the last line is the chapter's definition of an **additive model**. The title is the chapter's `### Stumps`.
 
-## 19. Depth and interactions
+## 24. Depth and interactions
 
 - **tag:** core (1)
 - **show:** none, a two-line list
 - **words:** "Each leaf is reached through at most $\delta$ splits"; "Interactions among at most $\delta$ variables"
-- **say:** a tree of depth $\delta$ can split on more than $\delta$ explanatory variables in all: the 1,207 trees of depth 4 of the chosen model split on 1 to 8, with median 4; but each leaf is reached through at most $\delta$ splits, so the tree's prediction is a sum, over its leaves, of a constant times an indicator that involves at most $\delta$ variables; a boosted model of such trees is a sum of such terms, so it can represent interactions among at most $\delta$ variables
-- **note:** the chapter's sentences "each leaf is reached through at most $\delta$ splits" and "it can represent interactions among at most $\delta$ variables", cut to two lines; the 1 to 8 and the median 4 are inline R, quoted from the frozen markdown. **The title is not a chapter heading** (the paragraph sits under `### Stumps`); it names the learning objective the lines state.
+- **say:** a tree of depth $\delta$ can split on more than $\delta$ explanatory variables in all: the 1,194 trees of depth 4 of the chosen model split on 2 to 8, with median 5; but each leaf is reached through at most $\delta$ splits, so the tree's prediction is a sum, over its leaves, of a constant times an indicator that involves at most $\delta$ variables; a boosted model of such trees is a sum of such terms, so it can represent interactions among at most $\delta$ variables
+- **note:** the chapter's sentences "each leaf is reached through at most $\delta$ splits" and "it can represent interactions among at most $\delta$ variables", cut to two lines; the 2 to 8 and the median 5 are inline R, quoted from the frozen markdown. **The title is not a chapter heading** (the paragraph sits under `### Stumps`); it names the learning objective the lines state.
 
-## 20. Stumps and trees of depth 4
+## 25. Stumps and trees of depth 4
 
 - **tag:** core (2)
 - **show:** tabset, the chapter's own tabs: "Depth 1" (`stumps-figure`) and "Depth 4" (`depth-4-figure`)
 - **words:** none
-- **say:** the tabs plot the predicted strength against age for mixes with 200 and 400 kg of cement per cubic meter, the other six ingredients at their training medians, for the boosted model of 5,000 stumps with $\nu = 0.1$ and for the chosen model of 1,207 trees of depth 4; for the stumps the two curves are parallel, the extra cement adding 18.6 MPa at every age; for the trees of depth 4 the gap runs from 7.3 to 20.7 MPa depending on age, an interaction, as the raw thirds suggested; whether the interactions matter is a question for the test error: the stumps' test MSE after 5,000 trees, 32.3 and still falling slowly, is above the smallest test MSE of every depth that allows interactions, 23.6 for depth 2, 20.6 for depth 4 and 22.2 for depth 8
+- **say:** the tabs plot the predicted strength against age for mixes with 200 and 400 kg of cement per cubic meter, the other six ingredients at their training medians, for the boosted model of 5,000 stumps with $\nu = 0.1$ and for the chosen model of 1,194 trees of depth 4; for the stumps the two curves are parallel, the extra cement adding 16.6 MPa at every age; for the trees of depth 4 the gap runs from 5.9 to 20.6 MPa depending on age, an interaction, as the raw thirds suggested (the gap in mean strength between the highest and the lowest third of cement content was 8.5 MPa at 90 days and about 22 MPa at 7 and 28 days); whether the interactions matter is a question for the test error: the stumps' test MSE after 5,000 trees, 31.7 and still falling slowly, is above the smallest test MSE of every depth that allows interactions, 28.1 for depth 2, 23.9 for depth 4 and 28.2 for depth 8
 - **note:** the chapter's `### Stumps` tabs (the chapter's `####` names), two 8 by 4.2 inch figures with aligned panels, shown with `.mid-tabs`; the values are inline R, quoted from the frozen markdown. **The title is not a chapter heading** (it names the two tabs).
 
 # Comparison
@@ -261,34 +313,34 @@ Entries are numbered by content slide; the title and the transitions are not num
 - **say:** this part compares boosting with bagging and random forests, and with every other fit of the three tree lectures, on test error, and lists its limits
 - **note:** relies on the chapter's `## Comparison` section.
 
-## 21. Bias and variance
+## 26. Bias and variance
 
 - **tag:** core (2)
 - **show:** figure — `bias-variance-figure` (test MSE against the number of trees for bagging and boosting with the same small trees, stumps and trees of depth 4, in two panels), the figure alone
 - **words:** none
-- **say:** one stump fit to all the training specimens has test MSE 183.6 and one tree of depth 4 91.9; averaging 1,000 of them over bootstrap samples brings these to 171.7 and 59.9, and boosting the same kinds of trees brings them to 32.3 and 21.6 with 5,000 trees; a small tree's error is mostly bias: it cannot follow the curve in age, or the effect of the other ingredients, with a few leaves; averaging removes variance but leaves the bias of the trees it averages, so bagging needs large trees; boosting removes bias, since each tree is fit to what the trees before it got wrong
+- **say:** one stump fit to all the training specimens has test MSE 183.6 and one tree of depth 4 92.9; averaging 1,000 of them over bootstrap samples brings these to 171.7 and 59.9, and boosting trees of the same depths brings them to 31.7 and 24.3 with 5,000 trees; a small tree's error is mostly bias: it cannot follow the curve in age, or the effect of the other ingredients, with a few leaves; averaging removes variance but leaves the bias of the trees it averages, so bagging needs large trees; boosting removes bias, since each tree is fit to what the trees before it got wrong
 - **note:** the chapter's `bias-variance-figure`, 9 by 4.2 inches, shown at `height=540` (1158 px wide); the values are inline R, quoted from the frozen markdown. The title is the chapter's `### Bias and variance`.
 
-## 22. Test error
+## 27. Test error
 
 - **tag:** core (2)
 - **show:** table — the chapter's `comparison_table` (test MSE of eight fits, with how each was tuned), copied from the frozen markdown
 - **words:** none
-- **say:** the table collects the test MSE of every fit to all 8 explanatory variables in the three tree lectures, with how each was tuned; boosting has the smallest test MSE, 20.8, 23% below the best of the other fits, 26.9; only $B$ was chosen by cross-validation, and $\nu = 0.1$ and $\delta = 4$ were fixed in advance, but $\delta = 4$ is also the depth with the smallest test MSE in the Tree depth section, so 20.8 is mildly optimistic; even taking the best $B$ for each depth, chosen on the test specimens and so flattering to boosting, depths 2, 4 and 8 reach 23.6, 20.6 and 22.2, all below bagging's 26.9, which used no tuning; least squares with $\log(\texttt{age})$, which needed a feature built after seeing the curve in age, has 48.5, and the tree ensembles find the curve and the interactions without it
-- **note:** the table is copied verbatim from `result.markdown` and wrapped in `.auto-table`, which sets the column widths from the content. The chapter's `tbl-colwidths: [38, 47, 15]` appears in the frozen markdown only as an attribute on the `.cell` div around the table, not in the pipe table, whose separator line is the table's only width information, so the class sets the widths here. The table ends at 574 px. The title is the chapter's `### Test error`.
+- **say:** the table collects the test MSE of every fit to all 8 explanatory variables in the three tree lectures, with how each was tuned; boosting has the smallest test MSE, 24.1, 10% below bagging's 26.9; differences of a few units of test MSE are within the noise the chapter shows: the loop and `xgboost` with the loop's settings, the same algorithm, differ by 1.3, the refit forests differ from the previous lecture's by up to 0.8, and every test MSE comes from one sample of 305 test specimens; only $B$ was chosen by cross-validation, and $\nu = 0.1$ and $\delta = 4$ were fixed before the Tree depth comparison, in which $\delta = 4$ then turned out to have the smallest test MSE of the depths compared, so 24.1 is mildly optimistic; taking the best $B$ for each other depth, chosen on the test specimens and so flattering to boosting, depths 1, 2 and 8 reach 31.6, 28.1 and 28.2, all above bagging's 26.9: boosting's advantage depends on its tuning parameters; least squares with $\log(\texttt{age})$, which needed a feature built after seeing the curve in age, has 48.5, and the tree ensembles find the curve and the interactions without it
+- **note:** the table is copied verbatim from `result.markdown` and wrapped in `.auto-table`, which sets the column widths from the content (the chapter's `tbl-colwidths: [38, 47, 15]` appears in the frozen markdown only as an attribute on the `.cell` div). The table ends at 574 px. The title is the chapter's `### Test error`.
 
-## 23. Limits
+## 28. Limits
 
-- **tag:** core (1)
+- **tag:** optional (1)
 - **show:** none, a five-line list cut from the chapter's paragraph
-- **words:** "Three tuning parameters: $B$, $\nu$, $\delta$"; "$B$ must be chosen: too many trees overfit"; "Trees grown in sequence, not in parallel"; "No single tree to read: importance rankings only"; "Predictions made of steps, constant beyond the largest training value"
-- **say:** boosting has three tuning parameters, against a random forest's $m$ and number of trees, and its $B$ must be chosen, since too many trees overfit, while a forest only needs enough trees; its trees are grown in sequence, each needing the residuals of the one before, so they cannot be grown at the same time as a forest's can, and the cross-validation refit 5,000 trees in each of 10 folds; with many trees it fits the training data nearly exactly: the training MSE fell to 0.41 with $\nu = 0.5$ while that fit's test MSE never fell below 20.2; like a forest it has no single tree to read, its predictions are made of steps, and it predicts a constant beyond the largest value of an explanatory variable in the training data, since every tree does
-- **note:** the chapter's `### Limits` paragraph cut to five lines. The chapter's `### Beyond this course` callout that follows is not used. Third in the drop order.
+- **words:** "Three tuning parameters: $B$, $\nu$, $\delta$; `xgboost` adds more, such as `lambda`"; "$B$ must be chosen: too many trees overfit"; "Trees grown in sequence, not in parallel"; "No single tree to read: importance rankings only"; "Predictions made of steps, constant beyond the largest training value"
+- **say:** boosting has three tuning parameters, against a random forest's $m$ and number of trees, and `xgboost` adds more, such as `lambda`; its $B$ must be chosen, since too many trees overfit, while a forest only needs enough trees; its trees are grown in sequence, each needing the residuals of the one before, so they cannot be grown at the same time as a forest's can (`xgboost` instead spreads the split search of each tree over processor threads), and the cross-validation grew 5,000 trees in each of 10 folds; with many trees it fits the training data nearly exactly: the training MSE fell to 0.28 with $\nu = 0.5$ while that fit's test MSE never fell below 21.0; like a forest it has no single tree to read, its predictions are made of steps, and it predicts a constant beyond the largest value of an explanatory variable in the training data, since every tree does
+- **note:** the chapter's `### Limits` paragraph cut to five lines. The chapter's `### Beyond this course` callout that follows is not used. First in the drop order.
 
-## 24. Conclusion
+## 29. Conclusion
 
 - **tag:** core (1)
 - **show:** none, a flat list of six takeaways
-- **words:** "Boosting adds small trees, each fit to the residuals of the trees before it"; "A smaller $\nu$ needs more trees"; "Depth $\delta$ allows interactions among at most $\delta$ variables"; "Too many trees overfit: choose $B$ by cross-validation"; "Boosting reduces bias; bagging reduces variance"; "Importance ranks variables, with no direction or effect size"
-- **say:** the chapter's Conclusion: boosting builds a model from small trees added one after another, starting from the fit 0; each tree is fit to what the trees before it got wrong, so the trees depend on one another and are grown in sequence; a smaller $\nu$ needs more trees and makes the test error less sensitive to their number; each leaf of a tree of depth $\delta$ is reached through at most $\delta$ splits, so the model can represent interactions among at most $\delta$ variables, and stumps give an additive model; $B$ is chosen by cross-validation since, unlike bagging, boosting overfits when $B$ is too large, and one run of boosting gives the estimate for every $B$ up to its length; bagging and random forests average large trees, each with low bias and high variance, which reduces variance, while boosting adds small trees, each with high bias, which reduces bias; importance ranks the variables without a direction or an effect size, as for a forest; the next lecture begins support vector machines (ISLR2 Chapter 9), which classify by finding a boundary that separates the classes in the space of the features, with as wide a margin as possible
-- **note:** distilled from the chapter's `## Conclusion` (one line per main result); no example numbers. The chapter's sentence "stumps give an additive model" is in `say:` only, so that the third line fits on one line.
+- **words:** "Boosting adds small trees, each fit to the residuals of the trees before it"; "`xgboost` starts from the mean and shrinks leaf values"; "A smaller $\nu$ needs more trees; choose $B$ by cross-validation"; "Importance ranks variables, with no direction or effect size"; "Depth $\delta$ allows interactions among at most $\delta$ variables"; "Boosting reduces bias; bagging reduces variance"
+- **say:** the chapter's Conclusion: boosting builds a model from small trees added one after another, starting from a constant fit; each tree is fit to what the trees before it got wrong, so the trees depend on one another and are grown in sequence; the algorithm is a short loop of `rpart()` fits, and `xgboost` implements it, with $\nu$, $\delta$ and $B$ as `learning_rate`, `max_depth` and `nrounds`, and by default starts from the mean response and shrinks each leaf's value by the penalty `lambda`; a smaller $\nu$ needs more trees and makes the test error less sensitive to their number; $B$ is chosen by cross-validation since, unlike bagging, boosting overfits when $B$ is too large, and one run of boosting per fold, as in `xgb.cv()`, gives the estimate for every $B$ up to its length; each leaf of a tree of depth $\delta$ is reached through at most $\delta$ splits, so the model can represent interactions among at most $\delta$ variables, and stumps give an additive model; bagging and random forests average large trees, each with low bias and high variance, which reduces variance, while boosting adds small trees, each with high bias, which reduces bias; importance, the decrease in RSS from a variable's splits summed over the trees (`xgboost`'s gain), ranks the variables without a direction or an effect size; the chapter's Limits paragraph, if that slide was skipped: boosting has three tuning parameters, against a random forest's $m$ and number of trees, and `xgboost` adds more, such as `lambda`; its $B$ must be chosen, since too many trees overfit, while a forest only needs enough trees; its trees are grown in sequence, so they cannot be grown at the same time as a forest's can; with many trees it fits the training data nearly exactly; like a forest, it has no single tree to read, only importance rankings, its predictions are made of steps, and it predicts a constant beyond the largest value of an explanatory variable in the training data; the next lecture begins support vector machines (ISLR2 Chapter 9), which classify by finding a boundary that separates the classes in the space of the features, with as wide a margin as possible
+- **note:** distilled from the chapter's `## Conclusion` (one line per main result, in the order of the lecture); no example numbers. The chapter's sentence "stumps give an additive model" is in `say:` only, so that no line wraps.

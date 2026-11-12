@@ -1353,42 +1353,56 @@ proximity, `ranger`) is not assessed.
 
 Boosting regression trees (ISLR2 8.2.3) on the same `modeldata::concrete`
 training and test split as the two previous chapters (numeric response
-only). Notation differs from the textbook: the shrinkage (learning rate) is
-$\nu$, not $\lambda$ (which is the ridge/lasso tuning parameter in this
-course), and tree size is the depth $\delta$ (`rpart()`'s `maxdepth`; a
-stump has $\delta = 1$), not the textbook's number of splits $d$; $B$ is
-the number of trees. Students describe the algorithm: start from
-$\hat f_0 = 0$ with residuals $r_i = y_i$; for $b = 1, \ldots, B$ fit a tree
-$\hat f^b$ of depth $\delta$ to the residuals, update
+only), built from scratch and then fit with the `xgboost` package. Notation
+differs from the textbook: the shrinkage (learning rate) is $\nu$, not
+$\lambda$ (which is the ridge/lasso tuning parameter in this course), and
+tree size is the depth $\delta$ (`rpart()`'s `maxdepth`, `xgboost`'s
+`max_depth`; a stump has $\delta = 1$), not the textbook's number of splits
+$d$; $B$ is the number of trees. Students describe the algorithm: start
+from $\hat f_0 = 0$ with residuals $r_i = y_i$; for $b = 1, \ldots, B$ fit
+a tree $\hat f^b$ of depth $\delta$ to the residuals, update
 $\hat f_b = \hat f_{b-1} + \nu\hat f^b$ and
-$r_i \leftarrow r_i - \nu\hat f^b(x_i)$;
-predict with $\hat f_B(x) = \sum_b \nu\hat f^b(x)$; and implement it as a
-short loop of `rpart()` fits. Tuning parameters: a smaller $\nu$ learns more
-slowly and needs more trees (with a small $\nu$ the fit stays near its
-starting value 0, like a large ridge/lasso penalty); deeper trees learn
-faster; boosting, unlike bagging, overfits when $B$ is too large, so $B$ is
-chosen by 10-fold cross-validation (one run per fold gives the estimate for
-every $B$), then the chosen model is evaluated on test data. A tree of
-depth $\delta$ can split on more than $\delta$ variables in all, but each
-leaf is reached through at most $\delta$ splits, so the boosted model is a
-sum of terms each involving at most $\delta$ explanatory variables
-(interactions among at most $\delta$); stumps give an additive model
-$\sum_j a_j(x)$, each $a_j$ depending on $x$ only through $X_j$ (parallel
-prediction curves), and on concrete trees of depth 2 or more predict better
-than stumps. Boosting versus bagging: boosting fits small, high-bias trees in
-sequence to residuals and reduces bias; bagging and forests average large,
-low-bias, high-variance trees grown independently and reduce variance
-(bagging small trees leaves their bias: bagged stumps improve little on one
-stump, and bagged depth-4 trees stay far worse than boosted ones).
-Variable importance: the decrease in
-RSS of the residuals from each variable's splits summed over the trees, a
-ranking with no direction or effect size. Comparison table of test MSE for
-least squares, trees, bagging, a random forest and boosting; limits of
-boosting (three tuning parameters, sequential fitting, overfitting, no
-single tree to read, no extrapolation). A `Beyond this course` callout
-(classification boosting with the deviance, AdaBoost, gradient boosting
-with other losses, `gbm` and `xgboost` and their extra tuning parameters,
-BART) is not assessed.
+$r_i \leftarrow r_i - \nu\hat f^b(x_i)$; predict with
+$\hat f_B(x) = \sum_b \nu\hat f^b(x)$; and implement it as a short loop
+of `rpart()` fits. They fit the same model with `xgboost`
+(`xgb.DMatrix()`, `xgb.params()`, `xgb.train()`), where `learning_rate`
+(alias `eta`) is $\nu$, `max_depth` is $\delta$ and `nrounds` is $B$, and
+explain how its defaults differ from the loop: it starts from the mean
+response (`base_score`), fits each tree from the first and second
+derivatives of the squared-error loss (the residuals and 1), and divides a
+leaf's residual sum by its count plus the penalty `lambda` (default 1,
+shrinking leaf values toward 0; not the ridge $\lambda$), and by default
+searches binned cut points (`tree_method = "hist"`); with `lambda = 0`,
+`base_score = 0` and `tree_method = "exact"` it grows the loop's trees up
+to rounding. Tuning parameters: a smaller $\nu$ learns more slowly and
+needs more trees (a small $\nu$ holds the fit near its starting point, like
+a large ridge/lasso penalty); deeper trees learn faster; boosting, unlike
+bagging, overfits when $B$ is too large (test error curves come from
+`xgb.train()`'s `evals` and `evaluation_log`), so $B$ is chosen by 10-fold
+cross-validation with `xgb.cv()` (one run per fold gives the estimate for
+every $B$; the CV estimate of the MSE is recovered from the reported mean
+and standard deviation of the fold RMSEs, $\overline{\text{RMSE}}^2 +
+\tfrac{9}{10}s^2$), then the chosen model is refit and evaluated on test
+data. A tree of depth $\delta$ can split on more than $\delta$ variables
+in all, but each leaf is reached through at most $\delta$ splits, so the
+boosted model is a sum of terms each involving at most $\delta$
+explanatory variables (interactions among at most $\delta$); stumps give
+an additive model $\sum_j a_j(x)$, each $a_j$ depending on $x$ only through
+$X_j$ (parallel prediction curves), and on concrete trees of depth 2 or
+more predict better than stumps. Boosting versus bagging: boosting fits
+small, high-bias trees in sequence to residuals and reduces bias; bagging
+and forests average large, low-bias, high-variance trees grown
+independently and reduce variance (bagging small trees leaves their bias).
+Variable importance, defined in this chapter without relying on the
+previous one: the decrease in RSS of the residuals from each variable's
+splits summed over the trees, which `xgboost` calls the gain
+(`xgb.importance()`'s `Gain` column is each variable's share of the total
+gain); a ranking with no direction or effect size. Comparison table of
+test MSE for least squares, trees, bagging, a random forest and boosting;
+limits of boosting (several tuning parameters, sequential fitting,
+overfitting, no single tree to read, no extrapolation). A `Beyond this
+course` callout (classification boosting and AdaBoost, `gbm::gbm()` as
+used in the ISLR2 lab, LightGBM, CatBoost, BART) is not assessed.
 
 ## What has already been assessed
 

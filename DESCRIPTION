@@ -29,4 +29,5 @@ Imports:
     rpart.plot,
     Sleuth3,
     tidymodels,
-    tidyverse
+    tidyverse,
+    xgboost
