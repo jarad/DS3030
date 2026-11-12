@@ -1,4 +1,4 @@
-# Bagging and Random Forests
+# Random Forests
 
 [Slides for this lecture](20-bagging-and-random-forests_slides.html)
 
@@ -214,9 +214,11 @@ stopifnot(round(100 * tree_accuracy, 1) == c(95.1, 96.1))
 :::
 
 The repeated draws reproduce the earlier lecture's results: on the concrete
-test specimens, test MSE `r fmt(monday_mse[["ls"]], 1)` for least squares,
-`r fmt(monday_mse[["log_ls"]], 1)` for least squares with
-$\log(\texttt{age})$ in place of age, `r fmt(monday_mse[["default"]], 1)`
+test specimens, test MSE `r fmt(monday_mse[["ls"]], 1)` for least squares with main effects
+only (each of the explanatory variables enters linearly, with no interactions
+or polynomial terms), `r fmt(monday_mse[["log_ls"]], 1)` for the same main
+effects with $\log(\texttt{age})$ in place of age,
+`r fmt(monday_mse[["default"]], 1)`
 for the default tree, and `r fmt(monday_mse[["full"]], 1)` and
 `r fmt(monday_mse[["pruned"]], 1)` for the full and pruned trees; on the
 `r nrow(penguins)` penguins, `r nrow(penguin_train)` training and
@@ -376,9 +378,9 @@ $$\left(1 - \frac{1}{n}\right)^n \to e^{-1} \approx `r fmt(exp(-1), 3)`,$$
 where $n$ is the number of training observations and the limit, as
 $n \to \infty$, is the case $x = -1$ of $\left(1 + x/n\right)^n \to e^x$;
 for $n = `r n_train`$ the probability is
-`r fmt((1 - 1 / n_train)^n_train, 3)`. A bootstrap sample therefore holds
-about `r pct(1 - exp(-1), 0)` of the training observations, some of them
-more than once. The figure counts, for one bootstrap sample of the
+`r fmt((1 - 1 / n_train)^n_train, 3)`. A bootstrap sample therefore contains
+about `r pct(1 - exp(-1), 0)` of the distinct training observations, some of
+them more than once. The figure counts, for one bootstrap sample of the
 `r n_train` training specimens, how many specimens appear 0, 1, 2, ...
 times.
 
@@ -671,12 +673,26 @@ that some training specimen also has.
 
 ## Random forests
 
+### Definition
+
+A **random forest** combines three ingredients:
+
+- **bootstrap samples**: each tree is fit to its own bootstrap sample of the
+training data,
+- **averaging**: the forest predicts with the average of its trees'
+predictions, or by majority vote for a class, and
+- **random variable inclusion**: at each split, the tree chooses among only a
+random subset of the explanatory variables.
+
+Bagged trees have the first two ingredients; the third is the one change a
+random forest makes to them.
+
 ### Correlated trees
 
 The figure counts the first split of each tree in two forests fit to all the
 training specimens with `randomForest()`: bagging, which may split on any of
 the `r ncol(specimens) - 1` explanatory variables, and the random forest
-described next.
+with `randomForest()`'s default $m$, defined below.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -765,9 +781,9 @@ n_small <- 100
 ```
 :::
 
-A **random forest** grows bagged trees with one change: at each split, the
-tree may use only $m$ of the $p$ explanatory variables, chosen at random anew
-for that split, where
+The random subset of explanatory variables is the **split restriction**: at
+each split, the tree may use only $m$ of the $p$ explanatory variables,
+chosen at random anew for that split, where
 
 - $p$ is the number of explanatory variables, and
 - $m \le p$ is the number tried at each split.
@@ -792,9 +808,11 @@ halvings of the expected prediction of a forest, shared by all its trees,
 and the variance among the trees of one forest. The first part is the
 variance of the forests' average predictions across halvings, less the
 variance among trees divided by `r n_small`, which an average of
-`r n_small` trees still carries. $\hat\sigma^2$ is the sum of the two parts,
-averaged over the test specimens, $\hat\rho\hat\sigma^2$ is the first part
-averaged over the test specimens, and $\hat\rho$ is their ratio.
+`r n_small` trees still carries. These are values at one $x$, the explanatory
+variables of one test specimen. The table averages them over the
+`r nrow(test)` test specimens: $\hat\sigma^2$ is the average of the sum of
+the two parts, $\hat\rho\hat\sigma^2$ is the average of the first part, and
+$\hat\rho$ is their ratio.
 
 ::: {.callout-note collapse="true"}
 ### Code
@@ -849,8 +867,10 @@ single_tree_mse <- function(forest) {
 single_rf <- c(Bagging = single_tree_mse(bag_rf),
                `Random forest` = single_tree_mse(default_rf))
 
-# The prose says the variance of one tree is larger with the restriction.
-stopifnot(sigma2[["Random forest"]] > sigma2[["Bagging"]])
+# The prose says the restriction lowers the correlation and raises the
+# variance of one tree.
+stopifnot(rho[["Random forest"]] < rho[["Bagging"]],
+          sigma2[["Random forest"]] > sigma2[["Bagging"]])
 ```
 :::
 
@@ -861,9 +881,11 @@ correlation_table
 
 With $m = p$, $\hat\rho = `r fmt_math(rho[["Bagging"]], 2)`$; with
 $m = `r floor(p / 3)`$, $\hat\rho = `r fmt_math(rho[["Random forest"]], 2)`$.
-The variance of one tree, $\hat\sigma^2$, is
-`r if (sigma2[["Random forest"]] > sigma2[["Bagging"]]) "larger" else "smaller"`
-with the restriction, and the part that no number of trees removes,
+For these data the restriction lowers the correlation between trees and
+raises the variance of one tree, $\hat\sigma^2$, from
+`r fmt(sigma2[["Bagging"]], 0)` to `r fmt(sigma2[["Random forest"]], 0)`: it
+randomizes each tree's splits, so the trees differ more, and each tree is a
+more variable predictor. The part that no number of trees removes,
 $\hat\rho\hat\sigma^2$, is `r fmt(shared[["Bagging"]], 1)` for bagging and
 `r fmt(shared[["Random forest"]], 1)` for the random forest. These are
 variances for trees fit to `r n_train / 2` specimens (a half), across
@@ -874,8 +896,9 @@ The restriction also changes each tree. In the forests of `r n_trees` trees
 fit to all `r n_train` training specimens, a single tree has mean test MSE
 `r fmt(single_rf[["Bagging"]], 1)` with $m = p$ and
 `r fmt(single_rf[["Random forest"]], 1)` with $m = `r floor(p / 3)`$. Part of
-that loss is variance, which averaging removes: $\hat\sigma^2$ above is
-larger with the restriction.
+that loss is variance: $\hat\sigma^2$ above is larger with the restriction.
+Averaging removes only the $\left(1 - \rho\right)\sigma^2/B$ part of a
+tree's variance.
 
 ### Fitting
 
@@ -1038,7 +1061,7 @@ $\hat\rho\hat\sigma^2$, from `r fmt(shared[["Bagging"]], 1)` to
 `r fmt(end_mse("Bagging", "Test"), 1)` to
 `r fmt(end_mse("Random forest", "Test"), 1)`, and its OOB MSE moved the same
 way, from `r fmt(end_mse("Bagging", "Out of bag"), 1)` to
-`r fmt(end_mse("Random forest", "Out of bag"), 1)`. The increase is bias:
+`r fmt(end_mse("Random forest", "Out of bag"), 1)`. The increase is mostly bias:
 with $m = `r floor(p / 3)`$ a tree often cannot split on the variables that
 matter most, and averaging does not remove that.
 
@@ -1238,9 +1261,10 @@ unavailable.
 ### Interpretation
 
 Importance ranks the variables; it gives no direction and no effect size. A
-large importance for water says that predictions get worse without it, not
-whether concrete gets stronger or weaker as water increases, with the
-others fixed, or by how much. The
+large importance for water says that the forest relies on it, through large
+decreases in RSS or through worse out-of-bag predictions when its values are
+shuffled, not whether concrete gets stronger or weaker as water increases,
+with the others fixed, or by how much. The
 two measures `r if (same_order) "agree on the order here" else "order the variables differently here"`:
 they measure different things, the fit to the training data within each tree
 and the loss of out-of-bag accuracy when the variable is shuffled.
@@ -1385,8 +1409,8 @@ of $m$ stands out.
 # Test MSE on the concrete specimens, and test accuracy on the penguins.
 concrete_rows <- tribble(
   ~Method, ~value,
-  "Least squares", monday_mse[["ls"]],
-  "Least squares with log(age)", monday_mse[["log_ls"]],
+  "Least squares, main effects", monday_mse[["ls"]],
+  "Least squares, main effects, log(age)", monday_mse[["log_ls"]],
   "Default tree", monday_mse[["default"]],
   "Pruned tree", monday_mse[["pruned"]],
   "Full tree", monday_mse[["full"]],
@@ -1411,7 +1435,7 @@ penguin_table <- knitr::kable(penguin_rows,
                               align = "lrr")
 
 # Whether every average of trees beats every single tree and least squares
-# on the original variables.
+# with main effects.
 ensemble_mse <- c(bag_mse, end_mse("Bagging", "Test"), rf_mse,
                   m_curve$Test[m_best])
 single_mse_min <- min(monday_mse[c("ls", "default", "pruned", "full")])
@@ -1427,7 +1451,10 @@ half_mse <- c(mse(y_test, rowMeans(tree_pred[, seq_len(half_B)])),
 :::
 
 The tables give the test MSE on the concrete test specimens and the test
-accuracy on the test penguins.
+accuracy on the test penguins. Both least squares fits have main effects only:
+each explanatory variable enters linearly, with no interactions or polynomial
+terms, and the second replaces age by $\log(\texttt{age})$. Least squares
+with quadratic terms or interactions is not in the table.
 
 ```{r concrete-table-display}
 #| echo: false
@@ -1440,11 +1467,11 @@ penguin_table
 ```
 
 On concrete,
-`r if (all_beat) "every average of trees beats every single tree and least squares on the original variables" else "not every average of trees beats every single tree"`;
+`r if (all_beat) "every average of trees beats every single tree and least squares with main effects" else "not every average of trees beats every single tree"`;
 the best average has test MSE `r fmt(best_ensemble, 1)`, against
 `r fmt(monday_mse[["full"]], 1)` for the best single tree and
-`r fmt(monday_mse[["log_ls"]], 1)` for least squares with a feature built
-for the curvature in age. The two bagging fits, `r fmt(bag_mse, 1)` and
+`r fmt(monday_mse[["log_ls"]], 1)` for least squares with main effects and
+$\log(\texttt{age})$, a feature built for the curvature in age. The two bagging fits, `r fmt(bag_mse, 1)` and
 `r fmt(end_mse("Bagging", "Test"), 1)`, differ in their bootstrap samples
 and in node size (full trees against `randomForest()`'s
 `nodesize = `r nodesize[["numeric"]]``); the first and second

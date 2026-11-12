@@ -104,7 +104,7 @@ RSS from each explanatory variable's splits summed over the trees, as a
 ranking without direction or effect size.
 :::
 
-The [Bagging and Random Forests](20-bagging-and-random-forests.qmd) lecture
+The [Random Forests](20-bagging-and-random-forests.qmd) lecture
 averaged many large trees, each grown independently of the others, to
 reduce the variance of a single tree. **Boosting** also combines many
 trees, but grows small ones, one after another. This lecture builds
@@ -238,7 +238,7 @@ bag_rf <- m_forests[[p]]
 forest_mse <- c(bagging = mse(y_test, predict(bag_rf, test)),
                 forest = mse(y_test, predict(best_rf, test)))
 
-# The Bagging and Random Forests lecture reported test MSEs of 27.1 for
+# The Random Forests lecture reported test MSEs of 27.1 for
 # bagging with randomForest() and 26.7 for the forest with the OOB choice
 # of m, which was 5. The refit forests are other random draws.
 previous_forest <- c(bagging = 27.1, forest = 26.7)

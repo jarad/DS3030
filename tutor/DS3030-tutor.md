@@ -164,7 +164,7 @@ material" and you can draw only from those chapters.
   is optional reading and not assessed), regularization (6.1-6.2) and
   dimension reduction (6.3-6.4).
 - **Final exam** (cumulative): "Quiz me on the final" draws on every chapter
-  below. Chapters 27 onward (Decision Trees, Bagging and Random Forests,
+  below. Chapters 27 onward (Decision Trees, Random Forests,
   Boosting, and later), taught after Exam 2,
   are assessed only on the final. Chapters not listed below have not been
   written yet. If a student asks about material that is not listed, say so
@@ -1304,7 +1304,7 @@ random folds and `xval`) and another (surrogate splits for missing values,
 splits on categorical variables, conditional inference trees, oblique and
 model trees) are not assessed.
 
-### 28. Bagging and Random Forests (Final exam)
+### 28. Random Forests (Final exam)
 <https://jarad.github.io/DS3030/08-trees/20-bagging-and-random-forests.html>
 
 Ensembles of trees (ISLR2 8.2.1-8.2.2) on the same `modeldata::concrete` and
@@ -1325,10 +1325,12 @@ $\hat f_{\text{bag}}$ the average (numeric response) or a majority vote
 off as $B$ grows rather than overfitting. Out-of-bag (OOB) prediction of
 each training observation from the trees that did not use it, and OOB error
 as an estimate of test error without held-out data (like cross-validation,
-but from the fit itself). Random forests: bagged trees share their strong
-first splits (age, on concrete) and are correlated; restricting each split
-to $m$ randomly chosen explanatory variables decorrelates them, at some cost
-in each tree's accuracy; $m = p$ is bagging; `randomForest()` defaults are
+but from the fit itself). Random forests: a random forest combines three
+ingredients, bootstrap samples (each tree is fit to its own),
+averaging the trees' predictions, and random variable inclusion; bagged
+trees share their strong first splits (age, on concrete) and are
+correlated; restricting each split to $m$ randomly chosen explanatory
+variables decorrelates them, at some cost in each tree's accuracy; $m = p$ is bagging; `randomForest()` defaults are
 $\lfloor p/3 \rfloor$ (numeric response) and $\lfloor\sqrt{p}\rfloor$
 (class); $m$ and the number of trees are chosen by OOB error (on concrete the
 default $m = 2$ predicts worse than bagging, and OOB picks a larger $m$).
@@ -1338,10 +1340,11 @@ Gini index) from a variable's splits averaged over trees, and permutation
 importance (increase in OOB error when the variable is shuffled); both rank
 variables and give no direction or effect size. Classification forest on
 penguins, compared with the trees (an easy problem, so the gain is a few
-test penguins). Comparison of least squares, trees, bagging and forests on
-test error; costs of forests: no single tree to read, many trees to fit and
-store, and no extrapolation beyond the training data (predictions constant
-past the largest training value). A `Beyond this course` callout (extremely
+test penguins). Comparison of least squares (main effects only, with no
+interactions or polynomial terms), trees, bagging and forests on test error;
+costs of forests: no single tree to read, many trees to fit and store, and no
+extrapolation beyond the training data (predictions constant past the
+largest training value). A `Beyond this course` callout (extremely
 randomized trees, conditional forests, quantile regression forests,
 proximity, `ranger`) is not assessed.
 

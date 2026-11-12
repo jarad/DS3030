@@ -294,7 +294,12 @@ convention.
   one tree's prediction at $x$ and the correlation between two trees'
   predictions, not the error variance; the chapter says so where they are
   defined. $m$ is the number of explanatory variables tried at each split of
-  a random forest, as in the textbook. $\mathcal{O}_i$ is the set of bootstrap samples that leave out
+  a random forest, as in the textbook. A random forest is defined by three
+  named ingredients: bootstrap samples (one per tree), averaging, and
+  random variable inclusion (the split restriction); bagged trees have the
+  first two. "Least squares" in a comparison of test errors says what the
+  model contained: "main effects" for each explanatory variable entering
+  linearly, with no interactions or polynomial terms. $\mathcal{O}_i$ is the set of bootstrap samples that leave out
   observation $i$ (out of bag), with $\hat f_{\text{OOB}}(x_i)$ the
   out-of-bag prediction. The observation words are those of the decision
   trees chapter (specimen, penguin, halving), and its training and test

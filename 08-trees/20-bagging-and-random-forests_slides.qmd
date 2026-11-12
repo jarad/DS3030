@@ -1,5 +1,5 @@
 ---
-title: "Bagging and Random Forests"
+title: "Random Forests"
 format:
   revealjs:
     slide-number: true
@@ -53,12 +53,13 @@ execute:
   - Averaging
   - Bootstrap samples
   - Bagged trees
-:::
-::: {.column width="33%"}
 - Out-of-bag error
   - Out-of-bag prediction
   - Out-of-bag and test error
+:::
+::: {.column width="33%"}
 - Random forests
+  - Definition
   - Correlated trees
   - Split restriction
   - Fitting a random forest
@@ -90,10 +91,26 @@ The data and splits are those of the Decision Trees lecture, so its numbers can 
 
 ## Concrete specimens
 
-- Response `compressive_strength`; seven ingredients and `age`; 700 training specimens, 305 test specimens
+::: {style="font-size: 0.75em"}
+- Response: `compressive_strength`
+- Explanatory variables:
+  - `cement`
+  - `blast_furnace_slag`
+  - `fly_ash`
+  - `water`
+  - `superplasticizer`
+  - `coarse_aggregate`
+  - `fine_aggregate`
+  - `age`
+:::
+
+::: {style="font-size: 0.75em; margin-top: 1em"}
+- Training specimens: 700
+- Test specimens: 305
+:::
 
 ::: notes
-modeldata::concrete records the compressive strength (MPa) of concrete specimens with 7 ingredient amounts (kg per cubic meter) and the age (days) as explanatory variables, p = 8 in all. Exact duplicate rows are removed, and the training specimens are a random sample, the first random draw after set.seed(20261031), as in the Decision Trees lecture. A collapsed callout in the chapter recomputes that lecture's test results to confirm the split: on the concrete test specimens, test MSE 106.4 for least squares, 48.5 for least squares with log(age) in place of age, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees.
+modeldata::concrete records the compressive strength (MPa) of concrete specimens with 7 ingredient amounts (kg per cubic meter) and the age (days) as explanatory variables, p = 8 in all. Exact duplicate rows are removed, and the training specimens are a random sample, the first random draw after set.seed(20261031), as in the Decision Trees lecture. A collapsed callout in the chapter recomputes that lecture's test results to confirm the split: on the concrete test specimens, test MSE 106.4 for least squares with main effects only, 48.5 for the same main effects with log(age) in place of age, 86.8 for the default tree, and 40.3 and 42.2 for the full and pruned trees.
 :::
 
 # Bagging
@@ -123,19 +140,20 @@ The earlier lecture split the training specimens at random into two halves of 35
 ## Averaging
 
 ::: {style="font-size: 0.75em"}
-$$Var\left[\frac{1}{B}\sum_{b=1}^B \widehat f_b(x)\right] = \frac{1}{B^2}\left\{\sum_{b=1}^B Var\left[\widehat f_b(x)\right] + \sum_{b \ne b'} Cov\left[\widehat f_b(x), \widehat f_{b'}(x)\right]\right\}$$
+$$
+\begin{aligned}
+Var\left[\frac{1}{B}\sum_{b=1}^B \widehat f_b(x)\right]
+&= \frac{1}{B^2}\left\{\sum_{b=1}^B Var\left[\widehat f_b(x)\right] + \sum_{b \ne b'} Cov\left[\widehat f_b(x), \widehat f_{b'}(x)\right]\right\} \\
+&= \frac{B\sigma^2 + B\left(B - 1\right)\rho\sigma^2}{B^2}
+= \rho\sigma^2 + \frac{1 - \rho}{B}\sigma^2.
+\end{aligned}
+$$
 :::
 
 ::: {style="font-size: 0.7em"}
 - $B$ — number of predictions averaged, $b = 1, \ldots, B$
 - $\sigma^2$ — variance of one prediction at $x$
 - $\rho$ — correlation between two of them
-:::
-
-::: {.fragment}
-::: {style="font-size: 0.75em"}
-$$= \frac{B\sigma^2 + B\left(B - 1\right)\rho\sigma^2}{B^2} = \rho\sigma^2 + \frac{1 - \rho}{B}\sigma^2.$$
-:::
 :::
 
 ::: notes
@@ -145,21 +163,22 @@ At 300 kg of cement per cubic meter and 28 days, the 40 trees above predict betw
 ## Bootstrap samples
 
 ::: {style="font-size: 0.8em"}
-- Bootstrap sample: $n$ draws, with replacement, from the $n$ training observations
+- Bootstrap sample
+  - $n$ training observations
+  - $n$ draws
+  - with replacement
 :::
 
 ::: {.fragment}
-::: {style="font-size: 0.75em"}
-$$\left(1 - \frac{1}{n}\right)^n \to e^{-1} \approx 0.368,$$
-:::
-
-::: {style="font-size: 0.6em"}
+::: {style="font-size: 0.8em"}
 - Probability that a given observation is missed by all $n$ draws
+
+  $$\left(1 - \frac{1}{n}\right)^n \to e^{-1} \approx 0.368$$
 :::
 :::
 
 ::: notes
-There is one training sample, not B. Bagging, short for bootstrap aggregation, makes B training samples from it by resampling, as in the optional Bootstrap lecture, which was not taught this semester: each bootstrap sample draws n observations from the n training observations at random with replacement. A given observation is missed by one draw with probability 1 − 1/n, and by all n independent draws with probability (1 − 1/n)^n; the limit, as n goes to infinity, is the case x = −1 of (1 + x/n)^n → e^x. For n = 700 the probability is 0.368. A bootstrap sample therefore holds about 63% of the training observations, some of them more than once.
+There is one training sample, not B. Bagging, short for bootstrap aggregation, makes B training samples from it by resampling, as in the optional Bootstrap lecture, which was not taught this semester: each bootstrap sample draws n observations from the n training observations at random with replacement. A given observation is missed by one draw with probability 1 − 1/n, and by all n independent draws with probability (1 − 1/n)^n; the limit, as n goes to infinity, is the case x = −1 of (1 + x/n)^n → e^x. For n = 700 the probability is 0.368. A bootstrap sample therefore contains about 63% of the distinct training observations, some of them more than once.
 :::
 
 ## Appearances in a bootstrap sample
@@ -176,7 +195,7 @@ The figure counts, for one bootstrap sample of the 700 training specimens, how m
 $$\widehat f_{\text{bag}}(x) = \frac{1}{B}\sum_{b=1}^B \widehat f^{*b}(x),$$
 :::
 
-::: {style="font-size: 0.6em"}
+::: {style="font-size: 0.7em"}
 - $\widehat f^{*b}(x)$ — prediction at $x$ of the tree fit to bootstrap sample $b$
 - $\widehat f_{\text{bag}}(x)$ — bagged prediction
 :::
@@ -279,7 +298,25 @@ The figure plots the OOB MSE and the test MSE of the first k trees against k. Ov
 # Random forests
 
 ::: notes
-Bagged trees tend to make the same strong splits, so they are correlated and the rho sigma squared term remains. A random forest lets each split choose among only m randomly chosen explanatory variables, which decorrelates the trees at some cost in the accuracy of each. This part shows the correlation, defines the restriction, fits a forest, and chooses the number of trees and m.
+Bagged trees tend to make the same strong splits, so they are correlated and the rho sigma squared term remains. A random forest lets each split choose among only m randomly chosen explanatory variables, which decorrelates the trees at some cost in the accuracy of each. This part defines a random forest, shows the correlation, defines the restriction, fits a forest, and chooses the number of trees and m.
+:::
+
+## Definition
+
+::: {style="font-size: 0.85em"}
+- **Bootstrap samples**: each tree is fit to its own bootstrap sample of the training data
+- **Averaging**: the forest predicts with the average of its trees' predictions
+- **Random variable inclusion**: at each split, the tree chooses among only a random subset of the explanatory variables
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.85em"}
+- Bagged trees have the first two; the third is the change a random forest makes
+:::
+:::
+
+::: notes
+A random forest combines three ingredients. Bootstrap samples: each tree is fit to its own bootstrap sample of the training data. Averaging: the forest predicts with the average of its trees' predictions, or by majority vote for a class. Random variable inclusion: at each split, the tree chooses among only a random subset of the explanatory variables. Bagged trees have the first two ingredients; the third is the one change a random forest makes to them.
 :::
 
 ## Correlated trees
@@ -287,18 +324,15 @@ Bagged trees tend to make the same strong splits, so they are correlated and the
 ![](../_freeze/08-trees/20-bagging-and-random-forests/figure-html/root-figure-1.png){height=540}
 
 ::: notes
-The figure counts the first split of each tree in two forests of 500 trees fit to all the training specimens with randomForest(): bagging, which may split on any of the 8 explanatory variables, and the random forest described next. In bagging, 96% of the trees split first on age; in the random forest, 28% do. Bagged trees are fit to overlapping samples of the same training data and nearly all begin with the same split.
+The figure counts the first split of each tree in two forests of 500 trees fit to all the training specimens with randomForest(): bagging, which may split on any of the 8 explanatory variables, and the random forest with randomForest()'s default m, defined below. In bagging, 96% of the trees split first on age; in the random forest, 28% do. Bagged trees are fit to overlapping samples of the same training data and nearly all begin with the same split.
 :::
 
 ## Split restriction
 
 ::: {style="font-size: 0.8em"}
 - At each split, a tree may use only $m$ of the $p$ explanatory variables, chosen at random anew for that split
-:::
-
-::: {style="font-size: 0.7em"}
-- $p$ — number of explanatory variables
-- $m \le p$ — number tried at each split
+  - $p$ — number of explanatory variables
+  - $m \le p$ — number tried at each split
 :::
 
 ::: {.fragment}
@@ -314,7 +348,7 @@ The figure counts the first split of each tree in two forests of 500 trees fit t
 :::
 
 ::: notes
-A random forest grows bagged trees with one change. In this lecture m is this number, as in the textbook; in the Decision Trees lecture it indexed the regions, which this lecture does not index. A strong explanatory variable such as age is not available at many splits, including the first split of many trees, so the trees differ more, at the cost of some accuracy in each tree. For the 8 concrete explanatory variables the default is m = 2. By its default nodesize, randomForest() does not split a node with 5 or fewer observations, so its regression trees are nearly, not exactly, full.
+The random subset of explanatory variables is the third ingredient of a random forest. A strong explanatory variable such as age is not available at many splits, including the first split of many trees, so the trees differ more, at the cost of some accuracy in each tree. For the 8 concrete explanatory variables the default is m = 2. By its default nodesize, randomForest() does not split a node with 5 or fewer observations, so its regression trees are nearly, not exactly, full.
 :::
 
 ## Split restriction: correlation
@@ -326,8 +360,18 @@ A random forest grows bagged trees with one change. In this lecture m is this nu
 |Random forest |   2|            105|       0.04|                    4.4|
 :::
 
+::: {style="font-size: 0.7em"}
+- $\widehat\sigma^2$ and $\widehat\rho\widehat\sigma^2$: averages over the 305 test specimens of values at one $x$
+:::
+
+::: {.fragment}
+::: {style="font-size: 0.7em"}
+- Restriction: lower $\widehat\rho$, higher $\widehat\sigma^2$
+:::
+:::
+
 ::: notes
-The correlation rho and the variance sigma squared can be estimated from the data, for trees fit to 350 specimens (a half), across 100 random halvings of the training specimens: for each halving, a forest of 100 trees is fit to the first half, with m = p and with the default m. At each test specimen, the variance of one tree's prediction splits into two parts: the variance across halvings of the expected prediction of a forest, shared by all its trees, and the variance among the trees of one forest. With m = p the estimate of rho is 0.09; with m = 2, 0.04. The variance of one tree is larger with the restriction, and the part that no number of trees removes, rho times sigma squared, is 5.8 for bagging and 4.4 for the random forest. These are variances for trees fit to 350 specimens (a half), across halvings of the 700 training specimens, which overlap, not across independent training samples; and they say nothing about bias. The restriction also changes each tree: in the forests of 500 trees fit to all 700 training specimens, a single tree has mean test MSE 68.2 with m = p and 111.9 with m = 2.
+The correlation rho and the variance sigma squared can be estimated from the data, for trees fit to 350 specimens (a half), across 100 random halvings of the training specimens: for each halving, a forest of 100 trees is fit to the first half, with m = p and with the default m. At each test specimen, the variance of one tree's prediction splits into two parts: the variance across halvings of the expected prediction of a forest, shared by all its trees, and the variance among the trees of one forest. These are values at one x, the explanatory variables of one test specimen. The table averages them over the 305 test specimens: the variance of one tree is the average of the sum of the two parts, rho times sigma squared is the average of the first part, and rho is their ratio. With m = p the estimate of rho is 0.09; with m = 2, 0.04. For these data the restriction lowers the correlation between trees and raises the variance of one tree, from 62 to 105: it randomizes each tree's splits, so the trees differ more, and each tree is a more variable predictor. The part that no number of trees removes, rho times sigma squared, is 5.8 for bagging and 4.4 for the random forest. These are variances for trees fit to 350 specimens (a half), across halvings of the 700 training specimens, which overlap, not across independent training samples; and they say nothing about bias. The restriction also changes each tree: in the forests of 500 trees fit to all 700 training specimens, a single tree has mean test MSE 68.2 with m = p and 111.9 with m = 2.
 :::
 
 ## Fitting a random forest
@@ -365,7 +409,7 @@ The printout gives the number of trees, the m used (variables tried at each spli
 ![](../_freeze/08-trees/20-bagging-and-random-forests/figure-html/ntree-figure-1.png){height=560}
 
 ::: notes
-The figure plots the OOB MSE and the test MSE of randomForest()'s bagging (m = p) and its random forest (default m) against the number of trees. randomForest() computes the OOB MSE after k trees from the specimens with at least one out-of-bag tree among them, so its curves start at one tree. The chapter's table gives the number of trees from which each curve stays within 5% and within 2% of its value with 500 trees; the slowest to settle within 5% is the out-of-bag curve of the random forest, at 111 trees, so 500 trees are enough here. With 500 trees, bagging has OOB MSE 27.6 and test MSE 27.1, and the random forest with m = 2 has 32.2 and 34.2. The OOB MSE is above the test MSE from 2 trees on for bagging, and below the test MSE from 95 trees on for the random forest. On these data the default m predicts worse than bagging. The restriction lowered the variance that averaging cannot remove, rho sigma squared, from 5.8 to 4.4, yet the forest's test MSE rose from 27.1 to 34.2, and its OOB MSE moved the same way, from 27.6 to 32.2. The increase is bias: with m = 2 a tree often cannot split on the variables that matter most, and averaging does not remove that.
+The figure plots the OOB MSE and the test MSE of randomForest()'s bagging (m = p) and its random forest (default m) against the number of trees. randomForest() computes the OOB MSE after k trees from the specimens with at least one out-of-bag tree among them, so its curves start at one tree. The chapter's table gives the number of trees from which each curve stays within 5% and within 2% of its value with 500 trees; the slowest to settle within 5% is the out-of-bag curve of the random forest, at 111 trees, so 500 trees are enough here. With 500 trees, bagging has OOB MSE 27.6 and test MSE 27.1, and the random forest with m = 2 has 32.2 and 34.2. The OOB MSE is above the test MSE from 2 trees on for bagging, and below the test MSE from 95 trees on for the random forest. On these data the default m predicts worse than bagging. The restriction lowered the variance that averaging cannot remove, rho sigma squared, from 5.8 to 4.4, yet the forest's test MSE rose from 27.1 to 34.2, and its OOB MSE moved the same way, from 27.6 to 32.2. The increase is mostly bias: with m = 2 a tree often cannot split on the variables that matter most, and averaging does not remove that.
 :::
 
 ## Choosing $m$
@@ -453,7 +497,7 @@ The figure plots both measures for the random forest of the Fitting subsection o
 - No effect size
 
 ::: notes
-A large importance for water says that predictions get worse without it, not whether concrete gets stronger or weaker as water increases, with the others fixed, or by how much. The two measures order the variables differently here: they measure different things, the fit to the training data within each tree and the loss of out-of-bag accuracy when the variable is shuffled.
+A large importance for water says that the forest relies on it, through large decreases in RSS or through worse out-of-bag predictions when its values are shuffled, not whether concrete gets stronger or weaker as water increases, with the others fixed, or by how much. The two measures order the variables differently here: they measure different things, the fit to the training data within each tree and the loss of out-of-bag accuracy when the variable is shuffled.
 :::
 
 # Comparison
@@ -466,22 +510,26 @@ This part compares bagging and random forests with a single tree and with least 
 
 ::: {.auto-table}
 ::: {style="font-size: 0.85em"}
-|Method                      | Test MSE|
-|:---------------------------|--------:|
-|Least squares               |    106.4|
-|Least squares with log(age) |     48.5|
-|Default tree                |     86.8|
-|Pruned tree                 |     42.2|
-|Full tree                   |     40.3|
-|Bagging, rpart() loop       |     26.8|
-|Bagging, randomForest()     |     27.1|
-|Random forest, m = 2        |     34.2|
-|Random forest, m = 5        |     26.7|
+|Method                                | Test MSE|
+|:-------------------------------------|--------:|
+|Least squares, main effects           |    106.4|
+|Least squares, main effects, log(age) |     48.5|
+|Default tree                          |     86.8|
+|Pruned tree                           |     42.2|
+|Full tree                             |     40.3|
+|Bagging, rpart() loop                 |     26.8|
+|Bagging, randomForest()               |     27.1|
+|Random forest, m = 2                  |     34.2|
+|Random forest, m = 5                  |     26.7|
 :::
 :::
 
+::: {style="font-size: 0.7em"}
+- Least squares: no interactions or polynomial terms
+:::
+
 ::: notes
-The table gives the test MSE on the concrete test specimens. Every average of trees beats every single tree and least squares on the original variables; the best average has test MSE 26.7, against 40.3 for the best single tree and 48.5 for least squares with a feature built for the curvature in age. The two bagging fits, 26.8 and 27.1, differ in their bootstrap samples and in node size (full trees against randomForest()'s nodesize = 5); the first and second 150 trees of the loop alone give 26.7 and 27.1, a spread at least as large.
+The table gives the test MSE on the concrete test specimens. Both least squares fits have main effects only: each explanatory variable enters linearly, with no interactions or polynomial terms, and the second replaces age by log(age). Least squares with quadratic terms or interactions is not in the table. Every average of trees beats every single tree and least squares with main effects; the best average has test MSE 26.7, against 40.3 for the best single tree and 48.5 for least squares with main effects and log(age), a feature built for the curvature in age. The two bagging fits, 26.8 and 27.1, differ in their bootstrap samples and in node size (full trees against randomForest()'s nodesize = 5); the first and second 150 trees of the loop alone give 26.7 and 27.1, a spread at least as large.
 :::
 
 ## Extrapolation
