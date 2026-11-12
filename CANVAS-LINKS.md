@@ -43,9 +43,9 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-22 | New | | 06-regularization/50-pcr-and-pls.qmd | x |
 | 2026-10-22 | New | | 06-regularization/60-high-dimensions.qmd | x |
 | 2026-10-28 | New | | 06-regularization/70-method-comparison.qmd | x |
-| 2026-10-31 | New | | 08-trees/10-decision-trees.qmd | |
-| 2026-10-31 | New | | 08-trees/20-bagging-and-random-forests.qmd | |
-| 2026-11-01 | New | | 08-trees/30-boosting.qmd | |
+| 2026-10-31 | New | | 08-trees/10-decision-trees.qmd | x |
+| 2026-10-31 | New | | 08-trees/20-bagging-and-random-forests.qmd | x |
+| 2026-11-01 | New | | 08-trees/30-boosting.qmd | x |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into

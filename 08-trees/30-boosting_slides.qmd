@@ -49,20 +49,20 @@ execute:
 ::: {.column width="34%"}
 - Data
   - Earlier fits
-- Algorithm
+- Boosting
   - Residuals
-  - Steps
-  - Loop
-- xgboost
-  - Fitting
+  - Algorithm
+  - Loop using rpart()
+  - xgboost
+  - Leaf predictions
   - Loop reproduction
 :::
 ::: {.column width="33%"}
 - Tuning parameters
+  - Tuning parameters
   - Shrinkage
   - Tree depth
   - Overfitting
-- Choosing $B$
   - Cross-validation estimate
   - Chosen model
 - Variable importance
@@ -83,9 +83,9 @@ execute:
 :::
 
 ::: notes
-Distilled from the chapter's six learning objectives and the slides this deck spends time on: describing boosting for regression trees (start from the fit 0, fit a tree of depth delta to the current residuals, add nu times its predictions to the fit, update the residuals, repeat B times) and implementing it as a loop of rpart() fits; fitting a boosted model with xgb.train(), setting nu, delta and B through learning_rate, max_depth and nrounds, and how its defaults differ from the loop: it starts from the mean response and shrinks each leaf's value with the penalty lambda; the roles of the three tuning parameters, the number of trees B, the shrinkage nu and the depth delta, including why a smaller nu needs a larger B and why stumps give an additive model; the comparison with bagging and random forests, small trees grown one after another, which reduces bias, against large trees grown independently and averaged, which reduces variance; how the test error changes as B grows, including overfitting, and choosing B by 10-fold cross-validation with xgb.cv(); and the variable importance of a boosted model, the decrease in RSS from each explanatory variable's splits summed over the trees (the Gain column of xgb.importance()), as a ranking without direction or effect size. The split chunk, the xgboost defaults and the loop-settings fit, the collapsed Code callouts, the Beyond this course callout and the hand-off to the next lecture are in the notes and not in the agenda. The Random Forests lecture averaged many large trees, each grown independently of the others, to reduce the variance of a single tree. Boosting also combines many trees, but grows small ones, one after another. This lecture builds boosting from scratch with rpart() for a numeric response, then fits, tunes and summarizes it with the xgboost package. The reading is ISLR2 Section 8.2.3.
+Distilled from the chapter's six learning objectives and the slides this deck spends time on: describing boosting for regression trees (start from the fit 0, fit a tree of depth delta to the current residuals, add nu times its predictions to the fit, update the residuals, repeat B times) and implementing it as a loop of rpart() fits; fitting a boosted model with xgb.train(), setting nu, delta and B through learning_rate, max_depth and nrounds, and how its defaults differ from the loop: it starts from the mean response and shrinks each leaf's prediction with the penalty lambda; the roles of the three tuning parameters, the number of trees B, the shrinkage nu and the depth delta, including why a smaller nu needs a larger B and why stumps give an additive model; the comparison with bagging and random forests, small trees grown one after another, which reduces bias, against large trees grown independently and averaged, which reduces variance; how the test error changes as B grows, including overfitting, and choosing B by 10-fold cross-validation with xgb.cv(); and the variable importance of a boosted model, the decrease in RSS from each explanatory variable's splits summed over the trees (the Gain column of xgb.importance()), as a ranking without direction or effect size. The split chunk, the xgboost defaults and the loop-settings fit, the collapsed Code callouts, the Beyond this course callout and the hand-off to the next lecture are in the notes and not in the agenda. The Random Forests lecture averaged many large trees, each grown independently of the others, to reduce the variance of a single tree. Boosting also combines many trees, but grows small ones, one after another. This lecture builds boosting from scratch with rpart() for a numeric response, then fits, tunes and summarizes it with the xgboost package. The reading is ISLR2 Section 8.2.3.
 
-Timing: the core slides come to about 44 minutes. The next lecture begins support vector machines (ISLR2 Chapter 9), which classify by finding a boundary that separates the classes in the space of the features, with as wide a margin as possible.
+Timing: in this offering Variable importance and Additive structure are skipped, and the core slides of the rest come to about 34 minutes (about 36.5 with the two optional slides in the plan, Leaf predictions and Limits); the whole deck comes to about 50. The next lecture begins support vector machines (ISLR2 Chapter 9), which classify by finding a boundary that separates the classes in the space of the features, with as wide a margin as possible.
 :::
 
 # Data
@@ -144,10 +144,10 @@ The data and split are those of the Decision Trees lecture, so the test MSEs of 
 The tabs plot the predicted against the observed strength of the 305 test specimens for four fits on all 8 explanatory variables: the mean training strength, a stump (a tree with a single split, so of depth 1), the default tree, and a random forest with m, the number of explanatory variables tried at each split as in the previous lecture, chosen by its out-of-bag (OOB) error. A point on the dashed line is predicted exactly. The mean predicts one value for every specimen, the stump 2, and the default tree 15, one per leaf; each horizontal row of points is one leaf or a few leaves with close predictions. Within a leaf the test strengths have a pooled standard deviation of 9.1 MPa, against 15.9 MPa over all the test specimens. The random forest's predictions follow the dashed line. The test MSEs are 254.7, 183.6, 86.8, and 27.5. The forest here uses m = 5, chosen by its OOB error; bagging (m = p) has test MSE 26.9. These forests are refit here, so their test MSEs, which depend on random draws, differ from those of the previous lecture by up to 0.8. A small tree is a poor fit: it predicts a few values, each the mean of many specimens that differ in strength. Bagging and random forests get past this by averaging large trees, each with low bias and high variance. Boosting instead keeps the trees small and adds them up one at a time, each fit to the part of the strength that the trees before it have not yet explained.
 :::
 
-# Algorithm
+# Boosting
 
 ::: notes
-Boosting starts from the prediction 0 for every specimen, so its first residuals are the strengths themselves. It fits a small tree to the residuals, adds a shrunken copy of the tree's predictions to the fit, and recomputes the residuals. This part shows the residuals as trees are added, writes the algorithm out, and fits it with rpart().
+Boosting starts from the prediction 0 for every specimen, so its first residuals are the strengths themselves. It fits a small tree to the residuals, adds a shrunken copy of the tree's predictions to the fit, and recomputes the residuals. This part shows the residuals as trees are added, writes the algorithm out, fits it with rpart(), and then fits it with xgboost, which differs from the loop in three defaults.
 :::
 
 ## Residuals
@@ -180,7 +180,7 @@ Boosting starts from the prediction 0 for every specimen, so its first residuals
 The tabs plot the residuals of the training specimens against age: at the start, the strengths, and then after 1, 10, 100, and 1,000 trees of depth 4 (each leaf reached through at most 4 splits), each tree's predictions multiplied by the shrinkage nu = 0.1 before they are added. The first tab is the data: strength rises steeply with age over the first month. The fit after one tree is nu = 0.1 times that tree's predictions, so no residual moves by more than 7.5 MPa, and the training MSE falls from 1,549.0 to 1,268.9, by 18%. A regression tree's predictions for its training data average to the mean of the residuals it is fit to, so after b trees the mean fitted value is 1 - (1 - nu)^b times the mean strength. After 10 trees that factor is 1 - 0.9^10 = 0.651: the mean fitted value is 23.3 MPa, against a mean training strength of 35.8, and the first trees mostly raise the overall level from 0. By 100 trees the rise with age is gone from the residuals (their correlation with log(age) falls from 0.57 to 0.03), and after 1,000 trees the training MSE is 0.42.
 :::
 
-## Steps
+## Algorithm
 
 ::: {style="font-size: 0.6em"}
 1. Set $\widehat f_0(x) = 0$ and $r_i = y_i$ for $i = 1, \ldots, n$.
@@ -206,7 +206,7 @@ The tabs plot the residuals of the training specimens against age: at the start,
 The chapter's list of steps for boosting with B trees of depth delta and shrinkage nu, with the step 1 "for every x" and "for every training observation" and the step 2a "to the training data, with the residuals as the response" shortened. The tree at step b depends on the trees before it through the residuals, so the trees are grown in sequence. B is the number of trees, indexed b, as in the Random Forests lecture. The superscript of the b-th tree names the tree; it has no star, because the tree is not fit to a bootstrap sample. The residual r_i is not the lasso residual vector r. The shrinkage, or learning rate, nu, with 0 < nu <= 1, is what the textbook writes lambda; in these notes lambda is the ridge and lasso tuning parameter. The depth delta is the largest number of splits on a path from the root to a leaf; delta = 1 is a stump. The textbook limits the number of splits, d; in these notes d is the number of features of the subset selection lectures, and both rpart() and xgboost limit depth, with maxdepth and max_depth. A tree of depth delta has at most 2^delta leaves. The symbol delta is unrelated to the discriminant functions delta_k(x) of the discriminant analysis lectures and to the interaction estimates delta_j of the Flexible Logistic Regression lecture, which always carry a subscript.
 :::
 
-## Loop
+## Loop using rpart()
 
 ```r
 # Boosting from scratch: B trees of depth 4, with shrinkage nu.
@@ -229,13 +229,7 @@ for (b in seq_len(B)) {
 The chunk writes the algorithm out with rpart(): B = 1,000 trees of depth 4 with shrinkage 0.1, the fit of the Residuals tabs, on all 8 explanatory variables of the training specimens. The tree settings, small, are set in a collapsed callout of the chapter: rpart.control(maxdepth = 4, cp = 0, minsplit = 2, minbucket = 1, xval = 0, maxcompete = 0, maxsurrogate = 0). cp = 0, minsplit = 2 and minbucket = 1 turn off rpart()'s other stopping rules, as for the full tree of the Decision Trees lecture, so each tree is grown until its leaves are at depth delta or hold specimens that no split separates. xval = 0 skips the cross-validation rpart() would otherwise run, and maxcompete = 0 and maxsurrogate = 0 skip the competing and surrogate splits it would otherwise record, which speeds up the loop without changing any tree. The leaves of the first tree hold 6 to 161 training specimens. The boosted prediction sums the trees' predictions and multiplies by nu; the chapter's next chunk does this for the test specimens and gives the loop's training MSE, 0.42, and test MSE, 23.7, against 86.8 for the default tree and 27.5 for the random forest; they are the first row of the table on the Loop reproduction slide.
 :::
 
-# xgboost
-
-::: notes
-The xgboost package fits boosted trees in compiled code. Its arguments name this lecture's tuning parameters differently: learning_rate (or its alias eta) is the shrinkage nu, by default 0.3; max_depth is the depth delta, by default 6; nrounds is the number of trees B, one per round, with no default. This part fits the loop's nu, delta and B with it, and shows how its defaults differ from the loop.
-:::
-
-## Fitting
+## xgboost
 
 ```r
 # The training and test data in xgboost's format.
@@ -254,10 +248,10 @@ mean((y_test - predict(fit, d_test))^2)
 ```
 
 ::: notes
-xgb.DMatrix() stores the explanatory variables with the response, xgb.params() collects the tuning parameters, and xgb.train() fits the model, with the squared-error loss by default for a numeric response. learning_rate is the shrinkage nu, max_depth the depth delta and nrounds the number of trees B. nthread = 1 runs it on one processor thread. The chunk fits the loop's nu, delta and B. The test MSE is 24.1, against 23.7 for the loop: the two fits use the same nu, delta and B, but are not the same model.
+The xgboost package fits boosted trees in compiled code. Its arguments name this lecture's tuning parameters differently: learning_rate (or its alias eta) is the shrinkage nu, by default 0.3; max_depth is the depth delta, by default 6; nrounds is the number of trees B, one per round, with no default. This slide fits the loop's nu, delta and B with it; the Leaf predictions and Loop reproduction slides show how its defaults differ from the loop. xgb.DMatrix() stores the explanatory variables with the response, xgb.params() collects the tuning parameters, and xgb.train() fits the model, with the squared-error loss by default for a numeric response. nthread = 1 runs it on one processor thread. The test MSE is 24.1, against 23.7 for the loop: the two fits use the same nu, delta and B, but are not the same model.
 :::
 
-## Leaf values
+## Leaf predictions
 
 ::: {style="font-size: 0.75em"}
 $$\frac{\sum_{i \in \text{leaf}} r_i}{n_{\text{leaf}} + \texttt{lambda}},$$
@@ -267,12 +261,12 @@ $$\frac{\sum_{i \in \text{leaf}} r_i}{n_{\text{leaf}} + \texttt{lambda}},$$
 ::: {style="font-size: 0.7em"}
 - the sum runs over the training specimens in the leaf
 - $n_{\text{leaf}}$ — their number
-- `lambda` — penalty that shrinks the leaf's value toward 0; default 1
+- `lambda` — penalty that shrinks the leaf's prediction toward 0; default 1
 :::
 :::
 
 ::: notes
-The chapter says xgboost differs from the loop in three ways, each a default. Start: it starts from the mean training strength (its base_score), not from 0. Leaf values: it grows each tree from the first and second derivatives of the loss at the current fit. For the squared-error loss one half of [y_i minus the fit]^2 these are minus r_i and 1, so the tree is fit to the residuals, as in the loop, but a leaf predicts, before the shrinkage nu, the display, where n_leaf is the number of training specimens in the leaf and lambda, by default 1, is a penalty that shrinks the leaf's value toward 0, as ridge regression shrinks its estimates. With lambda = 0 the leaf predicts the mean of its residuals, as an rpart() leaf does. (lambda is xgboost's name; it is not the ridge lambda of these notes.) Split search: by default (tree_method = "hist") it groups each explanatory variable's values into at most 256 bins and tries cut points only between bins, not between every pair of adjacent values. Setting lambda = 0, base_score = 0 and tree_method = "exact" removes all three. The other defaults already match the loop: every leaf holds at least one specimen (min_child_weight = 1, minbucket = 1), and any decrease in RSS justifies a split (gamma = 0, cp = 0).
+The chapter says xgboost differs from the loop in three ways, each a default. Start: it starts from the mean training strength (its base_score), not from 0. Leaf predictions: it grows each tree from the first and second derivatives of the loss at the current fit. For the squared-error loss one half of [y_i minus the fit]^2 these are minus r_i and 1, so the tree is fit to the residuals, as in the loop, but a leaf predicts, before the shrinkage nu, the display, where n_leaf is the number of training specimens in the leaf and lambda, by default 1, is a penalty that shrinks the leaf's prediction toward 0, as ridge regression shrinks its estimates. With lambda = 0 the leaf predicts the mean of its residuals, as an rpart() leaf does. (lambda is xgboost's name; it is not the ridge lambda of these notes.) Split search: by default (tree_method = "hist") it groups each explanatory variable's values into at most 256 bins and tries cut points only between bins, not between every pair of adjacent values. Setting lambda = 0, base_score = 0 and tree_method = "exact" removes all three. The other defaults already match the loop: every leaf holds at least one specimen (min_child_weight = 1, minbucket = 1), and any decrease in RSS justifies a split (gamma = 0, cp = 0).
 :::
 
 ## Loop reproduction
@@ -286,13 +280,30 @@ The chapter says xgboost differs from the loop in three ways, each a default. St
 :::
 
 ::: notes
-iterationrange = c(1, 200) predicts with trees 1 to 200 (counted from 1, both ends included). With the loop's settings, xgboost reproduces the loop to rounding through tree 232, and not after. Training fits: after 200 trees the two training fits differ by at most 0.00007 MPa, a rounding difference, since xgboost computes in single precision. Test predictions: of trees 20 to 232, 32 predict differently, by more than 0.001 MPa, for some test specimen while agreeing on every training specimen: in a node, both programs make the same partition of the training specimens with a different split. In tree 20, both split the root at the same place in age, rpart() cutting at 10.5 and xgboost at 11, with no specimen in between; deeper, both separate the same 2 training specimens from the rest of a node, rpart() with water at 201.75 and xgboost with cement at 275.4, which sends 1 test specimen to a different leaf. Tree 233: both split the root on age at 2. In the node of the other 699 training specimens two splits nearly tie. With the loop's residuals, age at 42 decreases the RSS by 0.624287 and fine_aggregate at 884.65 by 0.624186, so rpart() takes the first; with xgboost's residuals, which differ from the loop's by rounding, the decreases are 0.624227 and 0.624234, so xgboost takes the second. From there the trees differ. The table compares the three fits after 1,000 trees, each with 1,000 trees of depth 4 and shrinkage 0.1. A leaf of xgboost predicts, before the shrinkage nu, the sum of its residuals divided by n_leaf + lambda, where n_leaf is the number of training specimens in the leaf and lambda, by default 1, is a penalty that shrinks the leaf's value toward 0, as ridge regression shrinks its estimates; with lambda = 0 the leaf predicts the mean of its residuals, as an rpart() leaf does (lambda is xgboost's name; it is not the ridge lambda of these notes). The rest of this lecture uses xgboost with its defaults, apart from nu, delta and B.
+iterationrange = c(1, 200) predicts with trees 1 to 200 (counted from 1, both ends included). With the loop's settings, xgboost reproduces the loop to rounding through tree 232, and not after. Training fits: after 200 trees the two training fits differ by at most 0.00007 MPa, a rounding difference, since xgboost computes in single precision. Test predictions: of trees 20 to 232, 32 predict differently, by more than 0.001 MPa, for some test specimen while agreeing on every training specimen: in a node, both programs make the same partition of the training specimens with a different split. In tree 20, both split the root at the same place in age, rpart() cutting at 10.5 and xgboost at 11, with no specimen in between; deeper, both separate the same 2 training specimens from the rest of a node, rpart() with water at 201.75 and xgboost with cement at 275.4, which sends 1 test specimen to a different leaf. Tree 233: both split the root on age at 2. In the node of the other 699 training specimens two splits nearly tie. With the loop's residuals, age at 42 decreases the RSS by 0.624287 and fine_aggregate at 884.65 by 0.624186, so rpart() takes the first; with xgboost's residuals, which differ from the loop's by rounding, the decreases are 0.624227 and 0.624234, so xgboost takes the second. From there the trees differ. The table compares the three fits after 1,000 trees, each with 1,000 trees of depth 4 and shrinkage 0.1. A leaf of xgboost predicts, before the shrinkage nu, the sum of its residuals divided by n_leaf + lambda, where n_leaf is the number of training specimens in the leaf and lambda, by default 1, is a penalty that shrinks the leaf's prediction toward 0, as ridge regression shrinks its estimates; with lambda = 0 the leaf predicts the mean of its residuals, as an rpart() leaf does (lambda is xgboost's name; it is not the ridge lambda of these notes). The rest of this lecture uses xgboost with its defaults, apart from nu, delta and B.
 :::
 
 # Tuning parameters
 
 ::: notes
-Boosting has three tuning parameters: the number of trees B, the shrinkage nu, and the depth delta. This part shows how the test MSE changes with each.
+Boosting has three tuning parameters: the number of trees B, the shrinkage nu, and the depth delta. This part recalls what they are, shows how the test MSE changes with each (illustrations that use the test specimens for teaching only and choose nothing), and then chooses B without the test data, by 10-fold cross-validation: it defines the cross-validation estimate, computes it with xgb.cv() and shows the model it chooses.
+:::
+
+## Tuning parameters
+
+::: {style="font-size: 0.7em"}
+- Number of trees $B$ (`nrounds`) — how many trees are added
+- Shrinkage $\nu$ (`learning_rate`) — how fast the model learns
+- Depth $\delta$ (`max_depth`) — how complex each tree is
+:::
+
+::: {style="font-size: 0.7em; margin-top: 1em"}
+- Other `xgboost` settings (`lambda`, `min_child_weight`, `gamma`, `subsample`): defaults
+- $\nu = 0.1$ and $\delta = 4$ fixed in advance; the next plots illustrate each parameter and choose nothing
+:::
+
+::: notes
+The chapter's list of the three tuning parameters: the number of trees B (nrounds), how many trees are added; the shrinkage nu (learning_rate), the multiplier of each tree's predictions before they are added, which sets how fast the model learns; the depth delta (max_depth), the largest number of splits on a path from the root to a leaf, which sets how complex each tree is. xgboost has further settings, among them lambda, min_child_weight and gamma of the Loop reproduction slide and subsample, the share of the training specimens each tree is fit to; this lecture leaves them at their defaults. The Shrinkage, Tree depth and Overfitting figures plot the test MSE against the number of trees to show what each tuning parameter does. They use the test specimens for teaching only and choose nothing: nu = 0.1 and delta = 4 were fixed in advance, and the model fit for the rest of the lecture uses them. In practice every tuning parameter is chosen without the test data, by cross-validation (or, for a forest, by out-of-bag error), as B is on the Cross-validation estimate slide. Beyond this course, not tested: nu and delta can be chosen by cross-validation along with B, running xgb.cv() for each pair of values on a grid, and lambda and min_child_weight can be tuned the same way; this lecture does not.
 :::
 
 ## Shrinkage
@@ -308,7 +319,7 @@ The figure plots the test MSE of the boosted model after b trees against b, for 
 ![](../_freeze/08-trees/30-boosting/figure-html/depth-figure-1.png){height=560}
 
 ::: notes
-The figure plots the test MSE against the number of trees for depths 1, 2, 4, and 8, each with nu = 0.1. Deeper trees learn faster. The test MSE is smallest after 226 trees of depth 8 (28.2), 573 of depth 4 (23.9), and 4,626 of depth 2 (28.1). The curves for depths 1 and 2 are still falling at 5,000 trees, but slowly: the last 1,000 trees lowered them by 0.4 and 0.1. Depth 4 does best, and depth 8 reaches its smallest value first and then stays within 1% of it up to 5,000 trees. The Additive structure section shows what the depth changes in the fitted model: the interactions it can represent.
+The figure plots the test MSE against the number of trees for depths 1, 2, 4, and 8, each with nu = 0.1. Deeper trees learn faster. The test MSE is smallest after 226 trees of depth 8 (28.2), 573 of depth 4 (23.9), and 4,626 of depth 2 (28.1). The curves for depths 1 and 2 are still falling at 5,000 trees, but slowly: the last 1,000 trees lowered them by 0.4 and 0.1. Depth 4 has the smallest test MSE, and depth 8 reaches its smallest value first and then stays within 1% of it up to 5,000 trees. The Additive structure section shows what the depth changes in the fitted model: the interactions it can represent. That part is skipped in this offering.
 :::
 
 ## Overfitting
@@ -317,12 +328,6 @@ The figure plots the test MSE against the number of trees for depths 1, 2, 4, an
 
 ::: notes
 The figure plots the test MSE for nu = 0.5 and nu = 0.1, at depth 4, against the number of trees on a linear axis, from the same fits as the Shrinkage figure. Both curves reach a smallest value and then rise. With nu = 0.5, the test MSE rises 8% from its smallest value, after 83 trees, to 5,000 trees; with nu = 0.1 it rises 2% from its smallest value, after 573 trees. The training MSE with nu = 0.5 falls to 0.28 and stays there from about 583 trees on, while its test MSE is 22.6: the late trees fit what is left of the training residuals, which does not carry over to the test specimens. That training MSE is within 1% of the smallest any model of these explanatory variables can reach, 0.28: 11 training specimens share all 8 explanatory variables with another training specimen of a different strength, and no split separates them. Bagging's test error levels off instead: the bagging forest of the Earlier fits has test MSE between 26.5 and 27.8 from 50 to its 500 trees. Boosting overfits when B is too large; a smaller nu makes the rise slower.
-:::
-
-# Choosing $B$
-
-::: notes
-B is chosen without the test data by 10-fold cross-validation. Split the training observations at random into 10 folds of equal size; for each fold l, run boosting on the other nine folds and record the error on fold l after every number of trees. This part defines the cross-validation estimate, computes it with xgb.cv() and shows the model it chooses.
 :::
 
 ## Cross-validation estimate
@@ -340,7 +345,7 @@ $$\text{CV}_{(10)}(B) = \frac{1}{10}\sum_{\ell=1}^{10}\text{MSE}_\ell(B), \qquad
 :::
 
 ::: notes
-The estimate for B trees is the display. One run of B_max trees per fold gives the estimate for every B <= B_max, because the model of B trees is the first B trees of the longer run. Here B_max = 5,000, with nu = 0.1 and delta = 4, the params of the Fitting slide. The folds are drawn with R's random numbers, so the seed set at the start of the lecture fixes them.
+B is chosen like any tuning parameter, by cross-validation, without the test data, here 10-fold, with nu = 0.1 and delta = 4 fixed. Split the training observations at random into 10 folds of equal size; for each fold l, run boosting on the other nine folds and record the error on fold l after every number of trees. The estimate for B trees is the display. One run of B_max trees per fold gives the estimate for every B <= B_max, because the model of B trees is the first B trees of the longer run. Here B_max = 5,000, and the run uses the params of the xgboost slide. The folds are drawn with R's random numbers, so the seed set at the start of the lecture fixes them.
 :::
 
 ## Cross-validation: RMSE
@@ -361,6 +366,10 @@ xgb.cv() grows the models of the 10 folds side by side and records, after every 
 :::
 
 ## Cross-validation estimate in R
+
+::: {style="font-size: 0.7em"}
+`params`: $\nu = 0.1$ and $\delta = 4$ fixed
+:::
 
 ```r
 # 10-fold cross-validation for every number of trees up to 5,000.
@@ -384,13 +393,21 @@ The chunk runs xgb.cv() for 5,000 trees with 10 folds and applies the display of
 
 ## Chosen model
 
-![](../_freeze/08-trees/30-boosting/figure-html/cv-figure-1.png){height=560}
+![](../_freeze/08-trees/30-boosting/figure-html/cv-figure-1.png){height=520}
+
+::: {style="font-size: 0.7em"}
+$\nu = 0.1$, $\delta = 4$, $B = 1{,}194$
+:::
 
 ::: notes
-The figure plots the cross-validation estimate, and the test MSE of the model fit to all 700 training specimens, against the number of trees. The cross-validation estimate is smallest, 20.0, at B = 1,194. The next slide refits the chosen model to all the training specimens; its test MSE is 24.1; the smallest test MSE over every number of trees, which cross-validation cannot know, is 23.9, after 573 trees. The estimate is within 1% of its minimum for every B from 546 to 5,000, so B = 1,194 is not sharply determined; minimizing the mean RMSE alone would choose B = 1,312. The cross-validation estimate is below the test MSE by 4.1. This lecture does not fully explain the gap. Cross-validation reports the minimum of a noisy curve, and the test MSE comes from one sample of 305 specimens. Repeated mixes do not explain it by themselves: 72% of the training specimens share their mix with a training specimen in another fold, and 68% of the test specimens have a mix that some training specimen also has.
+The figure plots the cross-validation estimate, and the test MSE of the model fit to all 700 training specimens, against the number of trees. The cross-validation estimate is smallest, 20.0, at B = 1,194. The chosen model, with nu = 0.1, delta = 4 and B = 1,194, is refit to all the training specimens on the next slide; its test MSE is 24.1; the smallest test MSE over every number of trees, which cross-validation cannot know, is 23.9, after 573 trees. The estimate is within 1% of its minimum for every B from 546 to 5,000, so B = 1,194 is not sharply determined; minimizing the mean RMSE alone would choose B = 1,312. The cross-validation estimate is below the test MSE by 4.1. This lecture does not fully explain the gap. Cross-validation reports the minimum of a noisy curve, and the test MSE comes from one sample of 305 specimens. Repeated mixes do not explain it by themselves: 72% of the training specimens share their mix with a training specimen in another fold, and 68% of the test specimens have a mix that some training specimen also has.
 :::
 
 ## Chosen model in R
+
+::: {style="font-size: 0.7em"}
+$\nu = 0.1$, $\delta = 4$, $B = 1{,}194$
+:::
 
 ```r
 # The chosen model: B_cv trees, fit to all the training specimens.
@@ -403,7 +420,7 @@ mean((y_test - predict(fit_cv, d_test))^2)
 ```
 
 ::: notes
-The chosen model is refit to all the training specimens, with B_cv = 1,194 trees. Its test MSE is 24.1; the smallest test MSE over every number of trees, which cross-validation cannot know, is 23.9, after 573 trees. The cross-validation estimate (20.0) is below this test MSE by 4.1, and the lecture does not fully explain the gap: cross-validation reports the minimum of a noisy curve, and the test MSE comes from one sample of 305 specimens.
+The chosen model, with nu = 0.1, delta = 4 and B = 1,194, is refit to all the training specimens. Its test MSE is 24.1; the smallest test MSE over every number of trees, which cross-validation cannot know, is 23.9, after 573 trees. The cross-validation estimate (20.0) is below this test MSE by 4.1, and the lecture does not fully explain the gap: cross-validation reports the minimum of a noisy curve, and the test MSE comes from one sample of 305 specimens. To move on, say that the boosted model is now fit, tuned and chosen; that Variable importance and Additive structure are skipped in this offering; and that the Comparison part, which compares test errors and does not depend on them, is next.
 :::
 
 # Variable importance
@@ -446,13 +463,13 @@ $$\text{gain} = \frac{S_1^2}{n_1 + \texttt{lambda}} + \frac{S_2^2}{n_2 + \texttt
 ::: {style="font-size: 0.7em"}
 - $S_1$, $S_2$ — sums of the residuals in the two parts
 - $S = S_1 + S_2$ — sum over the node
-- `lambda` — the leaf penalty of the Leaf values slide
+- `lambda` — the leaf penalty of the Leaf predictions slide
 - `lambda = 0`: the gain equals the decrease in RSS
 :::
 :::
 
 ::: notes
-xgboost calls a split's decrease its gain: the display, where S_1 and S_2 are the sums of the residuals in the two parts, S = S_1 + S_2 is the sum over the node, and lambda is the leaf penalty of the Leaf values slide: it shrinks the leaf's value toward 0, as ridge regression shrinks its estimates. With lambda = 0, S_k^2/n_k = n_k r-bar_k^2, and the gain is n_1 r-bar_1^2 + n_2 r-bar_2^2 - (n_1 + n_2) r-bar^2, with r-bar the mean residual of the node, which equals the decrease in RSS above. With the default lambda = 1 each denominator is one larger, a small change for nodes of many specimens.
+xgboost calls a split's decrease its gain: the display, where S_1 and S_2 are the sums of the residuals in the two parts, S = S_1 + S_2 is the sum over the node, and lambda is the leaf penalty of the Leaf predictions slide: it shrinks the leaf's prediction toward 0, as ridge regression shrinks its estimates. With lambda = 0, S_k^2/n_k = n_k r-bar_k^2, and the gain is n_1 r-bar_1^2 + n_2 r-bar_2^2 - (n_1 + n_2) r-bar^2, with r-bar the mean residual of the node, which equals the decrease in RSS above. With the default lambda = 1 each denominator is one larger, a small change for nodes of many specimens.
 :::
 
 ## RSS decrease in R
@@ -578,20 +595,21 @@ The figure plots the test MSE against the number of trees for bagging and for bo
 ## Test error
 
 ::: {.auto-table}
-|Method                              |Tuning                                                | Test MSE|
-|:-----------------------------------|:-----------------------------------------------------|--------:|
-|Least squares, main effects         |none                                                  |    106.4|
-|Least squares with log(age)         |none                                                  |     48.5|
-|Default tree                        |rpart() stopping rules                                |     86.8|
-|Full tree                           |none                                                  |     40.3|
-|Pruned tree                         |cp by 10-fold CV                                      |     42.2|
-|Bagging, $m = 8$                    |none                                                  |     26.9|
-|Random forest, $m = 5$              |$m$ by OOB error                                      |     27.5|
-|Boosting, $\nu = 0.1$, $\delta = 4$ |$\nu$ and $\delta$ fixed, $B = 1{,}194$ by 10-fold CV |     24.1|
+|Method                              |Tuning                                                           | Test MSE|
+|:-----------------------------------|:----------------------------------------------------------------|--------:|
+|Least squares, main effects         |none                                                             |    106.4|
+|Least squares with log(age)         |none                                                             |     48.5|
+|Default tree                        |rpart() stopping rules                                           |     86.8|
+|Full tree                           |none                                                             |     40.3|
+|Pruned tree                         |cp by 10-fold CV                                                 |     42.2|
+|Bagging, $m = 8$                    |none                                                             |     26.9|
+|Random forest, $m = 5$              |$m$ by OOB error                                                 |     27.5|
+|Boosting, $\nu = 0.1$, $\delta = 4$ |$\nu$ and $\delta$ fixed in advance, $B = 1{,}194$ by 10-fold CV |     24.1|
+
 :::
 
 ::: notes
-The table collects the test MSE of every fit to all 8 explanatory variables in the three tree lectures, with how each was tuned. Boosting has the smallest test MSE, 24.1, 10% below bagging's 26.9. Differences of a few units of test MSE are within the noise this chapter shows: the loop and xgboost with the loop's settings, the same algorithm, differ by 1.3, the refit forests differ from the previous lecture's by up to 0.8, and every test MSE comes from one sample of 305 test specimens. Only B was chosen by cross-validation; nu = 0.1 and delta = 4 were fixed before the Tree depth comparison, in which delta = 4 then turned out to have the smallest test MSE of the depths compared, so 24.1 is mildly optimistic. Taking the best B for each other depth, chosen on the test specimens and so flattering to boosting, depths 1, 2, and 8 reach 31.6, 28.1, and 28.2, all above bagging's 26.9: boosting's advantage depends on its tuning parameters. Least squares with log(age), which needed a feature built after seeing the curve in age, has 48.5; the tree ensembles find the curve and the interactions without it.
+The table collects the test MSE of every fit to all 8 explanatory variables in the three tree lectures, with how each was tuned. Boosting has the smallest test MSE, 24.1, 10% below bagging's 26.9. Differences of a few units of test MSE are within the noise this chapter shows: the loop and xgboost with the loop's settings, the same algorithm, differ by 1.3, the refit forests differ from the previous lecture's by up to 0.8, and every test MSE comes from one sample of 305 test specimens. For boosting, nu = 0.1 and delta = 4 were fixed in advance and only B was chosen, by cross-validation. In the Tree depth figure, a comparison on the test specimens, delta = 4 has the smallest test MSE of the depths compared; that comparison illustrates the depth and did not choose it. Taking the best B for each other depth, chosen on the test specimens and so flattering to boosting, depths 1, 2, and 8 reach 31.6, 28.1, and 28.2, all above bagging's 26.9: boosting's advantage depends on its tuning parameters. Least squares with log(age), which needed a feature built after seeing the curve in age, has 48.5; the tree ensembles find the curve and any interactions without it.
 :::
 
 ## Limits
@@ -599,24 +617,24 @@ The table collects the test MSE of every fit to all 8 explanatory variables in t
 - Three tuning parameters: $B$, $\nu$, $\delta$; `xgboost` adds more, such as `lambda`
 - $B$ must be chosen: too many trees overfit
 - Trees grown in sequence, not in parallel
-- No single tree to read: importance rankings only
+- No single tree to read
 - Predictions made of steps, constant beyond the largest training value
 
 ::: notes
-Boosting has three tuning parameters, B, nu, and delta, against a random forest's m and number of trees, and xgboost adds more, such as lambda. Its B must be chosen, since too many trees overfit, while a forest only needs enough trees. Its trees are grown in sequence, each needing the residuals of the one before, so they cannot be grown at the same time as a forest's can (xgboost instead spreads the split search of each tree over processor threads), and the cross-validation above grew 5,000 trees in each of 10 folds. With many trees it fits the training data nearly exactly: the training MSE fell to 0.28 with nu = 0.5, while that fit's test MSE never fell below 21.0. Like a forest, it has no single tree to read, only importance rankings, its predictions are made of steps, and it predicts a constant beyond the largest value of an explanatory variable in the training data, since every tree does.
+Boosting has three tuning parameters, B, nu, and delta, against a random forest's m and number of trees, and xgboost adds more, such as lambda. Its B must be chosen, since too many trees overfit, while a forest only needs enough trees. Its trees are grown in sequence, each needing the residuals of the one before, so they cannot be grown at the same time as a forest's can (xgboost instead spreads the split search of each tree over processor threads), and the cross-validation above grew 5,000 trees in each of 10 folds. With many trees it fits the training data nearly exactly: the training MSE fell to 0.28 with nu = 0.5, while that fit's test MSE never fell below 21.0. Like a forest, it has no single tree to read, only importance rankings (the skipped Variable importance part), its predictions are made of steps, and it predicts a constant beyond the largest value of an explanatory variable in the training data, since every tree does.
 :::
 
 ## Conclusion
 
 - Boosting adds small trees, each fit to the residuals of the trees before it
-- `xgboost` starts from the mean and shrinks leaf values
+- `xgboost` starts from the mean and shrinks leaf predictions
 - A smaller $\nu$ needs more trees; choose $B$ by cross-validation
 - Importance ranks variables, with no direction or effect size
 - Depth $\delta$ allows interactions among at most $\delta$ variables
 - Boosting reduces bias; bagging reduces variance
 
 ::: notes
-Boosting builds a model from small trees added one after another. It starts from a constant fit, fits a tree of depth delta to the current residuals, adds nu times the tree's predictions to the fit, and updates the residuals, B times. Each tree is fit to what the trees before it got wrong, so the trees depend on one another and are grown in sequence. The algorithm is a short loop of rpart() fits; xgboost implements it, with nu, delta and B as learning_rate, max_depth and nrounds, and by default starts from the mean response and shrinks each leaf's value by the penalty lambda. The three tuning parameters interact. The shrinkage nu sets how fast the model learns: a smaller nu needs more trees and makes the test error less sensitive to their number. The depth delta sets how complex each tree is: each leaf of a tree of depth delta is reached through at most delta splits, so the boosted model is a sum of terms that each involve at most delta explanatory variables and can represent interactions among at most delta of them. Stumps give an additive model, a sum of functions that each depend on one variable. The number of trees B is chosen by cross-validation, since, unlike bagging, boosting overfits when B is too large. One run of boosting per fold, as in xgb.cv(), gives the cross-validation estimate for every B up to its length. Bagging and random forests average large trees, each with low bias and high variance, grown independently on bootstrap samples, which reduces variance. Boosting adds small trees, each with high bias, fit to residuals, which reduces bias. The importance of an explanatory variable, the decrease in RSS from its splits summed over the trees (xgboost's gain), ranks the variables without giving a direction or an effect size.
+In this offering Variable importance and Additive structure are skipped, so skip the fourth and fifth lines, which recap them: importance (the fourth line) and interactions and additive models (the fifth). Boosting builds a model from small trees added one after another. It starts from a constant fit, fits a tree of depth delta to the current residuals, adds nu times the tree's predictions to the fit, and updates the residuals, B times. Each tree is fit to what the trees before it got wrong, so the trees depend on one another and are grown in sequence. The algorithm is a short loop of rpart() fits; xgboost implements it, with nu, delta and B as learning_rate, max_depth and nrounds, and by default starts from the mean response and shrinks each leaf's prediction with the penalty lambda. The three tuning parameters interact. The shrinkage nu sets how fast the model learns: a smaller nu needs more trees and makes the test error less sensitive to their number. The depth delta sets how complex each tree is: each leaf of a tree of depth delta is reached through at most delta splits, so the boosted model is a sum of terms that each involve at most delta explanatory variables and can represent interactions among at most delta of them. Stumps give an additive model, a sum of functions that each depend on one variable. The number of trees B is a tuning parameter like nu and delta, chosen without the test data by cross-validation; it must be chosen, since, unlike bagging, boosting overfits when B is too large. One run of boosting per fold, as in xgb.cv(), gives the cross-validation estimate for every B up to its length. Bagging and random forests average large trees, each with low bias and high variance, grown independently on bootstrap samples, which reduces variance. Boosting adds small trees, each with high bias, fit to residuals, which reduces bias. The importance of an explanatory variable, the decrease in RSS from its splits summed over the trees (xgboost's gain), ranks the variables without giving a direction or an effect size.
 
 Boosting has three tuning parameters, B, nu, and delta, against a random forest's m and number of trees, and xgboost adds more, such as lambda. Its B must be chosen, since too many trees overfit, while a forest only needs enough trees. Its trees are grown in sequence, each needing the residuals of the one before, so they cannot be grown at the same time as a forest's can (xgboost instead spreads the split search of each tree over processor threads), and the cross-validation above grew 5,000 trees in each of 10 folds. With many trees it fits the training data nearly exactly: the training MSE fell to 0.28 with nu = 0.5, while that fit's test MSE never fell below 21.0. Like a forest, it has no single tree to read, only importance rankings, its predictions are made of steps, and it predicts a constant beyond the largest value of an explanatory variable in the training data, since every tree does.
 

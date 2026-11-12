@@ -338,11 +338,18 @@ convention.
   symbols, never the other way round: `learning_rate` (alias `eta`) is
   $\nu$, `max_depth` is $\delta$, `nrounds` is $B$. `xgboost`'s leaf
   penalty is written as code, `lambda` (or $\texttt{lambda}$ inside math),
-  never as $\lambda$, which stays the ridge and lasso tuning parameter; a
-  leaf's value is $\sum_{i \in \text{leaf}} r_i/(n_{\text{leaf}} +
-  \texttt{lambda})$, and a split's **gain** (the word `xgboost` uses for
-  its decrease in RSS) is written with $S_1, S_2$, the residual sums of its
-  two parts, $S = S_1 + S_2$, and the Decision Trees chapter's $n_1, n_2$.
+  never as $\lambda$, which stays the ridge and lasso tuning parameter. The
+  number a leaf predicts is a **leaf prediction**, never a "leaf value"
+  (in prose, headings, chunk comments and symbol lists); in `xgboost` a
+  leaf's prediction, before the shrinkage, is
+  $\sum_{i \in \text{leaf}} r_i/(n_{\text{leaf}} + \texttt{lambda})$,
+  and `lambda` shrinks leaf predictions toward 0. A split's **gain** (the
+  word `xgboost` uses for its decrease in RSS) is written with $S_1, S_2$,
+  the residual sums of its two parts, $S = S_1 + S_2$, and the Decision
+  Trees chapter's $n_1, n_2$. $B$, $\nu$ and $\delta$ are the chapter's
+  tuning parameters: $\nu$ and $\delta$ are fixed in advance, $B$ is
+  chosen by cross-validation, and the test-MSE curves are illustrations
+  that choose nothing.
   Variable importance is the decrease in RSS summed over the trees,
   reported as `xgb.importance()`'s `Gain` share. Cross-validation uses
   $\text{CV}_{(10)}(B)$, folds $\mathcal{F}_\ell$ of size $n_\ell$,

@@ -1371,10 +1371,17 @@ explain how its defaults differ from the loop: it starts from the mean
 response (`base_score`), fits each tree from the first and second
 derivatives of the squared-error loss (the residuals and 1), and divides a
 leaf's residual sum by its count plus the penalty `lambda` (default 1,
-shrinking leaf values toward 0; not the ridge $\lambda$), and by default
-searches binned cut points (`tree_method = "hist"`); with `lambda = 0`,
-`base_score = 0` and `tree_method = "exact"` it grows the loop's trees up
-to rounding. Tuning parameters: a smaller $\nu$ learns more slowly and
+shrinking leaf predictions toward 0; not the ridge $\lambda$), and by
+default searches binned cut points (`tree_method = "hist"`); with
+`lambda = 0`, `base_score = 0` and `tree_method = "exact"` it grows the
+loop's trees up to rounding. Tuning parameters: the number of trees $B$
+(`nrounds`), the shrinkage $\nu$ and the depth $\delta$; `xgboost`'s
+further settings (`lambda`, `min_child_weight`, `gamma`, `subsample`) stay
+at their defaults. The chapter's test-MSE curves against the number of
+trees illustrate what each tuning parameter does and choose nothing: $\nu$
+and $\delta$ are fixed in advance, and in practice every tuning parameter
+is chosen without the test data by cross-validation, as $B$ is here. A
+smaller $\nu$ learns more slowly and
 needs more trees (a small $\nu$ holds the fit near its starting point, like
 a large ridge/lasso penalty); deeper trees learn faster; boosting, unlike
 bagging, overfits when $B$ is too large (test error curves come from
@@ -1401,7 +1408,9 @@ gain); a ranking with no direction or effect size. Comparison table of
 test MSE for least squares, trees, bagging, a random forest and boosting;
 limits of boosting (several tuning parameters, sequential fitting,
 overfitting, no single tree to read, no extrapolation). A `Beyond this
-course` callout (classification boosting and AdaBoost, `gbm::gbm()` as
+course` callout (cross-validating $\nu$, $\delta$, `lambda` and
+`min_child_weight` along with $B$, classification boosting and AdaBoost,
+`gbm::gbm()` as
 used in the ISLR2 lab, LightGBM, CatBoost, BART) is not assessed.
 
 ## What has already been assessed
