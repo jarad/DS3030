@@ -1532,6 +1532,19 @@ scree-plot elbows, the sign of a loading vector, the number of components with
 nonzero variance, whether dimension reduction selects features, choosing the
 number of components by training error, and a perfect training fit.
 
+**Homework 10** (decision trees, bagging, random forests, boosting): by-hand
+practice with a tree's first split, cost-complexity pruning, the variance of
+an average of correlated trees, and bootstrap inclusion; on real housing data,
+comparing least squares, single trees, bagging, random forests tuned by
+out-of-bag error, and boosting fit with `xgboost` and tuned by
+cross-validation (the number of trees chosen from a cross-validation estimate
+of test error, then refit), for a numeric response and for a class, including
+what the out-of-bag error does and does not say, why ensembles out-predict a
+single tree and least squares in terms of what each can represent and of bias
+and variance, why a classification tree grown with the Gini index makes a
+split that leaves the predicted class unchanged, and reading a confusion
+matrix; judging claims about how tree ensembles are tuned and compared.
+
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable
 identification; matching a response to regression or classification;
