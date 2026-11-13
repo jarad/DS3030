@@ -165,7 +165,7 @@ The chapter's description at the top of its Boosting section. Boosting builds ma
 
 ## Algorithm
 
-::: {style="font-size: 0.6em"}
+::: {.incremental style="font-size: 0.6em"}
 1. Set $\widehat f_0(x) = 0$ and $r_i = y_i$ for $i = 1, \ldots, n$.
 2. For $b = 1, \ldots, B$:
     a. fit a tree $\widehat f^b$ of depth $\delta$ to the residuals $r_1, \ldots, r_n$;
