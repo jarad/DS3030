@@ -354,10 +354,13 @@ convention.
   reported as `xgb.importance()`'s `Gain` share. Cross-validation uses
   $\text{CV}_{(10)}(B)$, folds $\mathcal{F}_\ell$ of size $n_\ell$,
   $\text{MSE}_\ell(B)$ the MSE on fold $\ell$, and $\hat f_B^{(-\ell)}$ as
-  in the resampling chapters; `xgb.cv()`'s `test_rmse_mean` and
+  in the resampling chapters; the fold RMSE is $\text{RMSE}_\ell(B)$,
+  defined in words as the root mean squared error on fold $\ell$ (no
+  `\sqrt` in its display or symbol list); `xgb.cv()`'s `test_rmse_mean` and
   `test_rmse_std` are written $\overline{\text{RMSE}}(B)$ and
   $s_{\text{RMSE}}(B)$ (divisor 9), with
-  $\text{CV}_{(10)}(B) = \overline{\text{RMSE}}(B)^2 + \tfrac{9}{10}s_{\text{RMSE}}(B)^2$;
+  $\text{CV}_{(10)}(B) = \tfrac{1}{10}\sum_\ell \text{RMSE}_\ell(B)^2 = \overline{\text{RMSE}}(B)^2 + \tfrac{9}{10}s_{\text{RMSE}}(B)^2$,
+  which holds only for equal folds;
   $B_{\max}$ is the length of the run whose first $B$ trees give the model of
   $B$ trees. The curves of error against the number of trees use $b$ (the
   bagging chapter's $k$ would collide with the number of folds in the same

@@ -1389,8 +1389,8 @@ bagging, overfits when $B$ is too large (test error curves come from
 cross-validation with `xgb.cv()` (one run per fold gives the estimate for
 every $B$; the CV estimate of the MSE is recovered from the reported mean
 and standard deviation of the fold RMSEs, $\overline{\text{RMSE}}^2 +
-\tfrac{9}{10}s^2$), then the chosen model is refit and evaluated on test
-data. A tree of depth $\delta$ can split on more than $\delta$ variables
+\tfrac{9}{10}s^2$, valid because the folds have equal size), then the chosen
+model is refit and evaluated on test data. A tree of depth $\delta$ can split on more than $\delta$ variables
 in all, but each leaf is reached through at most $\delta$ splits, so the
 boosted model is a sum of terms each involving at most $\delta$
 explanatory variables (interactions among at most $\delta$); stumps give

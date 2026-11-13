@@ -366,7 +366,18 @@ by averaging large trees, each with low bias and high variance. Boosting
 instead keeps the trees small and adds them up one at a time, each fit to
 the part of the strength that the trees before it have not yet explained.
 
-## Algorithm
+## Boosting
+
+- Boosting builds many small trees, one after another.
+- Each tree is fit to the residuals of the fit so far, not to the response.
+- The prediction is the sum of the trees' predictions, each multiplied by a
+small shrinkage, so every tree corrects only part of what is left.
+- Each tree learns what the earlier trees missed.
+- Three tuning parameters, defined in the Algorithm subsection below,
+control how the fit builds up: the number of trees $B$, the shrinkage $\nu$,
+and the depth $\delta$ of each tree.
+- Bagging and random forests instead grow their trees independently of one
+another.
 
 ### Residuals
 
@@ -541,7 +552,7 @@ residuals (their correlation with $\log(\texttt{age})$ falls from
 `r fmt(age_cor[1], 2)` to `r fmt(age_cor[2], 2)`), and after 1,000 trees
 the training MSE is `r fmt(train_mse_1000, 2)`.
 
-### Steps
+### Algorithm
 
 Boosting for regression trees, with $B$ trees of depth $\delta$ and
 shrinkage $\nu$:
@@ -1370,19 +1381,30 @@ One run of $B_{\max}$ trees per fold gives the estimate for every
 $B \le B_{\max}$, because the model of $B$ trees is the first $B$ trees of
 the longer run. `xgb.cv()` does this: it grows the models of the 10 folds
 side by side and records, after every round, the mean and the standard
-deviation over the folds of the RMSE, $\sqrt{\text{MSE}_\ell(B)}$, as
+deviation over the folds of the RMSE, the root of the fold's MSE, as
 `test_rmse_mean` and `test_rmse_std` (`xgboost`'s word `test` there names
 the held-out fold, not the test specimens). The mean of the squares is the
 square of the mean plus the variance with divisor 10, so
 
-$$\text{CV}_{(10)}(B) = \frac{1}{10}\sum_{\ell=1}^{10}\left[\sqrt{\text{MSE}_\ell(B)}\right]^2 = \overline{\text{RMSE}}(B)^2 + \frac{9}{10}\,s_{\text{RMSE}}(B)^2,$$
+$$\text{CV}_{(10)}(B) = \frac{1}{10}\sum_{\ell=1}^{10}\text{RMSE}_\ell(B)^2 = \overline{\text{RMSE}}(B)^2 + \frac{9}{10}\,s_{\text{RMSE}}(B)^2,$$
 
 where
 
+- $\text{RMSE}_\ell(B)$ is the root mean squared error on fold $\ell$,
 - $\overline{\text{RMSE}}(B)$ is `test_rmse_mean`, the mean over the folds
-of $\sqrt{\text{MSE}_\ell(B)}$, and
+of $\text{RMSE}_\ell(B)$, and
 - $s_{\text{RMSE}}(B)$ is `test_rmse_std`, their standard deviation with
 divisor $10 - 1 = 9$.
+
+Two notes on this second form:
+
+- It holds only when the folds have equal size, here
+`r n_train / 10` training specimens each. With unequal folds the estimate
+is the weighted average of the fold MSEs,
+$\sum_{\ell} (n_\ell / n)\,\text{MSE}_\ell(B)$, the first display with
+weights $n_\ell / n$ in place of $1/10$, and the second form does not hold.
+- It is used here because `xgb.cv()` records only the mean and the
+standard deviation of the fold RMSEs.
 
 Here $B_{\max} = `r big_math(B_max)`$, and the run uses the `params` of
 the Fitting subsection. The
@@ -1409,8 +1431,9 @@ fold_sizes <- lengths(cv_fit$folds)
 stopifnot(nrow(cv_log) == B_max,
           all(fold_sizes == n_train / 10))
 
-# The identity above, checked once: pooling the out-of-fold predictions
-# of a short run on the same folds gives the same estimate.
+# The second display, checked once on these equal folds: pooling the
+# out-of-fold predictions of a short run on the same folds gives the same
+# estimate.
 check_rounds <- 20
 check_fit <- xgb.cv(params, d_train, nrounds = check_rounds,
                     folds = cv_fit$folds, prediction = TRUE, verbose = 0)
