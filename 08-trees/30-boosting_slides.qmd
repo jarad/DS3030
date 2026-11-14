@@ -446,22 +446,22 @@ The chosen model, with nu = 0.1, delta = 4 and B = 1,194, is refit to all the tr
 
 ## Test error
 
-::: {.auto-table}
-|Method                              |Tuning                                                           | Test MSE|
-|:-----------------------------------|:----------------------------------------------------------------|--------:|
-|Least squares, main effects         |none                                                             |    106.4|
-|Least squares with log(age)         |none                                                             |     48.5|
-|Default tree                        |rpart() stopping rules                                           |     86.8|
-|Full tree                           |none                                                             |     40.3|
-|Pruned tree                         |cp by 10-fold CV                                                 |     42.2|
-|Bagging, $m = 8$                    |none                                                             |     26.9|
-|Random forest, $m = 5$              |$m$ by OOB error                                                 |     27.5|
-|Boosting, $\nu = 0.1$, $\delta = 4$ |$\nu$ and $\delta$ fixed in advance, $B = 1{,}194$ by 10-fold CV |     24.1|
+::: {.auto-table style="font-size: 0.85em"}
+|Method                              |Tuning                                                           | CV/OOB MSE| Test MSE|
+|:-----------------------------------|:----------------------------------------------------------------|----------:|--------:|
+|Least squares, main effects         |none                                                             |    &ndash;|    106.4|
+|Least squares with log(age)         |none                                                             |    &ndash;|     48.5|
+|Default tree                        |rpart() stopping rules                                           |    &ndash;|     86.8|
+|Full tree                           |none                                                             |    &ndash;|     40.3|
+|Pruned tree                         |cp by 10-fold CV                                                 |       60.8|     42.2|
+|Bagging, $m = 8$                    |none                                                             |       27.3|     26.9|
+|Random forest, $m = 5$              |$m$ by OOB error                                                 |       26.8|     27.5|
+|Boosting, $\nu = 0.1$, $\delta = 4$ |$\nu$ and $\delta$ fixed in advance, $B = 1{,}194$ by 10-fold CV |       20.0|     24.1|
 
 :::
 
 ::: notes
-The table collects the test MSE of every fit to all 8 explanatory variables in the three tree lectures, with how each was tuned. Boosting has the smallest test MSE, 24.1, 10% below bagging's 26.9. Differences of a few units of test MSE are within the noise this chapter shows: the loop and xgboost with the loop's settings, the same algorithm, differ by 1.3, the refit forests differ from the previous lecture's by up to 0.8, and every test MSE comes from one sample of 305 test specimens. For boosting, nu = 0.1 and delta = 4 were fixed in advance and only B was chosen, by cross-validation. In the Tree depth figure, a comparison on the test specimens, delta = 4 has the smallest test MSE of the depths compared; that comparison illustrates the depth and did not choose it. Taking the best B for each other depth, chosen on the test specimens and so flattering to boosting, depths 1, 2, and 8 reach 31.6, 28.1, and 28.2, all above bagging's 26.9: boosting's advantage depends on its tuning parameters. Least squares with log(age), which needed a feature built after seeing the curve in age, has 48.5; the tree ensembles find the curve and any interactions without it. To move on, say that Variable importance and Additive structure are skipped in this offering, and that the Comparison part, which explains the difference from bagging in bias and variance and does not depend on them, is next.
+The table collects the test MSE of every fit to all 8 explanatory variables in the three tree lectures, with how each was tuned and its cross-validation or OOB estimate of the test MSE (CV/OOB MSE). The CV/OOB MSE column holds, for the pruned tree, the 10-fold CV estimate of its MSE at the chosen cp, for bagging and the random forest the OOB MSE, and for boosting the 10-fold CV estimate at the chosen B; least squares, the default tree and the full tree have no such estimate here, shown as a dash. The CV/OOB MSE is above the test MSE of the same fit for the pruned tree (by 18.5) and bagging (by 0.4), and below it for the random forest (by 0.6) and boosting (by 4.1). A CV/OOB MSE and a test MSE differ by noise, since they are computed on different specimens, and by selection: at the tuning it chose, an estimate is the smallest value it found. Boosting has the smallest test MSE, 24.1, 10% below bagging's 26.9. Differences of a few units of test MSE are within the noise this chapter shows: the loop and xgboost with the loop's settings, the same algorithm, differ by 1.3, the refit forests differ from the previous lecture's by up to 0.8, and every test MSE comes from one sample of 305 test specimens. For boosting, nu = 0.1 and delta = 4 were fixed in advance and only B was chosen, by cross-validation. In the Tree depth figure, a comparison on the test specimens, delta = 4 has the smallest test MSE of the depths compared; that comparison illustrates the depth and did not choose it. Taking the best B for each other depth, chosen on the test specimens and so flattering to boosting, depths 1, 2, and 8 reach 31.6, 28.1, and 28.2, all above bagging's 26.9: boosting's advantage depends on its tuning parameters. Least squares with log(age), which needed a feature built after seeing the curve in age, has 48.5; the tree ensembles find the curve and any interactions without it. To move on, say that Variable importance and Additive structure are skipped in this offering, and that the Comparison part, which explains the difference from bagging in bias and variance and does not depend on them, is next.
 :::
 
 # Variable importance

@@ -2094,27 +2094,86 @@ small tree can.
 ### Code
 ```{r comparison}
 #| output: false
-# Test MSE of every fit on all eight explanatory variables, and how each
-# was tuned.
+# The pruned tree's 10-fold CV estimate of its MSE, at the cp that defines
+# it. rpart()'s xerror is the CV sum of squared errors divided by the root
+# node's RSS (the frame's first dev), so xerror times the root node's MSE,
+# the training MSE of the mean prediction, is the CV MSE.
+root_mse <- all_full$frame$dev[1] / n_train
+stopifnot(abs(root_mse - mse(y_train, mean(y_train))) < 1e-8)
+pruned_row <- which.min(all_cp[, "xerror"])
+stopifnot(all_cp[pruned_row, "CP"] == all_best_cp)
+pruned_cv <- all_cp[pruned_row, "xerror"] * root_mse
+
+# The conversion checked on fixed folds, which draw no random numbers: the
+# MSE of xpred.rpart()'s out-of-fold predictions equals xerror times the
+# root node's MSE at every cp.
+check_folds <- rep_len(1:10, n_train)
+check_control <- rpart.control(cp = 0, minsplit = 2, minbucket = 1,
+                               xval = check_folds)
+check_tree <- rpart(compressive_strength ~ ., data = train,
+                    control = check_control)
+check_pred <- xpred.rpart(check_tree, xval = check_folds)
+check_cv <- colMeans((y_train - check_pred)^2)
+check_xerror <- check_tree$cptable[, "xerror"] * root_mse
+stopifnot(max(abs(check_cv - check_xerror)) < 1e-8)
+
+# The OOB MSE after the last tree of the bagging forest and of the forest
+# with the OOB choice of m (m_oob), and boosting's CV estimate at B_cv.
+estimate_mse <- c(pruned = pruned_cv,
+                  bagging = m_oob[[p]],
+                  forest = m_oob[[m_best]],
+                  boosting = cv_best)
+
+# Test MSE of every fit on all eight explanatory variables, how each was
+# tuned, and its CV or OOB estimate where it has one.
 comparison <- tribble(
-  ~Method, ~Tuning, ~value,
-  "Least squares, main effects", "none", earlier_mse[["ls"]],
-  "Least squares with log(age)", "none", earlier_mse[["log_ls"]],
-  "Default tree", "rpart() stopping rules", earlier_mse[["default"]],
-  "Full tree", "none", earlier_mse[["full"]],
-  "Pruned tree", "cp by 10-fold CV", earlier_mse[["pruned"]],
-  paste0("Bagging, $m = ", p, "$"), "none", forest_mse[["bagging"]],
+  ~Method, ~Tuning, ~estimate, ~value,
+  "Least squares, main effects", "none", NA, earlier_mse[["ls"]],
+  "Least squares with log(age)", "none", NA, earlier_mse[["log_ls"]],
+  "Default tree", "rpart() stopping rules", NA, earlier_mse[["default"]],
+  "Full tree", "none", NA, earlier_mse[["full"]],
+  "Pruned tree", "cp by 10-fold CV", estimate_mse[["pruned"]],
+  earlier_mse[["pruned"]],
+  paste0("Bagging, $m = ", p, "$"), "none", estimate_mse[["bagging"]],
+  forest_mse[["bagging"]],
   paste0("Random forest, $m = ", m_best, "$"), "$m$ by OOB error",
-  forest_mse[["forest"]],
+  estimate_mse[["forest"]], forest_mse[["forest"]],
   paste0("Boosting, $\\nu = ", nu_main, "$, $\\delta = ", depth_main, "$"),
   paste0("$\\nu$ and $\\delta$ fixed in advance, $B = ", big_math(B_cv),
-         "$ by 10-fold CV"), boost_mse
-) |>
-  mutate(value = fmt(value, 1))
+         "$ by 10-fold CV"), estimate_mse[["boosting"]], boost_mse
+)
+
+# An en dash (as an HTML entity) where a fit has no CV or OOB estimate.
+comparison <- comparison |>
+  mutate(estimate = if_else(is.na(estimate), "&ndash;", fmt(estimate, 1)),
+         value = fmt(value, 1))
 comparison_table <- knitr::kable(comparison,
                                  col.names = c("Method", "Tuning",
-                                               "Test MSE"),
-                                 align = "llr")
+                                               "CV/OOB MSE", "Test MSE"),
+                                 align = "llrr")
+
+# Each CV/OOB MSE minus the test MSE of the same fit, for prose: the
+# direction and size of the gaps, stated as one pattern when all four go
+# the same way.
+fit_test_mse <- c(pruned = earlier_mse[["pruned"]],
+                  bagging = forest_mse[["bagging"]],
+                  forest = forest_mse[["forest"]],
+                  boosting = boost_mse)
+estimate_gap <- estimate_mse - fit_test_mse
+fit_names <- c(pruned = "the pruned tree",
+               bagging = "bagging",
+               forest = "the random forest",
+               boosting = "boosting")
+gap_side <- if_else(estimate_gap > 0, "above", "below")
+gap_by <- paste0(fit_names, " (by ", fmt(abs(estimate_gap), 1), ")")
+gap_text <- if (all(gap_side == gap_side[1])) {
+  paste0("The CV/OOB MSE is ", gap_side[1], " the test MSE of the same ",
+         "fit for ", and_list(gap_by), ".")
+} else {
+  paste0("The CV/OOB MSE is above the test MSE of the same fit for ",
+         and_list(gap_by[gap_side == "above"]), ", and below it for ",
+         and_list(gap_by[gap_side == "below"]), ".")
+}
 
 # Boosting's test MSE relative to the best of the other fits.
 others_best <- min(earlier_mse, forest_mse)
@@ -2164,13 +2223,22 @@ implementation_gap <- abs(mse(y_test, loop_fit_test) - loop_test)
 :::
 
 The table collects the test MSE of every fit to all `r p` explanatory
-variables in the three tree lectures, with how each was tuned.
+variables in the three tree lectures, with how each was tuned and its
+cross-validation or OOB estimate of the test MSE (CV/OOB MSE): for the
+pruned tree, `rpart()`'s 10-fold CV estimate at the chosen cp, for bagging
+and the random forest the OOB MSE, and for boosting $\text{CV}_{(10)}(B)$ at
+the chosen $B$. Least squares, the default tree and the full tree have no
+such estimate here.
 
 ```{r comparison-display}
 #| echo: false
-#| tbl-colwidths: [38, 47, 15]
+#| tbl-colwidths: [30, 44, 13, 13]
 comparison_table
 ```
+
+`r gap_text` A CV/OOB MSE and a test MSE differ by noise, since they are
+computed on different specimens, and by selection: at the tuning it chose,
+an estimate is the smallest value it found.
 
 `r best_text`
 Differences of a few units of test MSE are within the noise this chapter
