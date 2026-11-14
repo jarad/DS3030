@@ -123,6 +123,27 @@ read consistently with the notes:
   stumps is $\sum_j a_j(x)$, with $a_j(x)$ the sum of the shrunken stumps
   that split on $X_j$ (a function of $x$ only through the value of $X_j$;
   not $g_j(x_j)$, since a single subscript on $x$ means an observation).
+- In support vector machines, the two classes are coded $y_i \in \{-1, 1\}$
+  (a coding for the geometry, not a response for regression), a hyperplane
+  is $\beta_0 + \beta^\top X = 0$ with normal vector
+  $\beta = (\beta_1, \ldots, \beta_p)^\top$ and
+  $f(x) = \beta_0 + \beta^\top x$, and $M$ is the margin (in earlier
+  chapters $M$ counts repeated training samples or components). `e1071`'s
+  `cost` argument is a penalty on margin violations, written as code; it is
+  not ISLR2's budget $C$, which acts the other way (a large `cost` is a small
+  budget). The support vector classifier's slack variables are $\epsilon_i$
+  (not the regression error term), with $\sum_i \epsilon_i \le C$; its
+  features are standardized, so its estimates and margin are in standard
+  deviations. A kernel is written with its two arguments, $K(x_i, x_{i'})$
+  (bare $K$ stays the number of classes); the radial kernel's parameter is
+  $\gamma$ in math and `gamma` in code (unrelated to `xgboost`'s `gamma`),
+  and the support vector machine is
+  $f(x) = w_0 + \sum_{i \in \mathcal{S}}\alpha_i K(x, x_i)$, on the
+  rescaled scale of `svm()`'s decision values ($w_0 = \beta_0/M$, the
+  intercept of the rescaled problem, not ISLR2's unit-norm $\beta_0$;
+  $\alpha_i$ is signed like $y_i$, `svm()`'s `coefs`). The
+  hinge loss is $\max[0, 1 - y_i f(x_i)]$ and the
+  penalty's $\lambda = 1/(2\,\texttt{cost})$.
 - Double subscripts take no comma: $X_{i1}$, not $X_{i,1}$.
 - Expectation and variance take square brackets: $E[Y]$, $Var[\epsilon]$, and
   the square goes inside: $E[(Y - \hat f(X))^2]$, not $E(Y-\hat f(X))^2$.
@@ -165,7 +186,8 @@ material" and you can draw only from those chapters.
   dimension reduction (6.3-6.4).
 - **Final exam** (cumulative): "Quiz me on the final" draws on every chapter
   below. Chapters 27 onward (Decision Trees, Random Forests,
-  Boosting, and later), taught after Exam 2,
+  Boosting, Maximal Margin Classifier, Support Vector Classifier, Support
+  Vector Machines, and later), taught after Exam 2,
   are assessed only on the final. Chapters not listed below have not been
   written yet. If a student asks about material that is not listed, say so
   and quiz only on what is.
@@ -1412,6 +1434,147 @@ course` callout (cross-validating $\nu$, $\delta$, `lambda` and
 `min_child_weight` along with $B$, classification boosting and AdaBoost,
 `gbm::gbm()` as
 used in the ISLR2 lab, LightGBM, CatBoost, BART) is not assessed.
+
+### 30. Maximal Margin Classifier (Final exam)
+<https://jarad.github.io/DS3030/09-svm/10-maximal-margin-classifier.html>
+
+The first of the support vector machine lectures (ISLR2 9.1), on
+`Sleuth3::ex1613`: two species of flea beetle (`conc` and `heik`) and two
+joint measurements in micrometers, `Jnt1` and `Jnt2`, which together
+separate the species with a narrow gap (neither alone does). Students define
+a hyperplane $\beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p = 0$ in $p$
+dimensions (a point, line, plane for $p = 1, 2, 3$) and its normal vector
+$\beta = (\beta_1, \ldots, \beta_p)^\top$, perpendicular to it; tell which
+side a point is on from the sign of $f(x) = \beta_0 + \beta^\top x$; and
+derive that the signed distance from $x$ to the hyperplane is
+$f(x)/\|\beta\|$, so $f(x)$ itself is the signed distance when
+$\sum_j \beta_j^2 = 1$. Two classes are coded $y_i \in \{-1, 1\}$, a coding
+for the geometry rather than a response for regression; a hyperplane
+separates the classes when $y_i f(x_i) > 0$ for every $i$, and separable
+classes have infinitely many separating hyperplanes. The margin of a
+separating hyperplane is the smallest distance from it to a training
+observation; the maximal margin hyperplane maximizes $M$ subject to
+$\sum_j \beta_j^2 = 1$ (which makes $y_i(\beta_0 + \beta^\top x_i)$ a
+distance) and $y_i(\beta_0 + \beta^\top x_i) \ge M$ for all $i$. For a fixed
+normal vector the best $\beta_0$ puts the hyperplane midway between the
+classes, with margin half the gap
+$\min_{y_i = 1}\beta^\top x_i - \max_{y_i = -1}\beta^\top x_i$; with $p = 2$
+the direction is one angle, and the margin plotted against it peaks at the
+maximal margin hyperplane. Fitting with `e1071::svm(kernel = "linear",
+scale = FALSE, cost = 1e5)`: a very large `cost` forbids margin violations,
+so on separable data the fit is the maximal margin hyperplane (`cost` is
+explained in the next lecture); `scale = FALSE` keeps distances in the
+features' common units. `svm()` solves the rescaled problem (minimize
+$\|w\|$ subject to $y_i(w_0 + w^\top x_i) \ge 1$), so
+$\hat\beta = \hat w/\|\hat w\|$, $\hat\beta_0 = \hat w_0/\|\hat w\|$ and
+$\hat M = 1/\|\hat w\|$, recovered from the fitted object's `coefs`, `SV`
+and `rho` (with the sign set by the class of the first training observation). Interpreting
+the estimates as distances. Support vectors are the observations on the
+margin, $y_i\hat f(x_i) = \hat M$; the fitted hyperplane depends only on
+them (refitting without a non-support observation, or on the support
+vectors alone, gives the same fit; deleting a support vector changes it).
+A new observation is classified by the sign of $\hat f(x^*)$, and
+$|\hat f(x^*)|$, its distance from the hyperplane, measures confidence
+(not a probability). Limitations: when the classes overlap (each beetle
+measurement alone) no separating hyperplane exists, so there is no maximal
+margin hyperplane; and the fit is sensitive to a single observation
+(deleting or adding one beetle near the boundary tilts the hyperplane and
+changes the margin). A `Beyond this course` callout (the Lagrangian dual,
+the hard-margin SVM and the Karush-Kuhn-Tucker conditions, inner products
+and kernels) is not assessed.
+
+### 31. Support Vector Classifier (Final exam)
+<https://jarad.github.io/DS3030/09-svm/20-support-vector-classifier.html>
+
+The second of the support vector machine lectures (ISLR2 9.2), on
+`MASS::cats`: the sex (`F`, `M`; `M` coded $y = 1$) of 144 cats from body
+weight in kilograms (`Bwt`) and heart weight in grams (`Hwt`), split into
+training and test cats. The sexes overlap (some female and male cats share
+both measurements), so no separating hyperplane and no maximal margin
+classifier exist. The support vector classifier maximizes $M$ subject to
+$\sum_j \beta_j^2 = 1$, $y_i(\beta_0 + \beta^\top x_i) \ge M(1 - \epsilon_i)$,
+$\epsilon_i \ge 0$ and $\sum_i \epsilon_i \le C$: slack variables
+$\epsilon_i$ and a budget $C$. $\epsilon_i = 0$ means on or outside the
+margin, $0 < \epsilon_i \le 1$ inside the margin on the correct side,
+$\epsilon_i > 1$ on the wrong side of the hyperplane (so at most $C$ training
+observations are misclassified); the fitted slack is
+$\max(0, 1 - y_i\hat f(x_i)/\hat M)$. Support vectors are the observations
+on or inside the margin or on the wrong side, and only they determine the
+fit (argued by convexity; refitting to them alone gives the same
+estimates). The budget trades bias for variance: $C = 0$ is the maximal
+margin classifier, a small $C$ gives a narrow margin and few support vectors
+(low bias, high variance), a large $C$ a wide margin and many (low
+variance, more bias). `e1071::svm()` solves the penalty form, minimizing
+$\tfrac12\|w\|^2 + \texttt{cost}\sum_i\epsilon_i$ subject to
+$y_i(w_0 + w^\top x_i) \ge 1 - \epsilon_i$, $\epsilon_i \ge 0$; students
+explain (the chapter proves it) that its solution solves the budget problem
+with $C = \sum_i\hat\epsilon_i$ and that a larger `cost` gives a budget and
+a margin no larger (weakly monotone, constant on a plateau, not equal;
+`cost` is never written $C$). Standardizing the features matters because the margin is a
+Euclidean distance and the penalty $\|w\|^2$ depends on the units; `svm()`
+standardizes by default (`scale = TRUE`) with the training means and
+standard deviations, and the unscaled and standardized fits differ.
+Estimates on the standardized scale are interpreted as distances in
+standard deviations, intercept first. Classification is by the sign of
+$\hat f(x^*)$. `cost` is chosen by 10-fold cross-validation with
+`e1071::tune()` (random folds, so a seed; `performances$error` is the
+cross-validation estimate of the misclassification rate, the cost with the
+smallest is `best.parameters`, and `best.model` is the refit), shown as a
+curve against `cost` on a log axis; the number of support vectors falls as
+`cost` grows. The chosen classifier is evaluated on the test cats by its
+error rate, confusion matrix, sensitivity and specificity. A `Beyond this
+course` callout (the hinge-loss form, `class.weights`, $\nu$-classification,
+one-class SVMs, the dual's bound on the multipliers) is not assessed.
+
+### 32. Support Vector Machines (Final exam)
+<https://jarad.github.io/DS3030/09-svm/30-support-vector-machines.html>
+
+The last of the support vector machine lectures (ISLR2 9.3-9.5), on
+`modeldata::Sacramento`: whether a home sold in the Sacramento area in May
+2008 is in the city of Sacramento (coded $y = 1$) or another city, from its
+longitude and latitude, split into training and test homes. The city is a
+block surrounded by other cities, so no line separates the classes.
+Students explain that a support vector classifier fit to polynomial
+features of the explanatory variables (degree 2: $X_1, X_2, X_1^2, X_1X_2,
+X_2^2$) draws a hyperplane in the enlarged space, which is a curved
+boundary (a conic section for degree 2) in the explanatory variables, and
+compute the number of such features, $q = \binom{p+d}{d} - 1$ for $p$
+explanatory variables and degree $d$, which grows
+fast with $p$ and $d$. The fitted support vector classifier classifies a
+new observation through its inner products with the support vectors alone,
+$\hat f(x) = \hat w_0 + \sum_{i \in \mathcal{S}}\hat\alpha_i\langle x,
+x_i\rangle$ (weights signed like $y_i$); the support vector machine
+replaces the inner product with a kernel $K(x, x_i)$. Linear, polynomial
+$\left(1 + \sum_j x_{ij}x_{i'j}\right)^d$ and radial
+$\exp\left(-\gamma\sum_j(x_{ij} - x_{i'j})^2\right)$ kernels; deriving that the
+degree-2 polynomial kernel is an inner product of degree-2 features. The
+radial kernel is local (a test point is classified by nearby support
+vectors); a small $\gamma$ gives a nearly linear boundary (bias), a large
+$\gamma$ islands around the training observations (overfitting).
+`svm(kernel = "radial", cost, gamma)`, whose decision values are
+reproduced from `coefs`, `SV` and `rho`. `cost` and `gamma` chosen together
+by 10-fold cross-validation over a two-dimensional grid with
+`e1071::tune()`, shown as a heat map (the largest `cost` has a smaller
+estimate than the smallest at every `gamma`, most where the smallest
+fails badly; the chosen `gamma` sits at the edge of the overfitting
+regime); test error rate and confusion matrix of the chosen
+support vector machine against the linear support vector classifier. More
+than two classes (Sacramento, Elk Grove, other): one-versus-one
+($\binom{K}{2}$ pairwise classifiers and a vote, what `svm()` does, read
+from its pairwise decision values, with a three-class confusion matrix)
+and one-versus-all ($K$ classifiers, largest
+$\hat f_k\left(x^*\right)$; defined, not fit). Hinge and logistic loss: deriving the
+loss-plus-penalty form $\sum_i \max[0, 1 - y_i f(x_i)] + \lambda\sum_j
+w_j^2$, $\lambda = 1/(2\,\texttt{cost})$; comparing the hinge loss with
+the logistic loss $\log\left(1 + e^{-y_i f(x_i)}\right)$ (the negative
+log-likelihood with $\pm1$ coding); the hinge loss is zero beyond the
+margin, so only support vectors matter, and the support vector machine
+gives no probabilities. On these data an unpenalized logistic regression
+and the linear support vector classifier give about the same test error
+(they differ in both loss and penalty, so this does not isolate the
+loss). A `Beyond this course` callout (the dual and the
+Karush-Kuhn-Tucker conditions, Mercer's condition and other kernels,
+one-class SVMs, Platt scaling, SVM regression) is not assessed.
 
 ## What has already been assessed
 

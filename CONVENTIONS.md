@@ -349,7 +349,12 @@ convention.
   Trees chapter's $n_1, n_2$. $B$, $\nu$ and $\delta$ are the chapter's
   tuning parameters: $\nu$ and $\delta$ are fixed in advance, $B$ is
   chosen by cross-validation, and the test-MSE curves are illustrations
-  that choose nothing.
+  that choose nothing. The comparison table's column "CV/OOB MSE" is each
+  fit's own estimate of its test MSE from the training specimens: the
+  pruned tree's `rpart()` `xerror` at the chosen cp times the root node's
+  MSE (`xerror` is relative to the root node's RSS), the OOB MSE of the
+  bagging and random forest fits, and boosting's $\text{CV}_{(10)}(B)$ at
+  the chosen $B$; a fit without one gets an en dash.
   Variable importance is the decrease in RSS summed over the trees,
   reported as `xgb.importance()`'s `Gain` share. Cross-validation uses
   $\text{CV}_{(10)}(B)$, folds $\mathcal{F}_\ell$ of size $n_\ell$,
@@ -370,6 +375,158 @@ convention.
   split chunk); this chapter's seed, 20261101, is set right after those
   draws rather than in the `packages` chunk, where it would be overwritten
   before any draw.
+- **In the support vector machine chapters (`09-svm/`, from
+  `10-maximal-margin-classifier.qmd` on)**, the two classes are coded
+  $y_i \in \{-1, 1\}$, a coding for the geometry (the sign says which side of
+  the hyperplane observation $i$ belongs on), never a response for
+  regression; the chapter says so where it is introduced. The class coded 1
+  is named in each chapter (`heik` for the flea beetles, the second factor
+  level). Classes are not indexed by $k$ there, and $K$ is not needed for two
+  classes. A hyperplane is $\beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p = 0$,
+  with $X = (X_1, \ldots, X_p)^\top$ a point, $x$ a value of it,
+  $x_i = (x_{i1}, \ldots, x_{ip})^\top$ observation $i$ (a column without a
+  leading 1, as in the decision trees chapter), and $x^*$ a new observation.
+  In the coordinate form $f(x) = \beta_0 + \beta_1 x_1 + \cdots + \beta_p x_p$
+  (and $x^*_j$), a single subscript $j$ on a generic point $x$ names its
+  $j$th coordinate, an exception to the decision trees rule that a single
+  subscript on $x$ names an observation; the chapter says so where $f(x)$ is
+  defined, and an observation's coordinates are always double-subscripted,
+  $x_{ij}$.
+  The **normal vector** is $\beta = (\beta_1, \ldots, \beta_p)^\top$, without
+  $\beta_0$, with length $\|\beta\| = (\sum_j \beta_j^2)^{1/2}$, and
+  $f(x) = \beta_0 + \beta^\top x$, $\hat f$ the fitted version; the signed
+  distance is $f(x)/\|\beta\|$. $M$ is the **margin**, as in the textbook
+  (it is the number of repeated training samples in the ridge and lasso
+  chapters and the number of components in Chapter 6's dimension reduction
+  chapters; the passages are far apart), $\hat M$ its estimate.
+  $\Delta(\beta)$ is the **gap** between the classes along a unit $\beta$,
+  $\min_{y_i = 1}\beta^\top x_i - \max_{y_i = -1}\beta^\top x_i$ (not
+  $g$, which is the link and the PLS estimate). With $p = 2$, $\theta$ is the
+  angle of a unit normal vector, $\beta = (\cos\theta, \sin\theta)^\top$, in
+  degrees (unrelated to the bootstrap estimand $\theta$). $w_0 = \beta_0/M$
+  and $w = \beta/M$ are the rescaled intercept and normal vector of the form
+  `e1071::svm()` solves (minimize $\|w\|$ subject to
+  $y_i(w_0 + w^\top x_i) \ge 1$), so $\hat\beta = \hat w/\|\hat w\|$,
+  $\hat\beta_0 = \hat w_0/\|\hat w\|$, $\hat M = 1/\|\hat w\|$; the fitted
+  object stores, in its own sign, $\sum$ `coefs` $\times$ `SV` $= \pm\hat w$
+  and `rho` $= \mp\hat w_0$, a sign that makes `svm()`'s decision values
+  positive for the class of the first training observation
+  (`fit$levels[fit$labels[1]]`), not necessarily the first factor level;
+  the chapter fixes $\hat w$ to the class coded $+1$, decides the flip from
+  the fit, and checks it against `predict(..., decision.values = TRUE)`. **`e1071`'s `cost` is
+  written as code, `cost`, never as $C$.** It is a penalty on margin
+  violations, so a large `cost` is a small violation budget; ISLR2's $C$ in
+  the support vector classifier is that budget, which works the other way.
+  $C$ is free for the budget there, since the class count has been $K$ from
+  the LDA chapter on; the support vector classifier chapter uses $C$ as
+  ISLR2 does and says, in one sentence, that `cost` is not $C$. The maximal
+  margin classifier is fit as `svm(kernel = "linear", cost = 1e5,
+  scale = FALSE, tolerance = 1e-8)`: a very large `cost` gives the
+  hard-margin fit on separable data, `scale = FALSE` when the features share
+  units, and the tighter `tolerance` makes the estimates accurate to six
+  decimal places. The observation is a **beetle** (`Sleuth3::ex1613`, flea
+  beetles `conc` and `heik`, measurements `Jnt1` and `Jnt2` in
+  micrometers). Words: **separating hyperplane**, **separable**, **maximal
+  margin hyperplane**, **maximal margin classifier**, **support vectors**
+  (observations with $y_i\hat f(x_i) = \hat M$, on the margin), and
+  **margins** (plural) for the two dashed lines $\hat f(x) = \pm\hat M$.
+  "Optimal separating hyperplane" is not used as a synonym.
+- **In the support vector classifier chapter
+  (`09-svm/20-support-vector-classifier.qmd`)**, the slack variables are
+  $\epsilon_i$, as in the textbook (not the regression error term
+  $\epsilon$; the chapter says so), and $C$ is the **budget**,
+  $\sum_i\epsilon_i \le C$. The rescaled (penalty) form that `svm()` solves
+  uses the same $\epsilon_i$, not `libsvm`'s $\xi_i$ (mentioned once):
+  minimize $\tfrac12\|w\|^2 + \texttt{cost}\sum_i\epsilon_i$ subject to
+  $y_i(w_0 + w^\top x_i) \ge 1 - \epsilon_i$. `cost` is always code
+  ($\texttt{cost}$ inside math), never $C$; a larger `cost` is a smaller
+  budget, and the budget a fit uses is written $\sum_i\hat\epsilon_i$. The
+  three kinds of training observation are **on or outside the margin**
+  ($\epsilon_i = 0$), **inside the margin** ($0 < \epsilon_i \le 1$), and
+  **wrong side** (of the hyperplane, $\epsilon_i > 1$). **Support vectors**
+  are now the observations with $y_i\hat f(x_i) \le \hat M$. Features are
+  standardized, $\tilde x_{ij} = (x_{ij} - \bar x_j)/s_j$ with the training
+  means and standard deviations (divisor $n - 1$, as `sd()` and
+  `svm(scale = TRUE)` compute; the ridge chapter's $\tilde x_{ij}$ uses
+  divisor $n$), so $\hat\beta$, $\hat f$ and $\hat M$ are in standard
+  deviations; figures in kilograms and grams are drawn with
+  `coord_fixed(ratio = s_Bwt / s_Hwt)` so that one standard deviation of
+  each measurement has the same length. Fits are `svm(kernel = "linear",
+  cost = ..., tolerance = 1e-8)` with the default `scale = TRUE`; `tune()`
+  keeps the default `tolerance` (the tighter one hits the solver's iteration
+  limit on some folds). `svm()`'s decision values are positive for the class
+  of its first training observation (`fit$levels[fit$labels[1]]`), not
+  necessarily the first factor level, so the sign flip is decided from the
+  fit. Cross-validation is `e1071::tune()` with its default 10 folds:
+  $\text{CV}_{(10)}(\texttt{cost}) = \tfrac{1}{10}\sum_\ell \text{Err}_\ell$,
+  the equal-weight mean of the fold error rates (the chapter notes that
+  this differs slightly from the resampling chapters' size-weighted mean);
+  `tune()`'s `performances$error` is that estimate (misclassification rate
+  by default), `dispersion` the standard deviation of the fold error rates,
+  `best.parameters` the `cost` with the smallest `error`, and `best.model`
+  the refit to all training observations. The observation is a **cat**
+  (`MASS::cats`, `Sex` `F`/`M` with `M` coded $y = 1$, `Bwt` in kg, `Hwt`
+  in g), with "training cats" and "test cats" (96 and 48, a simple random
+  split drawn after the seed 20261114 in the `packages` chunk); the test
+  confusion matrix takes `M` as the positive class.
+- **In the support vector machines chapter
+  (`09-svm/30-support-vector-machines.qmd`)**, $f(x)$ is on the rescaled
+  scale of the penalty form, $f(x) = w_0 + w^\top x$, the scale of
+  `svm()`'s decision values, so the kernel form is
+  $f(x) = w_0 + \sum_{i \in \mathcal{S}}\alpha_i K(x, x_i)$ with
+  $w_0 = \beta_0/M$, the intercept of the rescaled problem (as defined in
+  the support vector classifier chapter), not ISLR2's unit-norm $\beta_0$
+  (the chapter says so once); fitted quantities carry hats, $\hat f$, $\hat w_0$,
+  $\hat w$, $\hat\alpha_i$. $\mathcal{S}$ is the set of support vectors
+  and $\alpha_i$ the weight of support vector $i$, signed like $y_i$
+  (`svm()`'s `coefs`, in its sign); the unsigned dual multipliers, only in
+  the `Beyond this course` callout, are $a_i$, with $\alpha_i = y_ia_i$ and
+  $0 \le a_i \le \texttt{cost}$. Both are unrelated to the trees chapters'
+  cost-complexity $\alpha$, which carries no subscript. Coordinates are
+  written only as $x_{ij}$ (the polynomial-kernel derivation uses two
+  observations, $x_i$ and $x_{i'}$), so the single-subscript coordinate
+  exception of the maximal margin classifier chapter is not used. $p$ is
+  the number of explanatory variables (2 here); the number of enlarged
+  polynomial features is $q = \binom{p + d}{d} - 1$ (the same letter as
+  the number of explanatory variables used in the cross-validation in
+  practice chapter, a count of features in both; the chapters are far
+  apart). The inner-product and kernel sums run over the $p$ explanatory
+  variables, and the chapter says once that on enlarged features they run
+  over the $q$ features. Fitted polynomial-feature estimates are
+  $\hat w_j$, per standard deviation of each feature, since `svm()`
+  standardizes each feature. The
+  chapter states that classifying needs only inner products with the
+  support vectors; that fitting does too is said only as a fact flagged as
+  not derived, with the dual in the callout. The inner product is
+  $\langle x_i, x_{i'}\rangle = \sum_j x_{ij}x_{i'j}$, with $x_i$ the
+  standardized features. A **kernel** is always written with its two
+  arguments, $K(x_i, x_{i'})$ or $K(x, x_i)$; bare $K$ stays the number of
+  classes, which the chapter's multi-class section says. The radial
+  kernel's parameter is $\gamma$ in math and `gamma` in code, as in
+  `e1071`; it is unrelated to `xgboost`'s `gamma` (always code, in the
+  boosting chapter) and to the group difference $\gamma$ of
+  `04-classification/30-flexible-logistic-regression.qmd`. The polynomial
+  kernel's degree is $d$ (`degree`), ISLR2's form
+  $\left(1 + \langle x, x'\rangle\right)^d$ (`e1071`'s polynomial kernel
+  matches it with `gamma = 1, coef0 = 1`; the chapter fits no polynomial
+  kernel). The
+  **support vector machine** is the support vector classifier with a
+  kernel. Loss words: the **hinge loss**
+  $\max\left[0, 1 - y_if(x_i)\right]$ and the **logistic loss**
+  $\log\left(1 + e^{-y_if(x_i)}\right)$, both written in $y_if(x_i)$; the
+  loss-plus-penalty form uses $\lambda\sum_j w_j^2$ with
+  $\lambda = 1/(2\,\texttt{cost})$, the ridge chapter's $\lambda$ in the same
+  role. Multi-class approaches are **one-versus-one** and
+  **one-versus-all** (hyphenated as adjectives, "one versus one" as an
+  adverbial phrase), with $\binom{K}{2}$ and $K$ classifiers. The
+  observation is a **home** (`modeldata::Sacramento`, `place` `Other`/
+  `Sacramento` with `Sacramento` coded $y = 1$, `longitude` and `latitude`
+  in degrees), with "training homes" and "test homes" (621 and 311, a
+  simple random split drawn after the seed 20261114 in the `packages`
+  chunk); the test confusion matrices take `Sacramento` as the positive
+  class. The three-class variable is `three` (`Elk Grove`, `Other`,
+  `Sacramento`). Figures in degrees use `coord_fixed(ratio = s_longitude /
+  s_latitude)`, as the cats figures do.
 - **The $p$ collision (feature count vs. fitted probability) is open —
   no decision yet.** `$p$` is used throughout for the number of features in a
   model, and Classification chapters also use $p(X)$ for the fitted

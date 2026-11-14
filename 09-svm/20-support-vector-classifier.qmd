@@ -1,0 +1,1277 @@
+# Support Vector Classifier
+
+[Slides for this lecture](20-support-vector-classifier_slides.html)
+
+```{r packages}
+#| include: false
+library("tidyverse")
+library("e1071")
+theme_set(theme_bw())
+set.seed(20261114)
+
+# Printed output wraps at 80 characters.
+options(width = 80)
+
+# Fixed decimals, for use inside $...$, whose hyphen MathJax sets as a
+# minus. Adding 0 after rounding turns a negative zero into 0.
+fmt_math <- function(x, digits = 2) {
+  rounded <- round(x, digits) + 0
+  formatC(rounded, format = "f", digits = digits)
+}
+
+# The same for prose, where a negative value prints with a minus sign (the
+# HTML entity) rather than a hyphen.
+fmt <- function(x, digits = 2) {
+  sub("^-", "&minus;", fmt_math(x, digits))
+}
+
+# A percentage, for prose.
+pct <- function(x, digits = 1) {
+  paste0(fmt(100 * x, digits), "%")
+}
+
+# A name set as code in prose.
+code <- function(x) {
+  paste0("`", x, "`")
+}
+
+# Color-blind-friendly (Okabe-Ito) colors and distinct shapes per sex.
+sex_colors <- c(F = "#E69F00", M = "#0072B2")
+sex_shapes <- c(F = 16, M = 17)
+```
+
+::: {.callout-tip}
+### Learning objectives
+After this lecture you should be able to
+
+- **explain** why the maximal margin classifier fails when the classes
+overlap, **write** the optimization problem of the support vector classifier
+with slack variables $\epsilon_i$ and a budget $C$, and **explain** each of
+its constraints,
+- **classify** a training observation as outside the margin, inside the
+margin, or on the wrong side of the hyperplane from its slack $\epsilon_i$,
+**identify** the support vectors, and **explain** why the fitted hyperplane
+depends only on them,
+- **explain** how the budget $C$ sets the width of the margin and the number
+of support vectors, and so trades bias against variance, and that $C = 0$
+gives the maximal margin classifier,
+- **explain** that the penalty form that `e1071::svm()` solves, with tuning
+parameter `cost`, solves the budget problem for a budget that never grows
+as `cost` grows, and **explain** why the features are standardized before a
+margin is measured,
+- **choose** `cost` by 10-fold cross-validation with `e1071::tune()`, and
+**evaluate** the chosen classifier by its test error rate and confusion
+matrix.
+:::
+
+This is the second of three lectures on support vector machines. It covers
+the support vector classifier, which keeps the flat boundary of the maximal
+margin classifier but lets some training observations fall inside the margin
+or on the wrong side of the hyperplane. The reading is ISLR2 Section 9.2.
+
+## Cat sex
+
+**Question.** Can a cat's body weight and heart weight tell its sex, and if
+the two sexes overlap, which straight line should do the telling?
+
+**Data.** `MASS::cats` records the sex, body weight in kilograms (`Bwt`),
+and heart weight in grams (`Hwt`) of `r nrow(MASS::cats)` adult domestic
+cats used in experiments with the heart drug digitalis (published by R. A.
+Fisher in 1947). The observations are **cats**; each sex is a class, and the
+two explanatory variables are the features. As in the previous lecture, the
+class is coded $y_i = 1$ for `M`, the second level of the factor, and
+$y_i = -1$ for `F`.
+
+```{r cats}
+# Cats, with the class coded y = 1 (M) or y = -1 (F).
+cats <- MASS::cats |>
+  mutate(y = if_else(Sex == "M", 1, -1))
+
+count(cats, Sex)
+```
+
+The cats are split at random into training cats and test cats; the test
+cats are used only at the end of the lecture.
+
+```{r split}
+# Two thirds of the cats for training, the rest for testing.
+n_train <- round(2 / 3 * nrow(cats))
+train_rows <- sample(nrow(cats), n_train)
+train <- cats[train_rows, ]
+test <- cats[-train_rows, ]
+
+count(train, Sex)
+```
+
+The training cats are `r nrow(train)` of the `r nrow(cats)`, and the test
+cats the other `r nrow(test)`.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cat-plot}
+#| output: false
+# Standard deviations of the two measurements among the training cats.
+s_train <- sapply(train[c("Bwt", "Hwt")], sd)
+
+# Axes in kilograms and grams: Bwt every 0.5 kg, Hwt every 2 g, minor lines
+# midway. One standard deviation of each measurement is drawn the same
+# length, so that distances on the standardized scale look right.
+x_scale <- scale_x_continuous(breaks = seq(2, 4, by = 0.5),
+                              minor_breaks = seq(2.25, 3.75, by = 0.5))
+y_scale <- scale_y_continuous(breaks = seq(6, 20, by = 2),
+                              minor_breaks = seq(7, 21, by = 2))
+x_limits <- c(1.9, 4.1)
+y_limits <- c(5.9, 21)
+
+# The cats' axes, with the legend in the lower-right corner, where no cat
+# and no fitted line passes.
+cat_base <- function() {
+  ggplot(mapping = aes(x = Bwt, y = Hwt)) +
+    x_scale +
+    y_scale +
+    coord_fixed(ratio = s_train[["Bwt"]] / s_train[["Hwt"]],
+                xlim = x_limits, ylim = y_limits, expand = FALSE) +
+    scale_color_manual(values = sex_colors) +
+    scale_shape_manual(values = sex_shapes) +
+    labs(x = "Body weight, Bwt (kg)",
+         y = "Heart weight, Hwt (g)",
+         color = "Sex", shape = "Sex") +
+    theme(legend.position = "inside",
+          legend.position.inside = c(0.98, 0.02),
+          legend.justification = c(1, 0))
+}
+
+# The points on top of any lines drawn before them.
+cat_points <- function(data = train) {
+  geom_point(data = data,
+             aes(color = Sex, shape = Sex),
+             size = 2)
+}
+
+cat_plot <- cat_base() +
+  cat_points()
+
+# Training cats of different sexes that share both measurements.
+tied <- train |>
+  group_by(Bwt, Hwt) |>
+  summarize(n_F = sum(Sex == "F"), n_M = sum(Sex == "M"),
+            .groups = "drop") |>
+  filter(n_F > 0, n_M > 0)
+n_tied <- nrow(tied)
+
+# Mean body and heart weight of each sex.
+sex_means <- train |>
+  group_by(Sex) |>
+  summarize(Bwt = mean(Bwt), Hwt = mean(Hwt))
+mean_of <- function(sex, column) {
+  sex_means[[column]][sex_means$Sex == sex]
+}
+stopifnot(mean_of("M", "Bwt") > mean_of("F", "Bwt"),
+          mean_of("M", "Hwt") > mean_of("F", "Hwt"))
+
+# The heaviest female and the lightest male body weights.
+max_F <- max(train$Bwt[train$Sex == "F"])
+min_M <- min(train$Bwt[train$Sex == "M"])
+n_overlap <- sum(between(train$Bwt, min_M, max_F))
+```
+:::
+
+```{r cat-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+cat_plot
+```
+
+The training cats hold `r sum(train$Sex == "F")` females and
+`r sum(train$Sex == "M")` males. The males are heavier on average,
+`r fmt(mean_of("M", "Bwt"))` kg against `r fmt(mean_of("F", "Bwt"))` kg,
+with heavier hearts, `r fmt(mean_of("M", "Hwt"), 1)` g against
+`r fmt(mean_of("F", "Hwt"), 1)` g, and heart weight rises with body weight in
+both sexes. Every female weighs at most `r fmt(max_F, 1)` kg, while males
+run from `r fmt(min_M, 1)` kg up, so the heavier cats are all male and the
+`r n_overlap` cats between `r fmt(min_M, 1)` and `r fmt(max_F, 1)` kg are a
+mixture of the two sexes, with no line between them. The axes are drawn so
+that one standard deviation of each measurement among the training cats,
+$s_{\texttt{Bwt}} = `r fmt_math(s_train[["Bwt"]])`$ kg and
+$s_{\texttt{Hwt}} = `r fmt_math(s_train[["Hwt"]])`$ g, has the same length;
+the Standardization section below explains why.
+
+## Soft margin
+
+### Overlapping classes
+
+The maximal margin classifier of the previous lecture exists only when a
+hyperplane separates the classes, and when it exists, one observation near
+the boundary can move it far. The training cats in the figure above are not
+separable: in
+`r n_tied` places a female and a male cat share both measurements, and no
+hyperplane can put one point on both of its sides. The constraints
+$y_i\left(\beta_0 + \beta^\top x_i\right) \ge M$ of the maximal margin problem
+cannot
+all hold with $M > 0$.
+
+### Optimization problem
+
+The **support vector classifier** (also called the soft margin classifier)
+allows each observation to violate the margin by an amount it pays for out of
+a fixed budget. It solves
+
+$$
+\begin{aligned}
+\underset{\beta_0, \beta_1, \ldots, \beta_p, \epsilon_1, \ldots, \epsilon_n,
+M}{\text{maximize}} \quad & M \\
+\text{subject to} \quad & \sum_{j=1}^p \beta_j^2 = 1, \\
+& y_i\left(\beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}\right) \ge
+M(1 - \epsilon_i), \\
+& \epsilon_i \ge 0, \quad \sum_{i=1}^n \epsilon_i \le C,
+\end{aligned}
+$$
+
+where the constraints hold for all $i = 1, \ldots, n$ and
+
+- $\epsilon_i$ is the **slack variable** of observation $i$, the amount by
+which it may violate the margin, measured in units of the margin $M$ (it is
+not the error term $\epsilon$ of regression), and
+- $C \ge 0$ is the **budget**, a tuning parameter that bounds the total
+slack.
+
+The pieces:
+
+- As before, $\sum_j \beta_j^2 = 1$ makes $f(x_i) = \beta_0 + \beta^\top x_i$
+the signed distance from $x_i$ to the hyperplane, so $y_i f(x_i)$ is that
+distance, positive on observation $i$'s own side and negative on the other.
+- The second constraint asks observation $i$ to be at distance at least
+$M(1 - \epsilon_i)$ on its own side. With $\epsilon_i = 0$ it is the maximal
+margin constraint; a positive $\epsilon_i$ relaxes it.
+- The budget stops the slack from growing without limit. Without it, every
+$\epsilon_i$ could be made large and $M$ could be as large as desired.
+
+### Slack variables
+
+At the solution, each $\epsilon_i$ is no larger than its constraint needs,
+since a smaller $\epsilon_i$ leaves more of the budget for the others. So
+$\epsilon_i$ says where observation $i$ lies:
+
+- $\epsilon_i = 0$: $y_i f(x_i) \ge M$, on the correct side of the hyperplane
+and on or outside the margin;
+- $0 < \epsilon_i \le 1$: $0 \le y_i f(x_i) < M$, inside the margin but on
+the correct side of the hyperplane (on it when $\epsilon_i = 1$);
+- $\epsilon_i > 1$: $y_i f(x_i) < 0$, on the wrong side of the hyperplane,
+misclassified.
+
+Every misclassified training observation uses more than 1 of the budget, so
+at most $C$ training observations are misclassified. The cats' slacks are
+estimated below, once the classifier is fit.
+
+## Fitting
+
+The support vector classifier of the training cats in the figure above is
+fit by `svm()` with `kernel = "linear"`. `cost = 1` is a starting value,
+chosen by cross-validation later. `svm()` standardizes the features by
+default, for the reason given in the Standardization section below. As in
+the previous lecture, `tolerance` tightens the solver's stopping rule so
+that the estimates are accurate to more digits than are printed.
+
+```{r svc-fit}
+# Support vector classifier: linear kernel, standardized features.
+svc_fit <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+               cost = 1, tolerance = 1e-8)
+svc_fit
+```
+
+The printout gives the settings and the number of support vectors, defined
+below.
+
+### Penalty form
+
+Software solves the problem in a rescaled form, as for the maximal margin
+classifier. Dividing the second constraint by $M$ and writing
+$w_0 = \beta_0/M$ and $w = \beta/M$, so that $\|w\| = 1/M$, it becomes
+$y_i\left(w_0 + w^\top x_i\right) \ge 1 - \epsilon_i$, with the same slack
+$\epsilon_i$. Maximizing $M$ is minimizing $\|w\|$, so the budget problem is
+
+$$
+\underset{w_0, w, \epsilon_1, \ldots, \epsilon_n}{\text{minimize}} \quad
+\tfrac{1}{2}\|w\|^2
+\quad \text{subject to} \quad
+y_i\left(w_0 + w^\top x_i\right) \ge 1 - \epsilon_i, \quad \epsilon_i \ge 0,
+\quad \sum_{i=1}^n \epsilon_i \le C.
+$$
+
+`e1071::svm()` replaces the budget with a price on slack. It solves
+
+$$
+\underset{w_0, w, \epsilon_1, \ldots, \epsilon_n}{\text{minimize}} \quad
+\tfrac{1}{2}\|w\|^2 + \texttt{cost}\sum_{i=1}^n \epsilon_i
+\quad \text{subject to} \quad
+y_i\left(w_0 + w^\top x_i\right) \ge 1 - \epsilon_i, \quad \epsilon_i \ge 0,
+$$
+
+where `cost` $> 0$ is its tuning parameter, the price of one unit of slack.
+(The `libsvm` documentation behind `e1071` writes the slack as $\xi_i$; it is
+the same quantity as $\epsilon_i$.)
+
+`cost` is not the budget $C$, and it works in the opposite direction. A
+large `cost` makes slack expensive, so the fit buys a narrow margin with few
+violations, which is a small budget; a small `cost` makes slack cheap, which
+is a large budget. The Budget section derives the exact relation.
+
+### Standardization
+
+The margin is a Euclidean distance between points $x$ and $x'$,
+$\left[\sum_j \left(x_j - x'_j\right)^2\right]^{1/2}$, where $x_j$ is the $j$th
+coordinate of $x$ (a single subscript $j$ on a generic point names a
+coordinate, and a single subscript $i$ names an observation). It adds the
+squared differences of the features in their own units. With body weight in
+kilograms and heart weight in grams, a difference of 1 g in heart weight
+counts as much as a difference of 1 kg in body weight, although 1 g is
+`r fmt(1 / s_train[["Hwt"]])` standard deviations of heart weight and 1 kg
+is `r fmt(1 / s_train[["Bwt"]])` of body weight.
+
+The penalty depends on the units too. Recording feature $j$ in units $a$
+times smaller multiplies its values by $a$, so the same hyperplane needs
+$w_j/a$ in place of $w_j$, and its part of $\|w\|^2$ changes from $w_j^2$ to
+$w_j^2/a^2$. The trade between $\|w\|^2$ and the slack therefore changes
+with the units, and the same `cost` is a different budget.
+
+The tabs show two fits with `cost = 1`: unscaled, with the measurements as
+recorded (`scale = FALSE`), and standardized (the fit above). Each has its
+hyperplane (solid), its margins (dashed), and its support vectors (circled).
+
+::: {.callout-note collapse="true"}
+### Code
+```{r fit-helpers}
+#| output: false
+# svm()'s rescaled intercept w0 and normal vector w, with M on the positive
+# side. svm()'s decision values are positive for the class named first in
+# their column name, the class of its first training observation.
+svc_w <- function(fit) {
+  flip <- if (fit$levels[fit$labels[1]] == "M") 1 else -1
+  list(w0 = -flip * fit$rho,
+       w = flip * drop(t(fit$coefs) %*% fit$SV))
+}
+
+# The same function w0 + w'x written in Bwt (kg) and Hwt (g): undo the
+# standardization if svm() used it, and the change to grams if bwt_per_kg
+# is 1000.
+svc_raw <- function(fit, bwt_per_kg = 1) {
+  est <- svc_w(fit)
+  center <- c(0, 0)
+  spread <- c(1, 1)
+  if (!is.null(fit$x.scale)) {
+    center <- fit$x.scale[["scaled:center"]]
+    spread <- fit$x.scale[["scaled:scale"]]
+  }
+  slopes <- unname(est$w / spread * c(bwt_per_kg, 1))
+  c(a0 = est$w0 - sum(est$w * center / spread),
+    Bwt = slopes[1],
+    Hwt = slopes[2])
+}
+
+# The hyperplane (w0 + w'x = 0, solid) and the margins (w0 + w'x = -1 and
+# 1, dashed), drawn as lines Hwt = (level - a0 - a1 Bwt) / a2.
+svc_lines <- function(a) {
+  lapply(c(-1, 0, 1), function(level) {
+    geom_abline(intercept = (level - a[["a0"]]) / a[["Hwt"]],
+                slope = -a[["Bwt"]] / a[["Hwt"]],
+                linetype = if (level == 0) "solid" else "dashed")
+  })
+}
+
+# A fit drawn over the training cats, with its support vectors circled.
+svc_plot <- function(fit, bwt_per_kg = 1, data = train) {
+  support <- data[fit$index, ]
+  cat_base() +
+    svc_lines(svc_raw(fit, bwt_per_kg)) +
+    geom_point(data = support, shape = 1, size = 4.5) +
+    cat_points()
+}
+```
+
+```{r scale-plot}
+#| output: false
+# The same cost unscaled (kg and g as recorded); the standardized fit is
+# svc_fit.
+fit_raw <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+               cost = 1, scale = FALSE, tolerance = 1e-8)
+
+raw_plot <- svc_plot(fit_raw)
+std_plot <- svc_plot(svc_fit)
+
+# Standardized, the fit is the same with body weight in grams.
+train_g <- mutate(train, Bwt = 1000 * Bwt)
+fit_std_g <- svm(Sex ~ Bwt + Hwt, data = train_g, kernel = "linear",
+                 cost = 1, tolerance = 1e-8)
+stopifnot(isTRUE(all.equal(svc_raw(svc_fit),
+                           svc_raw(fit_std_g, bwt_per_kg = 1000),
+                           tolerance = 1e-6)))
+
+# Each fit's w per standard deviation of each measurement: the normal
+# vector in the picture, where one standard deviation of each measurement
+# is drawn the same length.
+per_sd_w <- function(a) {
+  c(a[["Bwt"]], a[["Hwt"]]) * s_train
+}
+w_sd_raw <- per_sd_w(svc_raw(fit_raw))
+w_sd_std <- per_sd_w(svc_raw(svc_fit))
+normal_raw <- w_sd_raw / sqrt(sum(w_sd_raw^2))
+normal_std <- w_sd_std / sqrt(sum(w_sd_std^2))
+
+# The angle between the two normal vectors, in degrees.
+angle_between <- acos(sum(normal_raw * normal_std)) * 180 / pi
+
+# Margins in the picture (standard deviations): 1 / |w per sd|. The
+# standardized one is the margin svm() reports for it; the unscaled fit's
+# reported margin, 1 / |w| in kg and g together, is another number.
+margin_sd_raw <- 1 / sqrt(sum(w_sd_raw^2))
+margin_sd_std <- 1 / sqrt(sum(w_sd_std^2))
+w_raw <- svc_w(fit_raw)$w
+margin_reported_raw <- 1 / sqrt(sum(w_raw^2))
+stopifnot(abs(margin_sd_std - 1 / sqrt(sum(svc_w(svc_fit)$w^2))) < 1e-8)
+
+# The prose reads heart weight's part as positive unscaled and negative
+# standardized, and body weight's as positive in both.
+stopifnot(normal_raw[2] > 0, normal_std[2] < 0,
+          normal_raw[1] > 0, normal_std[1] > 0)
+
+# Training error rates and budget used of the two fits.
+error_of <- function(fit, data) {
+  mean(predict(fit, data) != data$Sex)
+}
+scale_errors <- c(raw = error_of(fit_raw, train),
+                  std = error_of(svc_fit, train))
+budget_used <- function(fit, data = train) {
+  decision <- attr(predict(fit, data, decision.values = TRUE),
+                   "decision.values")
+  flip <- if (colnames(decision) == "M/F") 1 else -1
+  sum(pmax(0, 1 - data$y * flip * drop(decision)))
+}
+scale_budgets <- c(raw = budget_used(fit_raw),
+                   std = budget_used(svc_fit))
+```
+:::
+
+::: {.panel-tabset}
+#### Unscaled
+```{r scale-raw-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+raw_plot
+```
+
+#### Standardized
+```{r scale-std-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+std_plot
+```
+:::
+
+Per standard deviation of each measurement, the unit normal vector of the
+unscaled fit
+is $(`r fmt_math(normal_raw[1])`, `r fmt_math(normal_raw[2])`)^\top$ and
+that of the standardized fit
+$(`r fmt_math(normal_std[1])`, `r fmt_math(normal_std[2])`)^\top$: both are
+mostly body weight, and they differ in the sign of the heart weight part, a
+turn of `r fmt(angle_between, 1)` degrees. Their training error rates are
+`r pct(scale_errors[["raw"]])` and `r pct(scale_errors[["std"]])`, and the
+budgets they use, $\sum_i\hat\epsilon_i$, are
+`r fmt(scale_budgets[["raw"]])` and `r fmt(scale_budgets[["std"]])`. The
+standardized fit's margins lie $\hat M = `r fmt_math(margin_sd_std)`$
+standard deviations from its hyperplane, a distance in the picture. The
+unscaled fit's margins lie `r fmt(margin_sd_raw)` standard deviations from
+its hyperplane in the picture, but the margin `svm()` maximizes for it,
+$1/\|\hat w\| = `r fmt_math(margin_reported_raw)`$, is a distance in
+kilograms and grams together.
+
+Standardizing removes the units. Each feature is replaced by
+
+$$
+\tilde x_{ij} = \frac{x_{ij} - \bar x_j}{s_j},
+$$
+
+where
+
+- $\bar x_j$ is the mean of feature $j$ among the training observations,
+- $s_j$ is its standard deviation (divisor $n - 1$, as `sd()` computes), and
+- $\tilde x_{ij}$ is observation $i$'s value of feature $j$ in standard
+deviations from that mean.
+
+A change of units, $x_{ij} \to a x_{ij}$ for $a > 0$, leaves $\tilde x_{ij}$
+unchanged, so the fit no longer depends on the units: refitting the
+standardized classifier with body weight in grams gives the same hyperplane.
+`svm()` does this by default (`scale = TRUE`): it standardizes each feature
+with the training observations' means and standard deviations, stores them
+in the fit's `x.scale`, and applies the same ones to any new observation
+passed to `predict()`. The previous lecture set `scale = FALSE` because both
+beetle measurements were in micrometers, where a distance in micrometers
+means something. The cats' measurements are in different units, so the fits
+in this lecture standardize.
+
+### Estimates
+
+Undoing the rescaling gives the estimates on the standardized scale,
+
+$$
+\hat\beta_0 = \frac{\hat w_0}{\|\hat w\|}, \qquad
+\hat\beta = \frac{\hat w}{\|\hat w\|}, \qquad
+\hat M = \frac{1}{\|\hat w\|},
+$$
+
+with $\hat w$ and $\hat w_0$ read from the fit's `coefs`, `SV`, and `rho` as
+in the previous lecture (here `SV` holds the support vectors' standardized
+features). `svm()`'s decision values are positive for the class of its first
+training observation, which here is `r code(as.character(train$Sex[1]))`, so
+the class coded $y = 1$.
+
+```{r svc-estimates}
+# w and w0 with M on the positive side.
+w_hat <- svc_w(svc_fit)
+
+# Unit-norm estimates on the standardized scale, and the margin.
+norm_w <- sqrt(sum(w_hat$w^2))
+beta_hat <- c(beta0 = w_hat$w0, w_hat$w) / norm_w
+M_hat <- 1 / norm_w
+round(c(beta_hat, M = M_hat), 4)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r svc-checks}
+#| output: false
+# The first training cat is M, and svm()'s decision values, w0 + w'x on the
+# standardized scale, are positive for M.
+stopifnot(train$Sex[1] == "M")
+decision <- attr(predict(svc_fit, train, decision.values = TRUE),
+                 "decision.values")
+stopifnot(colnames(decision) == "M/F")
+
+# Standardized features of the training cats, with svm()'s centers and
+# scales, which are the training means and standard deviations.
+center_train <- svc_fit$x.scale[["scaled:center"]]
+scale_train <- svc_fit$x.scale[["scaled:scale"]]
+stopifnot(isTRUE(all.equal(scale_train, s_train)))
+x_std <- scale(as.matrix(train[c("Bwt", "Hwt")]),
+               center = center_train, scale = scale_train)
+
+# Fitted values (signed distances in standard deviations), distances on
+# each cat's own side, and slacks.
+train <- train |>
+  mutate(f_hat = drop(beta_hat["beta0"] + x_std %*% beta_hat[-1]),
+         distance = y * f_hat,
+         slack = pmax(0, 1 - distance / M_hat))
+stopifnot(isTRUE(all.equal(drop(decision), train$f_hat * norm_w,
+                           check.attributes = FALSE)))
+
+# The prose reads the average cat as on the M side, body weight's slope as
+# positive (toward M), and heart weight's as negative and smaller in size.
+stopifnot(beta_hat["beta0"] > 0,
+          beta_hat["Bwt"] > 0,
+          beta_hat["Hwt"] < 0,
+          beta_hat["Bwt"] > abs(beta_hat["Hwt"]))
+```
+:::
+
+The fitted value $\hat f(x) = \hat\beta_0 + \hat\beta_1\tilde x_1 +
+\hat\beta_2\tilde x_2$ is the signed distance from $x$ to the hyperplane in
+the standardized features, in standard deviations, with
+$\tilde x_1$ and $\tilde x_2$ the standardized body and heart weights.
+$\hat\beta_0 = `r fmt_math(beta_hat["beta0"])`$ is $\hat f$ at
+$\tilde x = 0$, a cat of average body and heart weight among the training
+cats: it lies `r fmt(abs(beta_hat["beta0"]))` standard deviations from the
+hyperplane on the `M` side. $\hat\beta_1 = `r fmt_math(beta_hat["Bwt"])`$:
+one standard deviation more body weight (`r fmt(s_train[["Bwt"]])` kg)
+moves a cat `r fmt(beta_hat["Bwt"])` standard deviations toward the `M`
+side.
+$\hat\beta_2 = `r fmt_math(beta_hat["Hwt"])`$: one standard deviation more
+heart weight (`r fmt(s_train[["Hwt"]])` g) moves it
+`r fmt(abs(beta_hat["Hwt"]))` standard deviations toward the `F` side. Body
+weight carries most of the classification; among cats of the same body
+weight, a heavier heart points slightly toward female. The margin is
+$\hat M = `r fmt_math(M_hat)`$ standard deviations.
+
+### Slack estimates
+
+Each $\hat\epsilon_i$ is the smallest slack its constraint allows,
+
+$$
+\hat\epsilon_i = \max\left(0,\ 1 - \frac{y_i \hat f(x_i)}{\hat M}\right),
+$$
+
+where $y_i \hat f(x_i)/\hat M$ is observation $i$'s distance from the
+hyperplane on its own side, in margins. The first tab is the fit; the
+second plots each training cat's $\hat\epsilon_i$ against
+$y_i\hat f(x_i)/\hat M$, with the three kinds of observation shaded.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r slack-plot}
+#| output: false
+# The three kinds of training cat, by slack, up to the solver's accuracy
+# (1e-4, as for the plateau below).
+kinds <- c("On or outside the margin", "Inside the margin", "Wrong side")
+train <- train |>
+  mutate(kind = case_when(slack < 1e-4 ~ kinds[1],
+                          slack <= 1 ~ kinds[2],
+                          TRUE ~ kinds[3]),
+         kind = factor(kind, levels = kinds))
+kind_counts <- table(train$kind)
+
+# Training cats on the margin: slack 0, at distance M_hat.
+n_on_margin <- sum(abs(train$distance / M_hat - 1) < 1e-4)
+
+# The estimated budget used, the sum of the slacks.
+C_hat <- sum(train$slack)
+
+fit_plot <- svc_plot(svc_fit)
+
+# Shaded bands for the three kinds, and the hinge max(0, 1 - u).
+u_limits <- c(-3.5, 4.5)
+bands <- tibble(xmin = c(1, 0, u_limits[1]),
+                xmax = c(u_limits[2], 1, 0),
+                kind = factor(kinds, levels = kinds))
+hinge <- tibble(u = c(u_limits[1], 1, u_limits[2])) |>
+  mutate(slack = pmax(0, 1 - u))
+stopifnot(between(range(train$distance / M_hat),
+                  u_limits[1], u_limits[2]))
+
+slack_plot <- ggplot(train, aes(x = distance / M_hat, y = slack)) +
+  geom_rect(data = bands,
+            aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf,
+                fill = kind),
+            inherit.aes = FALSE) +
+  geom_line(data = hinge, aes(x = u, y = slack), color = "grey50") +
+  geom_point(aes(color = Sex, shape = Sex), size = 2) +
+  annotate("text", x = c(2.75, 0.5, -1.75), y = 4.25,
+           label = c("On or outside\nthe margin", "Inside the\nmargin",
+                     "Wrong side")) +
+  scale_fill_manual(values = c("white", "grey92", "grey80"),
+                    guide = "none") +
+  scale_color_manual(values = sex_colors) +
+  scale_shape_manual(values = sex_shapes) +
+  scale_x_continuous(breaks = seq(-3, 4, by = 1),
+                     minor_breaks = seq(-3.5, 4.5, by = 1)) +
+  scale_y_continuous(breaks = seq(0, 4, by = 1),
+                     minor_breaks = seq(0.5, 4.5, by = 1)) +
+  coord_cartesian(xlim = u_limits, ylim = c(-0.2, 4.8), expand = FALSE) +
+  labs(x = expression("Distance on own side, in margins, " *
+                        y[i] * hat(f)(x[i]) / hat(M)),
+       y = expression("Slack, " * hat(epsilon)[i]),
+       color = "Sex", shape = "Sex") +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.98, 0.6),
+        legend.justification = c(1, 1))
+```
+:::
+
+::: {.panel-tabset}
+#### Fit
+```{r fit-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+fit_plot
+```
+
+#### Slack
+```{r slack-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+slack_plot
+```
+:::
+
+Of the `r nrow(train)` training cats,
+`r kind_counts[["On or outside the margin"]]` are on or outside the margin
+(`r n_on_margin` of them exactly on it) with
+$\hat\epsilon_i = 0$, `r kind_counts[["Inside the margin"]]` are inside the
+margin on the correct side, and `r kind_counts[["Wrong side"]]` are on the
+wrong side of the hyperplane, so the training error rate is
+`r pct(kind_counts[["Wrong side"]] / nrow(train))`. The slacks lie on the
+line $\hat\epsilon_i = 1 - y_i\hat f(x_i)/\hat M$ to the left of 1 and at 0
+to its right. They add to $\sum_i\hat\epsilon_i =
+`r fmt_math(C_hat)`$, the budget this fit uses. The misclassified cats are the
+lighter males, left of the solid line, and the heavier females, right of it.
+
+## Budget
+
+The tabs show the training cats and then support vector classifiers fit with
+four values of `cost`, from small to large, each with its hyperplane, margins,
+and support vectors circled.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r budget-plot}
+#| output: false
+# Fits at four values of cost.
+tab_costs <- c(0.01, 0.1, 1, 10)
+tab_fits <- lapply(tab_costs, function(cost) {
+  svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+      cost = cost, tolerance = 1e-8)
+})
+tab_plots <- lapply(tab_fits, svc_plot)
+
+# Margin, budget used, and kinds of training cat of a fit.
+svc_summary <- function(fit, data = train) {
+  est <- svc_w(fit)
+  decision <- attr(predict(fit, data, decision.values = TRUE),
+                   "decision.values")
+  flip <- if (colnames(decision) == "M/F") 1 else -1
+  margins_out <- data$y * flip * drop(decision)
+  slack <- pmax(0, 1 - margins_out)
+  tibble(cost = fit$cost,
+         C = sum(slack),
+         M = 1 / sqrt(sum(est$w^2)),
+         n_support = fit$tot.nSV,
+         n_inside = sum(slack > 1e-4 & slack <= 1),
+         n_wrong = sum(slack > 1),
+         error = mean(predict(fit, data) != data$Sex))
+}
+budget_summary <- map_dfr(tab_fits, svc_summary)
+
+# The budget used falls, and the margin narrows, as cost grows.
+stopifnot(!is.unsorted(rev(budget_summary$C)),
+          !is.unsorted(rev(budget_summary$M)))
+
+# At the smallest cost every training cat is classified M, so every
+# female is on the wrong side.
+smallest <- budget_summary[1, ]
+stopifnot(all(predict(tab_fits[[1]], train) == "M"),
+          smallest$n_wrong == sum(train$Sex == "F"))
+
+budget_table <- budget_summary |>
+  knitr::kable(digits = c(2, 2, 2, 0, 0, 0, 3),
+               col.names = c("`cost`", "$\\sum_i\\hat\\epsilon_i$",
+                             "$\\hat M$", "Support vectors",
+                             "Inside the margin", "Wrong side",
+                             "Training error rate"),
+               align = "rrrrrrr")
+```
+:::
+
+::: {.panel-tabset}
+#### Training cats
+```{r budget-data-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+cat_plot
+```
+
+#### `cost` = `r tab_costs[1]`
+```{r budget-1-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+tab_plots[[1]]
+```
+
+#### `cost` = `r tab_costs[2]`
+```{r budget-2-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+tab_plots[[2]]
+```
+
+#### `cost` = `r tab_costs[3]`
+```{r budget-3-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+tab_plots[[3]]
+```
+
+#### `cost` = `r tab_costs[4]`
+```{r budget-4-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+tab_plots[[4]]
+```
+:::
+
+### Bias and variance
+
+The budget $C$ is the classifier's tuning parameter.
+
+- $C = 0$ allows no slack, and the problem is the maximal margin problem: the
+support vector classifier with $C = 0$ is the maximal margin classifier, and
+it exists only for separable classes.
+- A small $C$ allows little slack, so the margin is narrow, few observations
+are on or inside it, and the hyperplane is set by those few. It follows the
+training observations near the boundary closely: low bias, high variance.
+- A large $C$ allows much slack, so the margin is wide, many observations
+are inside it, and the hyperplane is set by all of them, each with a small
+part. It moves little when one observation changes: low variance, but more
+bias.
+
+With `cost` = `r tab_costs[1]` slack is so cheap that the margin is
+`r fmt(smallest$M, 1)` standard deviations. The hyperplane and the margin on
+the `F` side lie off the plot to the left; only the margin on the `M` side
+(dashed) is in view. Every training cat is classified `M`, the more common
+sex, so every female is on the wrong side, and the `r smallest$n_support`
+support vectors are the cats left of the dashed line. As `cost` grows the margin
+narrows and the hyperplane turns to separate light from heavy cats, but it
+changes little from `cost` = `r tab_costs[3]` to `r tab_costs[4]`.
+
+### Cost and budget
+
+`svm()`'s penalty form solves the budget problem, for a budget set by `cost`.
+Let $(\hat w_0, \hat w, \hat\epsilon)$ solve the penalty problem at some
+`cost`, and let $C = \sum_i\hat\epsilon_i$. Any $(w_0, w, \epsilon)$ that
+satisfies the budget problem's constraints with this $C$ also satisfies the
+penalty problem's, so
+
+$$
+\tfrac12\|w\|^2 + \texttt{cost}\sum_i\epsilon_i \ \ge\
+\tfrac12\|\hat w\|^2 + \texttt{cost}\, C,
+\quad\text{so}\quad
+\tfrac12\|w\|^2 \ \ge\ \tfrac12\|\hat w\|^2 +
+\texttt{cost}\left(C - \sum_i\epsilon_i\right) \ \ge\ \tfrac12\|\hat w\|^2,
+$$
+
+because $\sum_i\epsilon_i \le C$. No point within the budget has a smaller
+$\|w\|$, so $\hat w$ solves the budget problem with budget
+$C = \sum_i\hat\epsilon_i$.
+
+The budget does not grow as `cost` grows. Write $N = \tfrac12\|\hat w\|^2$ and
+$S = \sum_i\hat\epsilon_i$ for the solution at `cost` $= a$, and $N'$ and
+$S'$ for the solution at `cost` $= b > a$. Each solution is at least as good
+as the other at its own `cost`:
+
+$$
+N + aS \le N' + aS', \qquad N' + bS' \le N + bS.
+$$
+
+Adding the two gives $aS + bS' \le aS' + bS$, that is,
+$(b - a)(S' - S) \le 0$, so $S' \le S$: the larger `cost` uses no more
+budget. Then the first inequality gives $N \le N'$: the larger `cost` has a
+margin $1/\|\hat w\|$ no wider. So the budget is a weakly monotone function
+of `cost`, a larger `cost` corresponding to a budget no larger, and it can
+be constant on a plateau (the cats have one, shown in the Support vectors
+section). `cost` and $C$ are not equal, and the $C$
+that a `cost` gives depends on the data. As `cost` grows without
+bound on separable data, the budget falls to 0 and the fit becomes the
+maximal margin classifier, which is why the previous lecture used a very
+large `cost`. For the four fits in the tabs:
+
+```{r budget-table-show}
+#| echo: false
+budget_table
+```
+
+The budget used, $\sum_i\hat\epsilon_i$, and the margin $\hat M$ fall as
+`cost` grows. The budget stays above the number of misclassified training
+cats, as it must.
+
+## Support vectors
+
+The figure is the fit with `cost` = 1 again.
+
+```{r support-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+fit_plot
+```
+
+### Definition
+
+The **support vectors** of the support vector classifier are the training
+observations on the margin, inside it, or on the wrong side of the
+hyperplane: those with $y_i\hat f(x_i) \le \hat M$. This is wider than the
+previous lecture's definition, the observations on the margin only, which
+is the case with no slack. They are the circled
+cats, `r svc_fit$tot.nSV` of the `r nrow(train)`: the
+`r n_on_margin` on the margin, with $\hat\epsilon_i = 0$, and all
+`r sum(train$slack > 1e-4)` with $\hat\epsilon_i > 0$.
+
+```{r support-vectors}
+# Training cats on or inside the margin or on the wrong side.
+support <- filter(train, distance / M_hat < 1 + 1e-4)
+count(support, kind)
+```
+
+::: {.callout-note collapse="true"}
+### Code
+```{r support-check}
+#| output: false
+# The cats with distance at most M_hat are the rows svm() kept.
+stopifnot(setequal(which(train$distance / M_hat < 1 + 1e-4),
+                   svc_fit$index))
+
+# Support vectors: on the margin, or with positive slack.
+stopifnot(svc_fit$tot.nSV == n_on_margin + sum(train$slack > 1e-4))
+
+# Refits on standardized features, with the training cats' means and
+# standard deviations: all training cats, and the support vectors alone.
+train_std <- tibble(Sex = train$Sex,
+                    Bwt = x_std[, "Bwt"],
+                    Hwt = x_std[, "Hwt"])
+refit_std <- function(data) {
+  fit <- svm(Sex ~ Bwt + Hwt, data = data, kernel = "linear",
+             cost = 1, scale = FALSE, tolerance = 1e-8)
+  w <- svc_w(fit)
+  c(w$w0, w$w) / sqrt(sum(w$w^2))
+}
+beta_all <- refit_std(train_std)
+beta_support <- refit_std(train_std[svc_fit$index, ])
+
+# Both agree with the standardized fit to six decimal places.
+stopifnot(max(abs(beta_all - beta_hat)) < 1e-6,
+          max(abs(beta_support - beta_hat)) < 1e-6)
+```
+:::
+
+### Refits
+
+The fitted hyperplane depends on the training data only through the support
+vectors. An observation outside the margin has $\hat\epsilon_i = 0$ and its
+constraint holds with room to spare. Suppose deleting it allowed a better
+solution. Moving from the current solution a short way toward that better
+one keeps the deleted observation's constraint satisfied (it held strictly),
+keeps every other constraint satisfied (each defines a convex set that
+contains both ends), and lowers the objective (which is convex). That point
+would then beat the current solution of the full problem, which is
+impossible. So deleting an observation outside the margin, or moving it
+anywhere outside the margin, leaves the fit unchanged. Refitting the
+standardized problem to the `r svc_fit$tot.nSV` support vectors alone, with
+the training cats' means and standard deviations, gives the same estimates
+to six decimal places.
+
+The difference from the maximal margin classifier is how many support
+vectors there are. There, a handful of observations on the margin set the
+hyperplane; here every observation inside the margin or on the wrong side
+does, and a wider margin holds more of them.
+
+### Support vector count
+
+The figure counts the support vectors, and the two kinds with positive
+slack, for fits over a grid of `cost` values.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r count-plot}
+#| output: false
+# Fits over a grid of cost, 4 per factor of 10.
+cost_grid <- 10^seq(-2, 2, by = 0.25)
+grid_summary <- map_dfr(cost_grid, function(cost) {
+  fit <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+             cost = cost, tolerance = 1e-8)
+  svc_summary(fit)
+})
+
+# Counts by kind, long, for one line per kind.
+count_levels <- c("Support vectors", "Inside the margin", "Wrong side")
+count_long <- grid_summary |>
+  select(cost, n_support, n_inside, n_wrong) |>
+  pivot_longer(-cost, names_to = "what", values_to = "count") |>
+  mutate(what = factor(what,
+                       levels = c("n_support", "n_inside", "n_wrong"),
+                       labels = count_levels))
+
+# Log axis for cost: majors at powers of 10, minors midway in log space.
+cost_axis <- scale_x_log10(breaks = 10^(-2:2),
+                           minor_breaks = 10^seq(-1.5, 1.5, by = 1),
+                           labels = c("0.01", "0.1", "1", "10", "100"))
+
+count_plot <- ggplot(count_long,
+                     aes(x = cost, y = count,
+                         color = what, shape = what, linetype = what)) +
+  geom_line() +
+  geom_point(size = 2) +
+  cost_axis +
+  scale_y_continuous(breaks = seq(0, 70, by = 10),
+                     minor_breaks = seq(5, 65, by = 10)) +
+  scale_color_manual(values = c("black", "#009E73", "#CC79A7")) +
+  coord_cartesian(xlim = c(0.008, 125), ylim = c(0, 70), expand = FALSE) +
+  labs(x = "cost (log scale)", y = "Training cats",
+       color = NULL, shape = NULL, linetype = NULL) +
+  theme(legend.position = "inside",
+        legend.position.inside = c(0.98, 0.03),
+        legend.justification = c(1, 0))
+
+grid_first <- grid_summary[1, ]
+grid_last <- grid_summary[nrow(grid_summary), ]
+# The budget used never rises with cost (up to the solver's accuracy), and
+# from some cost on the fit stops changing.
+stopifnot(all(diff(grid_summary$C) < 1e-4),
+          all(grid_summary$n_support > nrow(train) / 2),
+          min(grid_summary$n_wrong) == grid_last$n_wrong)
+plateau <- grid_summary |>
+  filter(abs(C - grid_last$C) < 1e-4, abs(M - grid_last$M) < 1e-4)
+plateau_cost <- min(plateau$cost)
+```
+:::
+
+```{r count-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+count_plot
+```
+
+The number of support vectors falls from `r grid_first$n_support` at
+`cost` = `r min(cost_grid)` to `r grid_last$n_support` at
+`cost` = `r max(cost_grid)`, as the margin narrows from
+`r fmt(grid_first$M, 1)` to `r fmt(grid_last$M)` standard deviations. Because
+the sexes overlap so much, more than half of the training cats are support
+vectors at every `cost`, including the `r grid_last$n_wrong` or more
+misclassified training cats of every fit on the grid. From `cost` =
+`r fmt(plateau_cost)` on, the fit no longer changes: its budget used,
+`r fmt(grid_last$C)`, is the smallest total slack that any hyperplane leaves
+these training cats, so a larger `cost` cannot reduce it.
+
+## Cross-validation
+
+The figure is the training cats from the start of the lecture.
+Cross-validation chooses `cost` from them alone; the test cats stay aside.
+
+```{r cv-data-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+cat_plot
+```
+
+### Error rate
+
+The budget, and so `cost`, is chosen by cross-validation, as in the
+resampling lectures. With the training cats split at random into $k = 10$
+folds $\mathcal{F}_1, \ldots, \mathcal{F}_{10}$ of sizes $n_\ell$, the
+estimate for a given `cost` is
+
+$$
+\text{CV}_{(10)}(\texttt{cost}) = \frac{1}{10}\sum_{\ell=1}^{10}\text{Err}_\ell,
+\qquad
+\text{Err}_\ell = \frac{1}{n_\ell}\sum_{i \in \mathcal{F}_\ell}
+\mathrm{I}\left(y_i \ne \hat y_i^{(-\ell)}\right),
+$$
+
+where $\hat y_i^{(-\ell)}$ is the class predicted for observation $i$ by the
+support vector classifier fit with that `cost` to the training cats outside
+fold $\ell$, and $\text{Err}_\ell$ is its error rate on fold $\ell$.
+`e1071::tune()` averages the fold error rates with equal weights, so with
+folds of different sizes it differs slightly from the size-weighted average
+of the resampling lectures. Each fit inside `tune()` standardizes with its
+own training folds' means and standard deviations, so the standardization is
+part of the fit being cross-validated.
+
+`tune()` takes the fitting function, the model, any further arguments for
+it, and a list of values of the tuning parameter. Its folds are random, which
+the seed set at the top of this file makes reproducible. The fits inside it
+keep `svm()`'s default `tolerance`; with the tighter one, the solver stops at
+its iteration limit on some folds.
+
+```{r cv-fit}
+# 10-fold cross-validation over the grid of cost values.
+cv_fit <- tune(svm, Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+               ranges = list(cost = cost_grid))
+head(cv_fit$performances, 3)
+cv_fit$best.parameters
+```
+
+The `performances` table has one row per `cost`: `error` is
+$\text{CV}_{(10)}(\texttt{cost})$, by default the misclassification rate, and
+`dispersion` the standard deviation of the 10 fold error rates.
+`best.parameters` is the `cost` with the smallest `error` (the smallest such
+`cost` if several tie), and `best.model` is the support vector classifier
+refit with it to all the training cats.
+
+### Curve
+
+::: {.callout-note collapse="true"}
+### Code
+```{r cv-plot}
+#| output: false
+# The cross-validation estimate against cost, and the chosen cost.
+cv_table <- as_tibble(cv_fit$performances)
+best_cost <- cv_fit$best.parameters$cost
+best_row <- filter(cv_table, cost == best_cost)
+
+# Error rate of classifying every training cat M.
+all_M_error <- mean(train$Sex != "M")
+
+cv_plot <- ggplot(cv_table, aes(x = cost, y = error)) +
+  geom_hline(yintercept = all_M_error, linetype = "dotted") +
+  annotate("text", x = 20, y = all_M_error + 0.02,
+           label = "Every cat classified M") +
+  geom_line() +
+  geom_point(size = 2) +
+  geom_point(data = best_row, shape = 1, size = 5) +
+  cost_axis +
+  scale_y_continuous(breaks = seq(0, 0.4, by = 0.1),
+                     minor_breaks = seq(0.05, 0.45, by = 0.1),
+                     labels = scales::label_percent()) +
+  coord_cartesian(xlim = c(0.008, 125), ylim = c(0, 0.42),
+                  expand = FALSE) +
+  labs(x = "cost (log scale)",
+       y = "10-fold CV estimate of error rate")
+
+# The smallest costs' estimates are close to the all-M error rate.
+stopifnot(abs(cv_table$error[1] - all_M_error) < 0.01)
+
+# Training error rate of the chosen fit.
+svc_best <- cv_fit$best.model
+best_train_error <- error_of(svc_best, train)
+stopifnot(svc_best$cost == best_cost)
+```
+:::
+
+```{r cv-figure}
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4
+cv_plot
+```
+
+For small `cost`, the estimate is close to the error rate of classifying
+every training cat `M` (dotted): the margin is so wide that the classifier fit
+to each set of training folds puts nearly every cat on the `M` side. The
+estimate is not monotone in `cost` (it rises to
+`r pct(max(cv_table$error))` at `cost` =
+`r fmt(cv_table$cost[which.max(cv_table$error)])`); it is smallest,
+`r pct(best_row$error)`, at `cost` =
+`r fmt(best_cost)` (circled), after which it is nearly flat. A linear
+boundary in two features has only three estimates, so even the narrowest
+margin on this grid varies little from one set of training folds to another,
+and the curve does not rise again at large `cost`.
+The fold error rates at the chosen `cost` have standard deviation
+`r pct(best_row$dispersion)`, so differences of a few percentage points
+along the curve are within the noise of the estimate.
+
+## Test error
+
+The figure shows the `r nrow(test)` test cats and the support vector
+classifier chosen by cross-validation, refit to all the training cats, with
+its hyperplane and margins; crosses mark the test cats it misclassifies.
+
+::: {.callout-note collapse="true"}
+### Code
+```{r test-plot}
+#| output: false
+# Test cats, their fitted values, and the misclassified ones.
+test <- test |>
+  mutate(predicted = predict(svc_best, test))
+wrong_test <- filter(test, predicted != Sex)
+
+test_plot <- cat_base() +
+  svc_lines(svc_raw(svc_best)) +
+  cat_points(test) +
+  geom_point(data = wrong_test, shape = 4, size = 3.5, stroke = 1)
+```
+:::
+
+```{r test-figure}
+#| echo: false
+#| fig-width: 5
+#| fig-height: 4.5
+test_plot
+```
+
+### Sign rule
+
+A new observation $x^*$ is classified by the sign of $\hat f(x^*)$, as for
+the maximal margin classifier: to `M` if $\hat f(x^*) > 0$ and to `F` if
+$\hat f(x^*) < 0$. `predict()` standardizes $x^*$ with the training cats'
+means and standard deviations first.
+
+```{r test-predict}
+# Predicted sex of the first test cats.
+head(select(test, Sex, Bwt, Hwt, predicted))
+```
+
+### Confusion matrix
+
+With `M`, the class coded $y = 1$, as the positive class, the confusion
+matrix of the test cats is
+
+```{r test-confusion}
+# Truth in the rows, predictions in the columns.
+confusion <- table(Truth = test$Sex, Predicted = test$predicted)
+confusion
+```
+
+```{r test-rates}
+#| include: false
+TP <- confusion["M", "M"]
+FN <- confusion["M", "F"]
+FP <- confusion["F", "M"]
+TN <- confusion["F", "F"]
+test_error <- (FP + FN) / nrow(test)
+sensitivity <- TP / (TP + FN)
+specificity <- TN / (TN + FP)
+test_all_M <- mean(test$Sex != "M")
+stopifnot(test_error == nrow(wrong_test) / nrow(test))
+```
+
+The test error rate is $(FP + FN)/n = (`r FP` + `r FN`)/`r nrow(test)` =
+`r fmt_math(test_error, 3)`$, against `r pct(test_all_M)` for classifying
+every test cat `M`. The sensitivity, the proportion of male cats classified
+male, is `r pct(sensitivity)`, and the specificity, the proportion of female
+cats classified female, is `r pct(specificity)`. The training error rate of
+the same fit is `r pct(best_train_error)` and its cross-validation estimate
+`r pct(best_row$error)`; the test cats played no part in fitting or in
+choosing `cost`, so the test error rate is the honest estimate, if a noisy
+one from `r nrow(test)` cats. The misclassified test cats lie where the
+training cats of the two sexes overlapped: the lighter males and the heavier
+females.
+
+::: {.callout-note collapse="true"}
+### Beyond this course
+The penalty form can be rewritten without the slack variables as minimizing
+$\sum_i \max\left[0,\ 1 - y_i\left(w_0 + w^\top x_i\right)\right] +
+\tfrac{1}{2\,
+\texttt{cost}}\|w\|^2$, a loss plus a ridge-like penalty; the next lecture
+compares this loss with logistic regression's. `svm()` has other options
+not taught here: `class.weights` sets a different `cost` for each class,
+which matters when one class is rare or its errors are costlier;
+`type = "nu-classification"` replaces `cost` with a parameter $\nu$ that
+is a lower bound on the fraction of support vectors and an upper bound on
+the fraction of observations inside the margin or on the wrong side; and
+`type = "one-classification"` fits a one-class support vector machine,
+which describes where a single class lies in order to flag unusual new
+observations. In the Lagrangian dual
+of the penalty form, each observation's multiplier is bounded above by
+`cost`. See *The Elements of Statistical Learning* (Hastie, Tibshirani, and
+Friedman), Section 12.2.
+:::
+
+## Conclusion
+
+When the classes overlap, no hyperplane separates them and the maximal
+margin classifier does not exist. The support vector classifier gives each
+observation a slack variable $\epsilon_i \ge 0$, requires
+$y_i\left(\beta_0 + \beta^\top x_i\right) \ge M(1 - \epsilon_i)$ with
+$\sum_j\beta_j^2 = 1$, and maximizes the margin $M$ subject to a budget
+$\sum_i \epsilon_i \le C$. An observation with $\epsilon_i = 0$ is on the
+correct side, on or outside the margin; one with $0 < \epsilon_i \le 1$ is
+inside the margin on the correct side; one with $\epsilon_i > 1$ is on the
+wrong side of the hyperplane, so at most $C$ training observations are
+misclassified.
+
+The support vectors are the observations on or inside the margin or on the
+wrong side, and the fitted hyperplane depends only on them. The budget is
+the tuning parameter: $C = 0$ gives the maximal margin classifier, a small
+$C$ a narrow margin with few support vectors (low bias, high variance), and a
+large $C$ a wide margin with many (low variance, more bias). A new observation
+is classified by the sign of $\hat f(x^*)$.
+
+`e1071::svm()` solves the equivalent penalty form, minimizing
+$\tfrac12\|w\|^2 + \texttt{cost}\sum_i\epsilon_i$; a larger `cost` gives a
+budget no larger and a margin no wider, so `cost` and $C$ move in opposite
+directions. Because a margin is a distance, `svm()` standardizes the
+features by default, which makes the fit independent of their units.
+`e1071::tune()` chooses `cost` by 10-fold cross-validation of the error
+rate, and the chosen classifier is judged by its test error rate and
+confusion matrix.
+
+The next lecture covers support vector machines, which replace the flat
+boundary with a curved one by means of kernels, tune `cost` together with a
+kernel's own parameter, extend to more than two classes, and compare the
+support vector classifier's loss with that of logistic regression.

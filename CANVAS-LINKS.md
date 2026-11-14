@@ -46,6 +46,9 @@ Update this whenever a chapter file is renamed or a new one is registered in
 | 2026-10-31 | New | | 08-trees/10-decision-trees.qmd | x |
 | 2026-10-31 | New | | 08-trees/20-bagging-and-random-forests.qmd | x |
 | 2026-11-01 | New | | 08-trees/30-boosting.qmd | x |
+| 2026-11-14 | New | | 09-svm/10-maximal-margin-classifier.qmd | |
+| 2026-11-14 | New | | 09-svm/20-support-vector-classifier.qmd | |
+| 2026-11-14 | New | | 09-svm/30-support-vector-machines.qmd | |
 
 The 2026-10-06 split moved LDA's Classifier evaluation, Credit card findings,
 and Student strata sections out of `04-classification/50-lda.html` into

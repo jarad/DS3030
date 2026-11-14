@@ -51,6 +51,11 @@ book:
       - 08-trees/10-decision-trees.qmd
       - 08-trees/20-bagging-and-random-forests.qmd
       - 08-trees/30-boosting.qmd
+    - part: "Support Vector Machines"
+      chapters:
+      - 09-svm/10-maximal-margin-classifier.qmd
+      - 09-svm/20-support-vector-classifier.qmd
+      - 09-svm/30-support-vector-machines.qmd
 
 format:
   html:
