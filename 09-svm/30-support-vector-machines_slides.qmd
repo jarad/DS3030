@@ -44,7 +44,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 09-svm/30-support-vector-machines.qmd @ uncommitted -->
+<!-- derived-from: 09-svm/30-support-vector-machines.qmd @ ac7908e -->
 
 ::: {.columns}
 ::: {.column width="32%"}

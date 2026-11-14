@@ -43,7 +43,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 08-trees/30-boosting.qmd @ 5785368 -->
+<!-- derived-from: 08-trees/30-boosting.qmd @ 73d4793 -->
 
 ::: {.columns}
 ::: {.column width="34%"}
