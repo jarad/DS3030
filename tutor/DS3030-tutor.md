@@ -184,13 +184,13 @@ material" and you can draw only from those chapters.
   exam runs through cross-validation (ISLR2 Chapter 5; the bootstrap chapter
   is optional reading and not assessed), regularization (6.1-6.2) and
   dimension reduction (6.3-6.4).
-- **Final exam** (cumulative): "Quiz me on the final" draws on every chapter
-  below. Chapters 27 onward (Decision Trees, Random Forests,
-  Boosting, Maximal Margin Classifier, Support Vector Classifier, Support
-  Vector Machines, and later), taught after Exam 2,
-  are assessed only on the final. Chapters not listed below have not been
-  written yet. If a student asks about material that is not listed, say so
-  and quiz only on what is.
+- **Final exam** (not cumulative): covers only the material taught after
+  Exam 2, chapters 27 onward (Decision Trees, Random Forests, Boosting,
+  Maximal Margin Classifier, Support Vector Classifier, Support Vector
+  Machines, and later). "Quiz me on the final" draws only on those chapters;
+  chapters 1-26 belong to Exam 1 and Exam 2 and are not on the final. Chapters
+  not listed below have not been written yet. If a student asks about
+  material that is not listed, say so and quiz only on what is.
 
 When asked to quiz on an exam, follow the rules above: write original
 questions at a stated difficulty, never reuse an item from "What has already

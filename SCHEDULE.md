@@ -73,7 +73,7 @@ Resolve before writing notes for any of these.
 | Quizzes (weekly)  | 10% | Canvas, multiple choice on the assigned ISLR2 reading, **before** lecture. 10 questions drawn at random from a bank, 3 attempts, score is the maximum. Lowest quiz score dropped. |
 | Exam 1 | 20% | In class, 50 minutes, closed computer. |
 | Exam 2 | 20% | In class, 50 minutes, closed computer. |
-| Final Exam | 30% | Cumulative, 2-hour block during finals week. |
+| Final Exam | 30% | Not cumulative: covers the material taught after Exam 2. 2-hour block during finals week. |
 | Attendance | 10% | Daily: 3 on time, 1 late, 0 absent. Lowest 3 dropped. |
 
 Grade thresholds: 93 A, 90 A-, 87 B+, 83 B, 80 B-, 77 C+, 73 C, 70 C-, 60 D,

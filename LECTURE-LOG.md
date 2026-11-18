@@ -66,7 +66,7 @@ shifted.
 | 2026-11-20 | Fri | `09-svm/30-support-vector-machines.qmd` (ISLR2 9.3-9.5; chapter not yet written) | Kernels, tuning `cost` and `gamma`, more than two classes, SVM against logistic regression loss |
 | 2026-11-30 | Mon | Clustering (ISLR2 Ch 12.4; no chapter or deck written yet) | First day after fall break; HW11 week |
 | 2026-12-02, 12-04, 12-07, 12-09 | Wed, Fri, Mon, Wed | Clustering (ISLR2 Ch 12.4) | Four class days after the start on 11-30; HW11 and HW12 fall here |
-| 2026-12-11 | Fri | Final review | Last class day before finals week; the final is cumulative (tentatively Dec 15, 12-2 PM) |
+| 2026-12-11 | Fri | Final review | Last class day before finals week; the final is not cumulative and covers the material taught after Exam 2 (tentatively Dec 15, 12-2 PM) |
 
 Multinomial logistic regression is deliberately deferred until after Exam 1
 and is not yet scheduled above.
