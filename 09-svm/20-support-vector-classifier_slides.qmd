@@ -87,7 +87,7 @@ Timing: one 50-minute period on Wed 2026-11-18, the first minutes of which may g
 # Cat sex
 
 ::: notes
-Question: can a cat's body weight and heart weight tell its sex, and if the two sexes overlap, which straight line should do the telling?
+Question: can a cat's heart weight and body weight tell its sex, and if the two sexes overlap, which straight line should do the telling?
 :::
 
 ## Cat sex
@@ -95,8 +95,8 @@ Question: can a cat's body weight and heart weight tell its sex, and if the two 
 ::: {style="font-size: 0.7em"}
 - Class: `Sex` (`M`: $y = 1$, `F`: $y = -1$)
 - Explanatory variables ($p = 2$):
-  - `Bwt`: body weight (kg)
   - `Hwt`: heart weight (g)
+  - `Bwt`: body weight (kg)
 :::
 
 ::: {style="font-size: 0.7em; margin-top: 1em"}
@@ -105,7 +105,7 @@ Question: can a cat's body weight and heart weight tell its sex, and if the two 
 :::
 
 ::: notes
-MASS::cats records the sex, body weight in kilograms (Bwt), and heart weight in grams (Hwt) of 144 adult domestic cats used in experiments with the heart drug digitalis (published by R. A. Fisher in 1947). The observations are cats; each sex is a class, and the two explanatory variables are the features. As in the previous lecture, the class is coded y_i = 1 for M, the second level of the factor, and y_i = -1 for F. The cats are split at random into training cats and test cats, two thirds for training: 96 training cats and 48 test cats. The test cats are used only at the end of the lecture. The training cats hold 31 females and 65 males. In the code, train is the 96 training cats and test the 48 test cats.
+MASS::cats records the sex, heart weight in grams (Hwt), and body weight in kilograms (Bwt) of 144 adult domestic cats used in experiments with the heart drug digitalis (published by R. A. Fisher in 1947). The observations are cats; each sex is a class, and the two explanatory variables are the features, heart weight x_1 on the horizontal axis of the figures and body weight x_2 on the vertical axis. As in the previous lecture, the class is coded y_i = 1 for M, the second level of the factor, and y_i = -1 for F. The cats are split at random into training cats and test cats, two thirds for training: 96 training cats and 48 test cats. The test cats are used only at the end of the lecture. The training cats hold 31 females and 65 males. In the code, train is the 96 training cats and test the 48 test cats.
 :::
 
 ## Cat sex: plot
@@ -113,7 +113,7 @@ MASS::cats records the sex, body weight in kilograms (Bwt), and heart weight in 
 ![](../_freeze/09-svm/20-support-vector-classifier/figure-html/cat-figure-1.png){height=560}
 
 ::: notes
-The males are heavier on average, 2.90 kg against 2.38 kg, with heavier hearts, 11.3 g against 9.2 g, and heart weight rises with body weight in both sexes. Every female weighs at most 3.0 kg, while males run from 2.0 kg up, so the heavier cats are all male and the 71 cats between 2.0 and 3.0 kg are a mixture of the two sexes, with no line between them. The axes are drawn so that one standard deviation of each measurement among the training cats, 0.50 kg for body weight and 2.59 g for heart weight, has the same length; the Standardization slide explains why.
+The males are heavier on average, 2.90 kg against 2.38 kg, with heavier hearts, 11.3 g against 9.2 g, and heart weight rises with body weight in both sexes. Every female weighs at most 3.0 kg, while males run from 2.0 kg up, so the heavier cats are all male and the 71 cats between 2.0 and 3.0 kg are a mixture of the two sexes, with no line between them. The axes are drawn so that one standard deviation of each measurement among the training cats, 2.59 g for heart weight and 0.50 kg for body weight, has the same length; the Standardization slide explains why.
 :::
 
 # Soft margin
@@ -199,7 +199,7 @@ This part fits the support vector classifier to the training cats with e1071::sv
 
 ```r
 # Support vector classifier: linear kernel, standardized features.
-svc_fit <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+svc_fit <- svm(Sex ~ Hwt + Bwt, data = train, kernel = "linear",
                cost = 1, tolerance = 1e-8)
 svc_fit
 ```
@@ -207,7 +207,7 @@ svc_fit
 ```
 
 Call:
-svm(formula = Sex ~ Bwt + Hwt, data = train, kernel = "linear", cost = 1, 
+svm(formula = Sex ~ Hwt + Bwt, data = train, kernel = "linear", cost = 1, 
     tolerance = 1e-08)
 
 
@@ -278,7 +278,7 @@ $$
 :::
 
 ::: notes
-The margin is a Euclidean distance between points x and x', the square root of the sum over j of (x_j - x'_j) squared, where x_j is the jth coordinate of x (a single subscript j on a generic point names a coordinate, and a single subscript i names an observation). It adds the squared differences of the features in their own units. With body weight in kilograms and heart weight in grams, a difference of 1 g in heart weight counts as much as a difference of 1 kg in body weight, although 1 g is 0.39 standard deviations of heart weight and 1 kg is 1.99 of body weight. The penalty depends on the units too. Recording feature j in units a times smaller multiplies its values by a, so the same hyperplane needs w_j/a in place of w_j, and its part of the squared norm of w changes from w_j squared to w_j squared over a squared. The trade between the squared norm of w and the slack therefore changes with the units, and the same cost is a different budget. Standardizing removes the units. Each feature is replaced by the display, where x-bar_j is the mean of feature j among the training observations, s_j is its standard deviation (divisor n - 1, as sd() computes), and x-tilde_ij is observation i's value of feature j in standard deviations from that mean. A change of units, x_ij to a x_ij for a > 0, leaves x-tilde_ij unchanged, so the fit no longer depends on the units: refitting the standardized classifier with body weight in grams gives the same hyperplane. svm() does this by default (scale = TRUE): it standardizes each feature with the training observations' means and standard deviations, stores them in the fit's x.scale, and applies the same ones to any new observation passed to predict(). The previous lecture set scale = FALSE because both beetle measurements were in micrometers, where a distance in micrometers means something. The cats' measurements are in different units, so the fits in this lecture standardize. If the Standardization: fits slide is dropped, say: the same cost = 1 gives a different hyperplane unscaled, with the measurements as recorded (scale = FALSE), than standardized; per standard deviation of each measurement the unit normal vector is (0.99, 0.16) unscaled and (0.99, -0.15) standardized, a turn of 17.8 degrees, and their training error rates are 24.0% and 22.9%.
+The margin is a Euclidean distance between points x and x', the square root of the sum over j of (x_j - x'_j) squared, where x_j is the jth coordinate of x (a single subscript j on a generic point names a coordinate, and a single subscript i names an observation). It adds the squared differences of the features in their own units. With heart weight in grams and body weight in kilograms, a difference of 1 g in heart weight counts as much as a difference of 1 kg in body weight, although 1 g is 0.39 standard deviations of heart weight and 1 kg is 1.99 of body weight. The penalty depends on the units too. Recording feature j in units a times smaller multiplies its values by a, so the same hyperplane needs w_j/a in place of w_j, and its part of the squared norm of w changes from w_j squared to w_j squared over a squared. The trade between the squared norm of w and the slack therefore changes with the units, and the same cost is a different budget. Standardizing removes the units. Each feature is replaced by the display, where x-bar_j is the mean of feature j among the training observations, s_j is its standard deviation (divisor n - 1, as sd() computes), and x-tilde_ij is observation i's value of feature j in standard deviations from that mean. A change of units, x_ij to a x_ij for a > 0, leaves x-tilde_ij unchanged, so the fit no longer depends on the units: refitting the standardized classifier with body weight in grams gives the same hyperplane. svm() does this by default (scale = TRUE): it standardizes each feature with the training observations' means and standard deviations, stores them in the fit's x.scale, and applies the same ones to any new observation passed to predict(). The previous lecture set scale = FALSE because both beetle measurements were in micrometers, where a distance in micrometers means something. The cats' measurements are in different units, so the fits in this lecture standardize. If the Standardization: fits slide is dropped, say: the same cost = 1 gives a different hyperplane unscaled, with the measurements as recorded (scale = FALSE), than standardized; per standard deviation of each measurement the unit normal vector, heart weight part first, is (0.16, 0.99) unscaled and (-0.15, 0.99) standardized, a turn of 17.8 degrees, and their training error rates are 24.0% and 22.9%.
 :::
 
 ## Standardization: fits
@@ -296,7 +296,7 @@ The margin is a Euclidean distance between points x and x', the square root of t
 :::
 
 ::: notes
-The tabs show two fits with cost = 1: unscaled, with the measurements as recorded (scale = FALSE), and standardized (the fit above). Each has its hyperplane (solid), its margins (dashed), and its support vectors (circled). The axes are drawn so that one standard deviation of each measurement has the same length. Per standard deviation of each measurement, the unit normal vector of the unscaled fit is (0.99, 0.16) and that of the standardized fit (0.99, -0.15): both are mostly body weight, and they differ in the sign of the heart weight part, a turn of 17.8 degrees. Their training error rates are 24.0% and 22.9%, and the budgets they use, the sum of the estimated slacks, are 56.15 and 54.55. The standardized fit's margins lie 0.64 standard deviations from its hyperplane, a distance in the picture. The unscaled fit's margins lie 0.97 standard deviations from its hyperplane in the picture, but the margin svm() maximizes for it, 1 over the norm of w-hat, 0.49, is a distance in kilograms and grams together.
+The tabs show two fits with cost = 1: unscaled, with the measurements as recorded (scale = FALSE), and standardized (the fit above). Each has its hyperplane (solid), its margins (dashed), and its support vectors (circled). The axes are drawn so that one standard deviation of each measurement has the same length. Per standard deviation of each measurement, the unit normal vector of the unscaled fit is (0.16, 0.99) and that of the standardized fit (-0.15, 0.99): both are mostly body weight, and they differ in the sign of the heart weight part, a turn of 17.8 degrees. Their training error rates are 24.0% and 22.9%, and the budgets they use, the sum of the estimated slacks, are 56.15 and 54.55. The standardized fit's margins lie 0.64 standard deviations from its hyperplane, a distance in the picture. The unscaled fit's margins lie 0.97 standard deviations from its hyperplane in the picture, but the margin svm() maximizes for it, 1 over the norm of w-hat, 0.49, is a distance in kilograms and grams together.
 :::
 
 ## Estimates
@@ -313,12 +313,12 @@ round(c(beta_hat, M = M_hat), 4)
 ```
 
 ```
-  beta0     Bwt     Hwt       M 
- 0.5519  0.9887 -0.1502  0.6426 
+  beta0     Hwt     Bwt       M 
+ 0.5519 -0.1502  0.9887  0.6426 
 ```
 
 ::: notes
-svc_w() is a helper the chapter defines in a collapsed Code callout: it reads w_0 and w from the fit's coefs, SV and rho and fixes the sign so that M is on the positive side. Undoing the rescaling gives the estimates on the standardized scale: beta-hat_0 = w-hat_0 over the norm of w-hat, beta-hat = w-hat over the norm of w-hat, and M-hat = 1 over the norm of w-hat, with w-hat and w-hat_0 read from the fit's coefs, SV, and rho as in the previous lecture (here SV holds the support vectors' standardized features). svm()'s decision values are positive for the class of its first training observation, which here is M, so the class coded y = 1. The fitted value f-hat(x) = beta-hat_0 + beta-hat_1 x-tilde_1 + beta-hat_2 x-tilde_2 is the signed distance from x to the hyperplane in the standardized features, in standard deviations, with x-tilde_1 and x-tilde_2 the standardized body and heart weights. beta-hat_0 = 0.55 is f-hat at x-tilde = 0, a cat of average body and heart weight among the training cats: it lies 0.55 standard deviations from the hyperplane on the M side. beta-hat_1 = 0.99: one standard deviation more body weight (0.50 kg) moves a cat 0.99 standard deviations toward the M side. beta-hat_2 = -0.15: one standard deviation more heart weight (2.59 g) moves it 0.15 standard deviations toward the F side. Body weight carries most of the classification; among cats of the same body weight, a heavier heart points slightly toward female. The margin is M-hat = 0.64 standard deviations.
+svc_w() is a helper the chapter defines in a collapsed Code callout: it reads w_0 and w from the fit's coefs, SV and rho and fixes the sign so that M is on the positive side. Undoing the rescaling gives the estimates on the standardized scale: beta-hat_0 = w-hat_0 over the norm of w-hat, beta-hat = w-hat over the norm of w-hat, and M-hat = 1 over the norm of w-hat, with w-hat and w-hat_0 read from the fit's coefs, SV, and rho as in the previous lecture (here SV holds the support vectors' standardized features). svm()'s decision values are positive for the class of its first training observation, which here is M, so the class coded y = 1. The fitted value f-hat(x) = beta-hat_0 + beta-hat_1 x-tilde_1 + beta-hat_2 x-tilde_2 is the signed distance from x to the hyperplane in the standardized features, in standard deviations, with x-tilde_1 and x-tilde_2 the standardized heart and body weights. beta-hat_0 = 0.55 is f-hat at x-tilde = 0, a cat of average heart and body weight among the training cats: it lies 0.55 standard deviations from the hyperplane on the M side. beta-hat_1 = -0.15: one standard deviation more heart weight (2.59 g) moves a cat 0.15 standard deviations toward the F side. beta-hat_2 = 0.99: one standard deviation more body weight (0.50 kg) moves it 0.99 standard deviations toward the M side. Body weight carries most of the classification; among cats of the same body weight, a heavier heart points slightly toward female. The margin is M-hat = 0.64 standard deviations.
 :::
 
 ## Slack estimates
@@ -340,7 +340,7 @@ $$
 :::
 
 ::: notes
-Each epsilon-hat_i is the smallest slack its constraint allows, the display, where y_i f-hat(x_i) over M-hat is observation i's distance from the hyperplane on its own side, in margins. The figure plots each training cat's slack against that distance, with the three kinds of observation shaded; f-hat is the fitted value, the signed distance from x to the hyperplane, and M-hat the margin, as in the previous lecture (on the standardized scale, M-hat = 0.64 standard deviations). If the Estimates slide is dropped, say: the unit-norm estimates are read from the svm() fit as in the previous lecture, beta-hat = w-hat over its norm and M-hat = 1 over the norm of w-hat, and the margin is 0.64 standard deviations. Of the 96 training cats, 41 are on or outside the margin (3 of them exactly on it) with epsilon-hat_i = 0, 33 are inside the margin on the correct side, and 22 are on the wrong side of the hyperplane, so the training error rate is 22.9%. The slacks lie on the line epsilon-hat_i = 1 - y_i f-hat(x_i) over M-hat to the left of 1 and at 0 to its right. They add to 54.55, the budget this fit uses. The cats in the shaded wrong-side band, with a negative distance, are both males and females; on the Support vectors figure they are the lighter males, left of the solid line, and the heavier females, right of it.
+Each epsilon-hat_i is the smallest slack its constraint allows, the display, where y_i f-hat(x_i) over M-hat is observation i's distance from the hyperplane on its own side, in margins. The figure plots each training cat's slack against that distance, with the three kinds of observation shaded; f-hat is the fitted value, the signed distance from x to the hyperplane, and M-hat the margin, as in the previous lecture (on the standardized scale, M-hat = 0.64 standard deviations). If the Estimates slide is dropped, say: the unit-norm estimates are read from the svm() fit as in the previous lecture, beta-hat = w-hat over its norm and M-hat = 1 over the norm of w-hat, and the margin is 0.64 standard deviations. Of the 96 training cats, 41 are on or outside the margin (3 of them exactly on it) with epsilon-hat_i = 0, 33 are inside the margin on the correct side, and 22 are on the wrong side of the hyperplane, so the training error rate is 22.9%. The slacks lie on the line epsilon-hat_i = 1 - y_i f-hat(x_i) over M-hat to the left of 1 and at 0 to its right. They add to 54.55, the budget this fit uses. The cats in the shaded wrong-side band, with a negative distance, are both males and females; on the Support vectors figure they are the lighter males, below the solid line, and the heavier females, above it.
 :::
 
 # Budget
@@ -372,7 +372,7 @@ This part fits the support vector classifier at four values of cost, reads the b
 :::
 
 ::: notes
-The tabs show support vector classifiers fit with four values of cost, from small to large, each with its hyperplane, margins, and support vectors circled; the chapter's first tab, the training cats alone, is not repeated. With cost = 0.01 slack is so cheap that the margin is 17.7 standard deviations. The hyperplane and the margin on the F side lie off the plot to the left; only the margin on the M side (dashed) is in view. Every training cat is classified M, the more common sex, so every female is on the wrong side, and the 62 support vectors are the cats left of the dashed line. As cost grows the margin narrows and the hyperplane turns to separate light from heavy cats, but it changes little from cost = 1 to 10.
+The tabs show support vector classifiers fit with four values of cost, from small to large, each with its hyperplane, margins, and support vectors circled; the chapter's first tab, the training cats alone, is not repeated. With cost = 0.01 slack is so cheap that the margin is 17.7 standard deviations. The hyperplane and the margin on the F side lie off the plot below; only the margin on the M side (dashed) is in view. Every training cat is classified M, the more common sex, so every female is on the wrong side, and the 62 support vectors are the 31 females and the 31 males below the dashed line. As cost grows the margin narrows and the hyperplane turns to separate light from heavy cats, but it changes little from cost = 1 to 10.
 :::
 
 ## Bias and variance
@@ -467,7 +467,7 @@ The budget, and so cost, is chosen by cross-validation, as in the resampling lec
 
 ```r
 # 10-fold cross-validation over the grid of cost values.
-cv_fit <- tune(svm, Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+cv_fit <- tune(svm, Sex ~ Hwt + Bwt, data = train, kernel = "linear",
                ranges = list(cost = cost_grid))
 head(cv_fit$performances, 3)
 cv_fit$best.parameters

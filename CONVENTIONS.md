@@ -450,8 +450,13 @@ convention.
   `svm(scale = TRUE)` compute; the ridge chapter's $\tilde x_{ij}$ uses
   divisor $n$), so $\hat\beta$, $\hat f$ and $\hat M$ are in standard
   deviations; figures in kilograms and grams are drawn with
-  `coord_fixed(ratio = s_Bwt / s_Hwt)` so that one standard deviation of
-  each measurement has the same length. Fits are `svm(kernel = "linear",
+  `coord_fixed(ratio = s_Hwt / s_Bwt)` so that one standard deviation of
+  each measurement has the same length. Heart weight is $x_1$, on the
+  horizontal axis, and body weight $x_2$, on the vertical axis, so the
+  formula is `Sex ~ Hwt + Bwt`, the first component of $\hat\beta$ is heart
+  weight's, and a fitted hyperplane is a nearly horizontal line (the data
+  are 5.8 standard deviations wide and 4.4 tall, a landscape figure rather
+  than the portrait one that body weight on the horizontal axis gave). Fits are `svm(kernel = "linear",
   cost = ..., tolerance = 1e-8)` with the default `scale = TRUE`; `tune()`
   keeps the default `tolerance` (the tighter one hits the solver's iteration
   limit on some folds). `svm()`'s decision values are positive for the class
@@ -465,8 +470,8 @@ convention.
   by default), `dispersion` the standard deviation of the fold error rates,
   `best.parameters` the `cost` with the smallest `error`, and `best.model`
   the refit to all training observations. The observation is a **cat**
-  (`MASS::cats`, `Sex` `F`/`M` with `M` coded $y = 1$, `Bwt` in kg, `Hwt`
-  in g), with "training cats" and "test cats" (96 and 48, a simple random
+  (`MASS::cats`, `Sex` `F`/`M` with `M` coded $y = 1$, `Hwt` in g, `Bwt`
+  in kg), with "training cats" and "test cats" (96 and 48, a simple random
   split drawn after the seed 20261114 in the `packages` chunk); the test
   confusion matrix takes `M` as the positive class.
 - **In the support vector machines chapter

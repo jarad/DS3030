@@ -1487,8 +1487,8 @@ and kernels) is not assessed.
 <https://jarad.github.io/DS3030/09-svm/20-support-vector-classifier.html>
 
 The second of the support vector machine lectures (ISLR2 9.2), on
-`MASS::cats`: the sex (`F`, `M`; `M` coded $y = 1$) of 144 cats from body
-weight in kilograms (`Bwt`) and heart weight in grams (`Hwt`), split into
+`MASS::cats`: the sex (`F`, `M`; `M` coded $y = 1$) of 144 cats from heart
+weight in grams (`Hwt`) and body weight in kilograms (`Bwt`), split into
 training and test cats. The sexes overlap (some female and male cats share
 both measurements), so no separating hyperplane and no maximal margin
 classifier exist. The support vector classifier maximizes $M$ subject to

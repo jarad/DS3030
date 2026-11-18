@@ -71,16 +71,17 @@ or on the wrong side of the hyperplane. The reading is ISLR2 Section 9.2.
 
 ## Cat sex
 
-**Question.** Can a cat's body weight and heart weight tell its sex, and if
+**Question.** Can a cat's heart weight and body weight tell its sex, and if
 the two sexes overlap, which straight line should do the telling?
 
-**Data.** `MASS::cats` records the sex, body weight in kilograms (`Bwt`),
-and heart weight in grams (`Hwt`) of `r nrow(MASS::cats)` adult domestic
+**Data.** `MASS::cats` records the sex, heart weight in grams (`Hwt`), and
+body weight in kilograms (`Bwt`) of `r nrow(MASS::cats)` adult domestic
 cats used in experiments with the heart drug digitalis (published by R. A.
 Fisher in 1947). The observations are **cats**; each sex is a class, and the
-two explanatory variables are the features. As in the previous lecture, the
-class is coded $y_i = 1$ for `M`, the second level of the factor, and
-$y_i = -1$ for `F`.
+two explanatory variables are the features, heart weight $x_1$ on the
+horizontal axis of the figures and body weight $x_2$ on the vertical axis.
+As in the previous lecture, the class is coded $y_i = 1$ for `M`, the
+second level of the factor, and $y_i = -1$ for `F`.
 
 ```{r cats}
 # Cats, with the class coded y = 1 (M) or y = -1 (F).
@@ -111,34 +112,34 @@ cats the other `r nrow(test)`.
 ```{r cat-plot}
 #| output: false
 # Standard deviations of the two measurements among the training cats.
-s_train <- sapply(train[c("Bwt", "Hwt")], sd)
+s_train <- sapply(train[c("Hwt", "Bwt")], sd)
 
-# Axes in kilograms and grams: Bwt every 0.5 kg, Hwt every 2 g, minor lines
+# Axes in grams and kilograms: Hwt every 2 g, Bwt every 0.5 kg, minor lines
 # midway. One standard deviation of each measurement is drawn the same
 # length, so that distances on the standardized scale look right.
-x_scale <- scale_x_continuous(breaks = seq(2, 4, by = 0.5),
-                              minor_breaks = seq(2.25, 3.75, by = 0.5))
-y_scale <- scale_y_continuous(breaks = seq(6, 20, by = 2),
+x_scale <- scale_x_continuous(breaks = seq(6, 20, by = 2),
                               minor_breaks = seq(7, 21, by = 2))
-x_limits <- c(1.9, 4.1)
-y_limits <- c(5.9, 21)
+y_scale <- scale_y_continuous(breaks = seq(2, 4, by = 0.5),
+                              minor_breaks = seq(2.25, 3.75, by = 0.5))
+x_limits <- c(5.9, 21)
+y_limits <- c(1.9, 4.1)
 
-# The cats' axes, with the legend in the lower-right corner, where no cat
+# The cats' axes, with the legend in the upper-left corner, where no cat
 # and no fitted line passes.
 cat_base <- function() {
-  ggplot(mapping = aes(x = Bwt, y = Hwt)) +
+  ggplot(mapping = aes(x = Hwt, y = Bwt)) +
     x_scale +
     y_scale +
-    coord_fixed(ratio = s_train[["Bwt"]] / s_train[["Hwt"]],
+    coord_fixed(ratio = s_train[["Hwt"]] / s_train[["Bwt"]],
                 xlim = x_limits, ylim = y_limits, expand = FALSE) +
     scale_color_manual(values = sex_colors) +
     scale_shape_manual(values = sex_shapes) +
-    labs(x = "Body weight, Bwt (kg)",
-         y = "Heart weight, Hwt (g)",
+    labs(x = "Heart weight, Hwt (g)",
+         y = "Body weight, Bwt (kg)",
          color = "Sex", shape = "Sex") +
     theme(legend.position = "inside",
-          legend.position.inside = c(0.98, 0.02),
-          legend.justification = c(1, 0))
+          legend.position.inside = c(0.02, 0.98),
+          legend.justification = c(0, 1))
 }
 
 # The points on top of any lines drawn before them.
@@ -153,16 +154,16 @@ cat_plot <- cat_base() +
 
 # Training cats of different sexes that share both measurements.
 tied <- train |>
-  group_by(Bwt, Hwt) |>
+  group_by(Hwt, Bwt) |>
   summarize(n_F = sum(Sex == "F"), n_M = sum(Sex == "M"),
             .groups = "drop") |>
   filter(n_F > 0, n_M > 0)
 n_tied <- nrow(tied)
 
-# Mean body and heart weight of each sex.
+# Mean heart and body weight of each sex.
 sex_means <- train |>
   group_by(Sex) |>
-  summarize(Bwt = mean(Bwt), Hwt = mean(Hwt))
+  summarize(Hwt = mean(Hwt), Bwt = mean(Bwt))
 mean_of <- function(sex, column) {
   sex_means[[column]][sex_means$Sex == sex]
 }
@@ -178,7 +179,7 @@ n_overlap <- sum(between(train$Bwt, min_M, max_F))
 
 ```{r cat-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 cat_plot
 ```
@@ -193,8 +194,8 @@ run from `r fmt(min_M, 1)` kg up, so the heavier cats are all male and the
 `r n_overlap` cats between `r fmt(min_M, 1)` and `r fmt(max_F, 1)` kg are a
 mixture of the two sexes, with no line between them. The axes are drawn so
 that one standard deviation of each measurement among the training cats,
-$s_{\texttt{Bwt}} = `r fmt_math(s_train[["Bwt"]])`$ kg and
-$s_{\texttt{Hwt}} = `r fmt_math(s_train[["Hwt"]])`$ g, has the same length;
+$s_{\texttt{Hwt}} = `r fmt_math(s_train[["Hwt"]])`$ g and
+$s_{\texttt{Bwt}} = `r fmt_math(s_train[["Bwt"]])`$ kg, has the same length;
 the Standardization section below explains why.
 
 ## Soft margin
@@ -275,7 +276,7 @@ that the estimates are accurate to more digits than are printed.
 
 ```{r svc-fit}
 # Support vector classifier: linear kernel, standardized features.
-svc_fit <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+svc_fit <- svm(Sex ~ Hwt + Bwt, data = train, kernel = "linear",
                cost = 1, tolerance = 1e-8)
 svc_fit
 ```
@@ -323,8 +324,8 @@ The margin is a Euclidean distance between points $x$ and $x'$,
 $\left[\sum_j \left(x_j - x'_j\right)^2\right]^{1/2}$, where $x_j$ is the $j$th
 coordinate of $x$ (a single subscript $j$ on a generic point names a
 coordinate, and a single subscript $i$ names an observation). It adds the
-squared differences of the features in their own units. With body weight in
-kilograms and heart weight in grams, a difference of 1 g in heart weight
+squared differences of the features in their own units. With heart weight in
+grams and body weight in kilograms, a difference of 1 g in heart weight
 counts as much as a difference of 1 kg in body weight, although 1 g is
 `r fmt(1 / s_train[["Hwt"]])` standard deviations of heart weight and 1 kg
 is `r fmt(1 / s_train[["Bwt"]])` of body weight.
@@ -352,7 +353,7 @@ svc_w <- function(fit) {
        w = flip * drop(t(fit$coefs) %*% fit$SV))
 }
 
-# The same function w0 + w'x written in Bwt (kg) and Hwt (g): undo the
+# The same function w0 + w'x written in Hwt (g) and Bwt (kg): undo the
 # standardization if svm() used it, and the change to grams if bwt_per_kg
 # is 1000.
 svc_raw <- function(fit, bwt_per_kg = 1) {
@@ -363,18 +364,18 @@ svc_raw <- function(fit, bwt_per_kg = 1) {
     center <- fit$x.scale[["scaled:center"]]
     spread <- fit$x.scale[["scaled:scale"]]
   }
-  slopes <- unname(est$w / spread * c(bwt_per_kg, 1))
+  slopes <- unname(est$w / spread * c(1, bwt_per_kg))
   c(a0 = est$w0 - sum(est$w * center / spread),
-    Bwt = slopes[1],
-    Hwt = slopes[2])
+    Hwt = slopes[1],
+    Bwt = slopes[2])
 }
 
 # The hyperplane (w0 + w'x = 0, solid) and the margins (w0 + w'x = -1 and
-# 1, dashed), drawn as lines Hwt = (level - a0 - a1 Bwt) / a2.
+# 1, dashed), drawn as lines Bwt = (level - a0 - a1 Hwt) / a2.
 svc_lines <- function(a) {
   lapply(c(-1, 0, 1), function(level) {
-    geom_abline(intercept = (level - a[["a0"]]) / a[["Hwt"]],
-                slope = -a[["Bwt"]] / a[["Hwt"]],
+    geom_abline(intercept = (level - a[["a0"]]) / a[["Bwt"]],
+                slope = -a[["Hwt"]] / a[["Bwt"]],
                 linetype = if (level == 0) "solid" else "dashed")
   })
 }
@@ -393,7 +394,7 @@ svc_plot <- function(fit, bwt_per_kg = 1, data = train) {
 #| output: false
 # The same cost unscaled (kg and g as recorded); the standardized fit is
 # svc_fit.
-fit_raw <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+fit_raw <- svm(Sex ~ Hwt + Bwt, data = train, kernel = "linear",
                cost = 1, scale = FALSE, tolerance = 1e-8)
 
 raw_plot <- svc_plot(fit_raw)
@@ -401,7 +402,7 @@ std_plot <- svc_plot(svc_fit)
 
 # Standardized, the fit is the same with body weight in grams.
 train_g <- mutate(train, Bwt = 1000 * Bwt)
-fit_std_g <- svm(Sex ~ Bwt + Hwt, data = train_g, kernel = "linear",
+fit_std_g <- svm(Sex ~ Hwt + Bwt, data = train_g, kernel = "linear",
                  cost = 1, tolerance = 1e-8)
 stopifnot(isTRUE(all.equal(svc_raw(svc_fit),
                            svc_raw(fit_std_g, bwt_per_kg = 1000),
@@ -411,7 +412,7 @@ stopifnot(isTRUE(all.equal(svc_raw(svc_fit),
 # vector in the picture, where one standard deviation of each measurement
 # is drawn the same length.
 per_sd_w <- function(a) {
-  c(a[["Bwt"]], a[["Hwt"]]) * s_train
+  c(a[["Hwt"]], a[["Bwt"]]) * s_train
 }
 w_sd_raw <- per_sd_w(svc_raw(fit_raw))
 w_sd_std <- per_sd_w(svc_raw(svc_fit))
@@ -430,10 +431,10 @@ w_raw <- svc_w(fit_raw)$w
 margin_reported_raw <- 1 / sqrt(sum(w_raw^2))
 stopifnot(abs(margin_sd_std - 1 / sqrt(sum(svc_w(svc_fit)$w^2))) < 1e-8)
 
-# The prose reads heart weight's part as positive unscaled and negative
-# standardized, and body weight's as positive in both.
-stopifnot(normal_raw[2] > 0, normal_std[2] < 0,
-          normal_raw[1] > 0, normal_std[1] > 0)
+# The prose reads heart weight's part (first) as positive unscaled and
+# negative standardized, and body weight's (second) as positive in both.
+stopifnot(normal_raw[1] > 0, normal_std[1] < 0,
+          normal_raw[2] > 0, normal_std[2] > 0)
 
 # Training error rates and budget used of the two fits.
 error_of <- function(fit, data) {
@@ -456,7 +457,7 @@ scale_budgets <- c(raw = budget_used(fit_raw),
 #### Unscaled
 ```{r scale-raw-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 raw_plot
 ```
@@ -464,7 +465,7 @@ raw_plot
 #### Standardized
 ```{r scale-std-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 std_plot
 ```
@@ -554,7 +555,7 @@ stopifnot(colnames(decision) == "M/F")
 center_train <- svc_fit$x.scale[["scaled:center"]]
 scale_train <- svc_fit$x.scale[["scaled:scale"]]
 stopifnot(isTRUE(all.equal(scale_train, s_train)))
-x_std <- scale(as.matrix(train[c("Bwt", "Hwt")]),
+x_std <- scale(as.matrix(train[c("Hwt", "Bwt")]),
                center = center_train, scale = scale_train)
 
 # Fitted values (signed distances in standard deviations), distances on
@@ -566,11 +567,11 @@ train <- train |>
 stopifnot(isTRUE(all.equal(drop(decision), train$f_hat * norm_w,
                            check.attributes = FALSE)))
 
-# The prose reads the average cat as on the M side, body weight's slope as
-# positive (toward M), and heart weight's as negative and smaller in size.
+# The prose reads the average cat as on the M side, heart weight's slope as
+# negative and smaller in size, and body weight's as positive (toward M).
 stopifnot(beta_hat["beta0"] > 0,
-          beta_hat["Bwt"] > 0,
           beta_hat["Hwt"] < 0,
+          beta_hat["Bwt"] > 0,
           beta_hat["Bwt"] > abs(beta_hat["Hwt"]))
 ```
 :::
@@ -578,17 +579,17 @@ stopifnot(beta_hat["beta0"] > 0,
 The fitted value $\hat f(x) = \hat\beta_0 + \hat\beta_1\tilde x_1 +
 \hat\beta_2\tilde x_2$ is the signed distance from $x$ to the hyperplane in
 the standardized features, in standard deviations, with
-$\tilde x_1$ and $\tilde x_2$ the standardized body and heart weights.
+$\tilde x_1$ and $\tilde x_2$ the standardized heart and body weights.
 $\hat\beta_0 = `r fmt_math(beta_hat["beta0"])`$ is $\hat f$ at
-$\tilde x = 0$, a cat of average body and heart weight among the training
+$\tilde x = 0$, a cat of average heart and body weight among the training
 cats: it lies `r fmt(abs(beta_hat["beta0"]))` standard deviations from the
-hyperplane on the `M` side. $\hat\beta_1 = `r fmt_math(beta_hat["Bwt"])`$:
-one standard deviation more body weight (`r fmt(s_train[["Bwt"]])` kg)
-moves a cat `r fmt(beta_hat["Bwt"])` standard deviations toward the `M`
+hyperplane on the `M` side. $\hat\beta_1 = `r fmt_math(beta_hat["Hwt"])`$:
+one standard deviation more heart weight (`r fmt(s_train[["Hwt"]])` g)
+moves a cat `r fmt(abs(beta_hat["Hwt"]))` standard deviations toward the `F`
 side.
-$\hat\beta_2 = `r fmt_math(beta_hat["Hwt"])`$: one standard deviation more
-heart weight (`r fmt(s_train[["Hwt"]])` g) moves it
-`r fmt(abs(beta_hat["Hwt"]))` standard deviations toward the `F` side. Body
+$\hat\beta_2 = `r fmt_math(beta_hat["Bwt"])`$: one standard deviation more
+body weight (`r fmt(s_train[["Bwt"]])` kg) moves it
+`r fmt(beta_hat["Bwt"])` standard deviations toward the `M` side. Body
 weight carries most of the classification; among cats of the same body
 weight, a heavier heart points slightly toward female. The margin is
 $\hat M = `r fmt_math(M_hat)`$ standard deviations.
@@ -671,7 +672,7 @@ slack_plot <- ggplot(train, aes(x = distance / M_hat, y = slack)) +
 #### Fit
 ```{r fit-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 fit_plot
 ```
@@ -695,7 +696,7 @@ wrong side of the hyperplane, so the training error rate is
 line $\hat\epsilon_i = 1 - y_i\hat f(x_i)/\hat M$ to the left of 1 and at 0
 to its right. They add to $\sum_i\hat\epsilon_i =
 `r fmt_math(C_hat)`$, the budget this fit uses. The misclassified cats are the
-lighter males, left of the solid line, and the heavier females, right of it.
+lighter males, below the solid line, and the heavier females, above it.
 
 ## Budget
 
@@ -710,7 +711,7 @@ and support vectors circled.
 # Fits at four values of cost.
 tab_costs <- c(0.01, 0.1, 1, 10)
 tab_fits <- lapply(tab_costs, function(cost) {
-  svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+  svm(Sex ~ Hwt + Bwt, data = train, kernel = "linear",
       cost = cost, tolerance = 1e-8)
 })
 tab_plots <- lapply(tab_fits, svc_plot)
@@ -757,7 +758,7 @@ budget_table <- budget_summary |>
 #### Training cats
 ```{r budget-data-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 cat_plot
 ```
@@ -765,7 +766,7 @@ cat_plot
 #### `cost` = `r tab_costs[1]`
 ```{r budget-1-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 tab_plots[[1]]
 ```
@@ -773,7 +774,7 @@ tab_plots[[1]]
 #### `cost` = `r tab_costs[2]`
 ```{r budget-2-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 tab_plots[[2]]
 ```
@@ -781,7 +782,7 @@ tab_plots[[2]]
 #### `cost` = `r tab_costs[3]`
 ```{r budget-3-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 tab_plots[[3]]
 ```
@@ -789,7 +790,7 @@ tab_plots[[3]]
 #### `cost` = `r tab_costs[4]`
 ```{r budget-4-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 tab_plots[[4]]
 ```
@@ -812,11 +813,12 @@ bias.
 
 With `cost` = `r tab_costs[1]` slack is so cheap that the margin is
 `r fmt(smallest$M, 1)` standard deviations. The hyperplane and the margin on
-the `F` side lie off the plot to the left; only the margin on the `M` side
+the `F` side lie off the plot below; only the margin on the `M` side
 (dashed) is in view. Every training cat is classified `M`, the more common
 sex, so every female is on the wrong side, and the `r smallest$n_support`
-support vectors are the cats left of the dashed line. As `cost` grows the margin
-narrows and the hyperplane turns to separate light from heavy cats, but it
+support vectors are the `r sum(train$Sex == "F")` females and the
+`r smallest$n_support - sum(train$Sex == "F")` males below the dashed line.
+As `cost` grows the margin narrows and the hyperplane turns to separate light from heavy cats, but it
 changes little from `cost` = `r tab_costs[3]` to `r tab_costs[4]`.
 
 ### Cost and budget
@@ -875,7 +877,7 @@ The figure is the fit with `cost` = 1 again.
 
 ```{r support-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 fit_plot
 ```
@@ -911,10 +913,10 @@ stopifnot(svc_fit$tot.nSV == n_on_margin + sum(train$slack > 1e-4))
 # Refits on standardized features, with the training cats' means and
 # standard deviations: all training cats, and the support vectors alone.
 train_std <- tibble(Sex = train$Sex,
-                    Bwt = x_std[, "Bwt"],
-                    Hwt = x_std[, "Hwt"])
+                    Hwt = x_std[, "Hwt"],
+                    Bwt = x_std[, "Bwt"])
 refit_std <- function(data) {
-  fit <- svm(Sex ~ Bwt + Hwt, data = data, kernel = "linear",
+  fit <- svm(Sex ~ Hwt + Bwt, data = data, kernel = "linear",
              cost = 1, scale = FALSE, tolerance = 1e-8)
   w <- svc_w(fit)
   c(w$w0, w$w) / sqrt(sum(w$w^2))
@@ -961,7 +963,7 @@ slack, for fits over a grid of `cost` values.
 # Fits over a grid of cost, 4 per factor of 10.
 cost_grid <- 10^seq(-2, 2, by = 0.25)
 grid_summary <- map_dfr(cost_grid, function(cost) {
-  fit <- svm(Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+  fit <- svm(Sex ~ Hwt + Bwt, data = train, kernel = "linear",
              cost = cost, tolerance = 1e-8)
   svc_summary(fit)
 })
@@ -1034,7 +1036,7 @@ Cross-validation chooses `cost` from them alone; the test cats stay aside.
 
 ```{r cv-data-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 cat_plot
 ```
@@ -1070,7 +1072,7 @@ its iteration limit on some folds.
 
 ```{r cv-fit}
 # 10-fold cross-validation over the grid of cost values.
-cv_fit <- tune(svm, Sex ~ Bwt + Hwt, data = train, kernel = "linear",
+cv_fit <- tune(svm, Sex ~ Hwt + Bwt, data = train, kernel = "linear",
                ranges = list(cost = cost_grid))
 head(cv_fit$performances, 3)
 cv_fit$best.parameters
@@ -1169,7 +1171,7 @@ test_plot <- cat_base() +
 
 ```{r test-figure}
 #| echo: false
-#| fig-width: 5
+#| fig-width: 5.6
 #| fig-height: 4.5
 test_plot
 ```
@@ -1183,7 +1185,7 @@ means and standard deviations first.
 
 ```{r test-predict}
 # Predicted sex of the first test cats.
-head(select(test, Sex, Bwt, Hwt, predicted))
+head(select(test, Sex, Hwt, Bwt, predicted))
 ```
 
 ### Confusion matrix
