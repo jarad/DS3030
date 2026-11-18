@@ -43,7 +43,7 @@ execute:
 
 ## Today
 
-<!-- derived-from: 09-svm/20-support-vector-classifier.qmd @ 6afcd17 -->
+<!-- derived-from: 09-svm/20-support-vector-classifier.qmd @ 0282ec7 -->
 
 ::: {.columns}
 ::: {.column width="34%"}
