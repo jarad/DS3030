@@ -75,17 +75,17 @@ execute:
   - Confusion matrix
 - Comparison
   - Classifiers
-  - Error rate
-  - Log loss
+  - Measures
+  - Results
 :::
 :::
 
 ::: notes
-Distilled from the chapter's six learning objectives: why the maximal margin classifier fails when the classes overlap, the optimization problem of the support vector classifier with slack variables epsilon_i and a budget C, and each of its constraints; classifying a training observation as outside the margin, inside the margin, or on the wrong side of the hyperplane from its slack, identifying the support vectors, and why the fitted hyperplane depends only on them; how the budget C sets the width of the margin and the number of support vectors, so trades bias against variance, and that C = 0 gives the maximal margin classifier; the penalty form that e1071::svm() solves, with tuning parameter cost, which solves the budget problem for a budget that never grows as cost grows, and why the features are standardized before a margin is measured; choosing cost by 10-fold cross-validation with e1071::tune(), and evaluating the chosen classifier by its test error rate and confusion matrix; and comparing its test and cross-validation error rates with those of logistic regression, LDA, QDA and a random forest, and why it has no log loss. The collapsed Code callouts, the cross-validation formula, the Sign rule, the sensitivity and specificity, and the Fit tab of the chapter's Slack estimates are not in the deck.
+Distilled from the chapter's six learning objectives: why the maximal margin classifier fails when the classes overlap, the optimization problem of the support vector classifier with slack variables epsilon_i and a budget C, and each of its constraints; classifying a training observation as outside the margin, inside the margin, or on the wrong side of the hyperplane from its slack, identifying the support vectors, and why the fitted hyperplane depends only on them; how the budget C sets the width of the margin and the number of support vectors, so trades bias against variance, and that C = 0 gives the maximal margin classifier; the penalty form that e1071::svm() solves, with tuning parameter cost, which solves the budget problem for a budget that never grows as cost grows, and why the features are standardized before a margin is measured; choosing cost by 10-fold cross-validation with e1071::tune(), and evaluating the chosen classifier by its test error rate and confusion matrix; and comparing its cross-validation and test error rates with those of logistic regression, LDA, QDA and a random forest, and why it has no log loss. The collapsed Code callouts, the cross-validation formula, the Sign rule, the sensitivity and specificity, and the Fit tab of the chapter's Slack estimates are not in the deck.
 
 This is the second of three lectures on support vector machines. It covers the support vector classifier, which keeps the flat boundary of the maximal margin classifier but lets some training observations fall inside the margin or on the wrong side of the hyperplane. The reading is ISLR2 Section 9.2.
 
-Timing: one 50-minute period on Wed 2026-11-18, the first minutes of which may go to finishing the maximal margin material from Monday. The core slides, the agenda and 19 content slides, come to 42.5 minutes, with no slack: the eight transitions are counted as zero minutes, so the core fills 50 minutes. The seven optional slides add 12.5 minutes, 55.0 in all. They are in the drop order, the first to drop first: Log loss (2 minutes); Error rate under Comparison (2) with Classifiers (1.5) and the Comparison transition (0), dropped together; Support vector count (1.5); Refits (1.5); Penalty form (2); and Estimates (2). Teach the core in the order of the deck and add the optional slides only if time is left; if time is short even without them, drop Standardization: fits (2 minutes) first. Agenda lines to skip when a slide is dropped: Log loss under Comparison; Error rate under Comparison, Classifiers, and the item Comparison itself, when the pair is dropped (Error rate under Cross-validation is a core line); Support vector count under Support vectors; Refits under Support vectors; Penalty form under Fitting; Estimates under Fitting. Standardization: fits has no agenda line. The next lecture covers support vector machines, which replace the flat boundary with a curved one by means of kernels.
+Timing: one 50-minute period on Wed 2026-11-18, the first minutes of which may go to finishing the maximal margin material from Monday. The core slides, the agenda and 19 content slides, come to 42.5 minutes, with no slack: the eight transitions are counted as zero minutes, so the core fills 50 minutes. The seven optional slides add 12.5 minutes, 55.0 in all. They are in the drop order, the first to drop first: Measures (1.5 minutes); Results (2.5) with Classifiers (1.5) and the Comparison transition (0), dropped together; Support vector count (1.5); Refits (1.5); Penalty form (2); and Estimates (2). Teach the core in the order of the deck and add the optional slides only if time is left; if time is short even without them, drop Standardization: fits (2 minutes) first. Agenda lines to skip when a slide is dropped: Measures under Comparison; Results and Classifiers under Comparison, and the item Comparison itself, when the group is dropped; Support vector count under Support vectors; Refits under Support vectors; Penalty form under Fitting; Estimates under Fitting. Standardization: fits has no agenda line. The next lecture covers support vector machines, which replace the flat boundary with a curved one by means of kernels.
 :::
 
 # Cat sex
@@ -577,27 +577,11 @@ head(predict(lda_fit, test)$posterior, 3)
 Each comparison classifier is fit to the same 96 training cats and the same two explanatory variables, `Hwt` and `Bwt`, gives a probability that a cat is M, and classifies it M when that probability exceeds 1/2. The classifiers are logistic regression with main effects only, with the interaction of Hwt and Bwt, and with both squares as well as the interaction; linear discriminant analysis (LDA) and quadratic discriminant analysis (QDA); and a random forest, with randomForest()'s default settings. The support vector classifier is the one chosen by cross-validation in this lecture, with cost = 1.78. The code is the chapter's calls for main-effects logistic regression, LDA, QDA and the random forest; the other two logistic regressions are fit in the chapter's collapsed Code callout. The output is the probabilities of F and M that LDA gives the first three test cats.
 :::
 
-## Error rate
+## Measures
 
-::: {style="font-size: 0.85em"}
-::: {.auto-table}
-|Classifier                | Test error rate (%)| CV error rate (%)|
-|:-------------------------|-------------------:|-----------------:|
-|Logistic, main effects    |                16.7|              22.9|
-|Logistic, interaction     |                16.7|              26.0|
-|Logistic, quadratic       |                16.7|              25.0|
-|LDA                       |                16.7|              24.0|
-|QDA                       |                14.6|              27.1|
-|Random forest             |                20.8|              22.9|
-|Support vector classifier |                18.8|              24.0|
+::: {style="font-size: 0.7em"}
+- Error rate: proportion misclassified
 :::
-:::
-
-::: notes
-Each classifier is fit to all the training cats and evaluated on the 48 test cats, and 10-fold cross-validation estimates its error rate from the training cats alone, with the same ten folds for every classifier. The support vector classifier is refit in each fold at the cost chosen earlier by a different set of folds, so its cross-validation error rate is slightly favorable to it; the other classifiers have no tuning parameter chosen here. The test error rates run from 14.6% to 20.8%, and one cat is 2.1% of the 48 test cats. The support vector classifier misclassifies 9 test cats, 1 more than each logistic regression and LDA, 2 more than QDA, and 1 fewer than the random forest. The cross-validation error rates run from 22.9% to 27.1%. QDA has the smallest test error rate, 14.6%, and the largest cross-validation error rate, 27.1%, so the two estimates do not order the classifiers the same way. None of the interaction, quadratic, QDA or random forest classifiers has both a smaller test error rate and a smaller cross-validation error rate than logistic regression with main effects only. With two explanatory variables and a sex difference that is mostly a difference in body weight, a straight boundary does about as well as anything here.
-:::
-
-## Log loss
 
 ::: {style="font-size: 0.8em"}
 $$
@@ -606,27 +590,32 @@ $$
 :::
 
 ::: {style="font-size: 0.7em"}
-- $\widehat p_i$ — probability given to cat $i$'s observed sex
+- $\widehat p_i$ — probability given cat $i$'s observed sex
+- $n$ — number of cats
 :::
 
-::: {.fragment}
+::: notes
+Each classifier is evaluated twice. Ten-fold cross-validation estimates its performance from the training cats alone, with the same ten folds for every classifier; the support vector classifier is refit in each fold at the cost chosen earlier by a different set of folds, so its cross-validation estimates are slightly favorable to it, and the other classifiers have no tuning parameter chosen here. The test cats are the other evaluation: each classifier is fit to all the training cats and evaluated on the 48 test cats. Two measures are computed in each, the error rate and the log loss. The error rate is the proportion of cats misclassified. The log loss of a classifier's predicted probabilities, as in the classification lecture, is the display, where n is the number of cats and p-hat_i is the probability the classifier gives cat i's observed sex, so a smaller log loss is better. The error rate counts a cat as right or wrong by which side of 1/2 its probability falls on; the log loss also rewards a confident correct probability and punishes a confident wrong one. Giving every cat the proportion of males among the training cats (in cross-validation, among the cats outside its fold), so using no explanatory variable, has a log loss of 0.633 in cross-validation and 0.637 on the test cats. The support vector classifier has no log loss because it gives no probability. Its fitted value f-hat(x) is a signed distance from the hyperplane, which says which side a cat is on and how far from the boundary, not how likely M is. Any increasing function of f-hat(x) could be declared a probability, but the classifier does not say which. The other five classifiers estimate a probability, so they have a log loss, and the support vector classifier is compared with them by error rate only. (not assessed: svm() with probability = TRUE fits a logistic regression to the support vector classifier's fitted values, using an internal cross-validation, and returns probabilities from it; that is a second model added to the classifier, which gives a class and a signed distance without it.)
+:::
+
+## Results
+
 ::: {style="font-size: 0.85em"}
 ::: {.auto-table}
-|Classifier                | Test log loss| CV log loss|
-|:-------------------------|-------------:|-----------:|
-|Logistic, main effects    |         0.418|       0.510|
-|Logistic, interaction     |         0.417|       0.513|
-|Logistic, quadratic       |         0.402|       0.550|
-|LDA                       |         0.429|       0.509|
-|QDA                       |         0.377|       0.543|
-|Random forest             |         0.406|       0.567|
-|Support vector classifier |       &mdash;|     &mdash;|
-:::
+|Classifier                | CV error rate (%)| CV log loss| Test error rate (%)| Test log loss|
+|:-------------------------|-----------------:|-----------:|-------------------:|-------------:|
+|Logistic, main effects    |              22.9|       0.510|                16.7|         0.418|
+|Logistic, interaction     |              26.0|       0.513|                16.7|         0.417|
+|Logistic, quadratic       |              25.0|       0.550|                16.7|         0.402|
+|LDA                       |              24.0|       0.509|                16.7|         0.429|
+|QDA                       |              27.1|       0.543|                14.6|         0.377|
+|Random forest             |              22.9|       0.567|                20.8|         0.406|
+|Support vector classifier |              24.0|     &mdash;|                18.8|       &mdash;|
 :::
 :::
 
 ::: notes
-The log loss of a classifier's predicted probabilities, as in the classification lecture, is the display, where p-hat_i is the probability the classifier gives cat i's observed sex, so a smaller log loss is better. The error rate counts a cat as right or wrong by which side of 1/2 its probability falls on; the log loss also rewards a confident correct probability and punishes a confident wrong one. Giving every cat the proportion of males among the training cats, so using no explanatory variable, has a log loss of 0.637 on the test cats and 0.633 in cross-validation. The support vector classifier has no log loss because it gives no probability. Its fitted value f-hat(x) is a signed distance from the hyperplane, which says which side a cat is on and how far from the boundary, not how likely M is. Any increasing function of f-hat(x) could be declared a probability, but the classifier does not say which. (not assessed: svm() with probability = TRUE fits a logistic regression to the fitted values by an internal cross-validation, a second model added to the classifier.) The other five classifiers estimate a probability, so they have a log loss, and the support vector classifier is compared with them by error rate only. Among the classifiers with a probability, the quadratic logistic regression, QDA and the random forest have the three smallest test log losses (0.377 to 0.406) and the three largest cross-validation log losses (0.543 to 0.567). The 48 test cats and the 96 cross-validated training cats rank the classifiers differently, by log loss as by error rate, so these data do not rank them.
+The cross-validation error rates run from 22.9% to 27.1%, and the cross-validation log losses of the classifiers with a probability from 0.509 to 0.567. The quadratic logistic regression, QDA and the random forest have the three largest cross-validation log losses (0.543 to 0.567). The test error rates run from 14.6% to 20.8%, and one cat is 2.1% of the 48 test cats. The support vector classifier misclassifies 9 test cats, 1 more than each logistic regression and LDA, 2 more than QDA, and 1 fewer than the random forest. The same three classifiers, the quadratic logistic regression, QDA and the random forest, have the three smallest test log losses (0.377 to 0.406). The cross-validation and the test estimates do not rank the classifiers the same way: QDA has the largest cross-validation error rate, 27.1%, and the smallest test error rate, 14.6%, and the quadratic logistic regression, QDA and the random forest go from the largest log losses in cross-validation to the smallest on the test cats. None of the interaction, quadratic, QDA or random forest classifiers has both a smaller cross-validation error rate and a smaller test error rate than logistic regression with main effects only. With two explanatory variables and a sex difference that is mostly a difference in body weight, a straight boundary does about as well as anything here. If the Measures slide is dropped, say: log loss is minus the mean log of the probability a classifier gives each cat's observed sex, and a smaller log loss is better; the support vector classifier gives no probability, so it has no log loss, and its cells in the table are dashes.
 :::
 
 ## Conclusion
@@ -639,7 +628,7 @@ The log loss of a classifier's predicted probabilities, as in the classification
 - `cost` by cross-validation; judged by the test error rate
 
 ::: notes
-When the classes overlap, no hyperplane separates them and the maximal margin classifier does not exist. The support vector classifier gives each observation a slack variable epsilon_i >= 0, requires y_i (beta_0 + beta transposed x_i) >= M(1 - epsilon_i) with the squared betas summing to 1, and maximizes the margin M subject to a budget, the sum of the epsilon_i being at most C. An observation with epsilon_i = 0 is on the correct side, on or outside the margin; one with 0 < epsilon_i <= 1 is inside the margin on the correct side; one with epsilon_i > 1 is on the wrong side of the hyperplane, so at most C training observations are misclassified. The support vectors are the observations on or inside the margin or on the wrong side, and the fitted hyperplane depends only on them. The budget is the tuning parameter: C = 0 gives the maximal margin classifier, a small C a narrow margin with few support vectors (low bias, high variance), and a large C a wide margin with many (low variance, more bias). A new observation is classified by the sign of f-hat(x*). e1071::svm() solves the equivalent penalty form, minimizing one half of the squared norm of w plus cost times the sum of the epsilon_i; a larger cost gives a budget no larger and a margin no wider, so cost and C move in opposite directions. Because a margin is a distance, svm() standardizes the features by default, which makes the fit independent of their units. e1071::tune() chooses cost by 10-fold cross-validation of the error rate, and the chosen classifier is judged by its test error rate and confusion matrix. If the Comparison slides were taught, add that the support vector classifier is compared with other classifiers by error rate, on test cats and in cross-validation, and that, unlike logistic regression, LDA, QDA and a random forest, it gives a class and no probability, so it has no log loss.
+When the classes overlap, no hyperplane separates them and the maximal margin classifier does not exist. The support vector classifier gives each observation a slack variable epsilon_i >= 0, requires y_i (beta_0 + beta transposed x_i) >= M(1 - epsilon_i) with the squared betas summing to 1, and maximizes the margin M subject to a budget, the sum of the epsilon_i being at most C. An observation with epsilon_i = 0 is on the correct side, on or outside the margin; one with 0 < epsilon_i <= 1 is inside the margin on the correct side; one with epsilon_i > 1 is on the wrong side of the hyperplane, so at most C training observations are misclassified. The support vectors are the observations on or inside the margin or on the wrong side, and the fitted hyperplane depends only on them. The budget is the tuning parameter: C = 0 gives the maximal margin classifier, a small C a narrow margin with few support vectors (low bias, high variance), and a large C a wide margin with many (low variance, more bias). A new observation is classified by the sign of f-hat(x*). e1071::svm() solves the equivalent penalty form, minimizing one half of the squared norm of w plus cost times the sum of the epsilon_i; a larger cost gives a budget no larger and a margin no wider, so cost and C move in opposite directions. Because a margin is a distance, svm() standardizes the features by default, which makes the fit independent of their units. e1071::tune() chooses cost by 10-fold cross-validation of the error rate, and the chosen classifier is judged by its test error rate and confusion matrix. If the Comparison slides were taught, add that the support vector classifier is compared with other classifiers by error rate, in cross-validation and on test cats, and that, unlike logistic regression, LDA, QDA and a random forest, it gives a class and no probability, so it has no log loss.
 
 The next lecture covers support vector machines, which replace the flat boundary with a curved one by means of kernels, tune cost together with a kernel's own parameter, extend to more than two classes, and compare the support vector classifier's loss with that of logistic regression.
 :::

@@ -62,7 +62,7 @@ margin is measured,
 - **choose** `cost` by 10-fold cross-validation with `e1071::tune()`, and
 **evaluate** the chosen classifier by its test error rate and confusion
 matrix,
-- **compare** the support vector classifier's test and cross-validation error
+- **compare** the support vector classifier's cross-validation and test error
 rates with those of logistic regression, LDA, QDA and a random forest, and
 **explain** why it has no log loss.
 :::
@@ -1430,63 +1430,37 @@ for (k in 1:10) {
 }
 cv_loss_constant <- log_loss(p_cv_constant, train$Sex)
 
-# Error table, in percent.
-error_table <- comparison |>
-  transmute(classifier,
-            test_error = 100 * test_error,
-            cv_error = 100 * cv_error) |>
-  knitr::kable(digits = 1,
-               col.names = c("Classifier", "Test error rate (%)",
-                             "CV error rate (%)"),
-               align = "lrr")
-
-# Log loss table; the support vector classifier has none.
+# One table: all the cross-validation columns first, then all the test
+# columns. Error rates in percent; the support vector classifier has no
+# log loss, shown as a dash.
 options(knitr.kable.NA = "&mdash;")
-loss_table <- comparison |>
-  select(classifier, test_loss, cv_loss) |>
-  knitr::kable(digits = 3,
-               col.names = c("Classifier", "Test log loss",
-                             "CV log loss"),
-               align = "lrr")
+comparison_table <- comparison |>
+  transmute(classifier,
+            cv_error = 100 * cv_error,
+            cv_loss,
+            test_error = 100 * test_error,
+            test_loss) |>
+  knitr::kable(digits = c(0, 1, 3, 1, 3),
+               col.names = c("Classifier", "CV error rate (%)",
+                             "CV log loss", "Test error rate (%)",
+                             "Test log loss"),
+               align = "lrrrr")
 ```
 :::
 
-### Error rate
+### Measures
 
-Each classifier is fit to all the training cats and evaluated on the
-`r nrow(test)` test cats, and 10-fold cross-validation estimates its error
-rate from the training cats alone, with the same ten folds for every
-classifier. The support vector classifier is refit in each fold at the `cost`
-chosen earlier by a different set of folds, so its cross-validation error rate
-is slightly favorable to it; the other classifiers have no tuning parameter
-chosen here.
+Each classifier is evaluated twice. Ten-fold cross-validation estimates its
+performance from the training cats alone, with the same ten folds for every
+classifier; the support vector classifier is refit in each fold at the `cost`
+chosen earlier by a different set of folds, so its cross-validation estimates
+are slightly favorable to it, and the other classifiers have no tuning
+parameter chosen here. The test cats are the other evaluation: each classifier
+is fit to all the training cats and evaluated on the `r nrow(test)` test cats.
+Two measures are computed in each, the error rate and the log loss.
 
-```{r comparison-error}
-#| echo: false
-#| tbl-colwidths: [50, 25, 25]
-error_table
-```
-
-The test error rates run from `r pct(min(comparison$test_error))` to
-`r pct(max(comparison$test_error))`, and one cat is
-`r pct(1 / nrow(test))` of the `r nrow(test)` test cats. The support vector
-classifier misclassifies `r missed[7]` test cats, `r svc_vs[1]` more than
-each logistic regression and LDA, `r svc_vs[5]` more than QDA,
-and `r -svc_vs[6]` fewer than the random forest. The cross-validation
-error rates run from `r pct(min(comparison$cv_error))` to
-`r pct(max(comparison$cv_error))`. QDA has the smallest test error rate,
-`r pct(others$test_error[5])`, and the largest cross-validation error rate,
-`r pct(others$cv_error[5])`, so the two estimates do not order the classifiers
-the same way. None of the interaction, quadratic, QDA or random forest
-classifiers has both a smaller test error rate and a smaller cross-validation
-error rate than logistic regression with main effects only. With two
-explanatory variables and a sex difference that is mostly a difference in
-body weight, a straight boundary does about as well as anything here.
-
-### Log loss
-
-The log loss of a classifier's predicted probabilities, as in the
-classification lecture, is
+The **error rate** is the proportion of cats misclassified. The **log loss** of
+a classifier's predicted probabilities, as in the classification lecture, is
 
 $$
 \text{log loss} = -\frac{1}{n}\sum_{i=1}^n \log \hat p_i,
@@ -1497,15 +1471,10 @@ classifier gives cat $i$'s observed sex, so a smaller log loss is better. The
 error rate counts a cat as right or wrong by which side of $1/2$ its
 probability falls on; the log loss also rewards a confident correct
 probability and punishes a confident wrong one. Giving every cat the
-proportion of males among the training cats, so using no explanatory
-variable, has a log loss of `r fmt(test_loss_constant, 3)` on the test cats
-and `r fmt(cv_loss_constant, 3)` in cross-validation.
-
-```{r comparison-loss}
-#| echo: false
-#| tbl-colwidths: [50, 25, 25]
-loss_table
-```
+proportion of males among the training cats (in cross-validation, among the
+cats outside its fold), so using no explanatory variable, has a log loss of
+`r fmt(cv_loss_constant, 3)` in cross-validation and
+`r fmt(test_loss_constant, 3)` on the test cats.
 
 The support vector classifier has no log loss because it gives no
 probability. Its fitted value $\hat f(x)$ is a signed distance from the
@@ -1515,16 +1484,6 @@ declared a probability, but the classifier does not say which. The
 other five classifiers estimate a probability, so they have a log loss, and
 the support vector classifier is compared with them by error rate only.
 
-Among the classifiers with a probability, the quadratic logistic regression,
-QDA and the random forest have the three smallest test log losses
-(`r fmt(min(others$test_loss), 3)` to
-`r fmt(sort(others$test_loss)[3], 3)`) and the three largest
-cross-validation log losses
-(`r fmt(sort(others$cv_loss)[4], 3)` to
-`r fmt(max(others$cv_loss), 3)`). The `r nrow(test)` test cats and the
-`r nrow(train)` cross-validated training cats rank the classifiers
-differently, by log loss as by error rate, so these data do not rank them.
-
 ::: {.callout-note collapse="true"}
 ### Beyond this course
 `svm()` with `probability = TRUE` fits a logistic regression to the support
@@ -1532,6 +1491,44 @@ vector classifier's fitted values, using an internal cross-validation, and
 returns probabilities from it. That is a second model added to the
 classifier, which gives a class and a signed distance without it.
 :::
+
+### Results
+
+```{r comparison-results}
+#| echo: false
+#| tbl-colwidths: [36, 16, 16, 16, 16]
+comparison_table
+```
+
+The cross-validation error rates run from
+`r pct(min(comparison$cv_error))` to `r pct(max(comparison$cv_error))`, and
+the cross-validation log losses of the classifiers with a probability from
+`r fmt(min(others$cv_loss), 3)` to `r fmt(max(others$cv_loss), 3)`. The
+quadratic logistic regression, QDA and the random forest have the three
+largest cross-validation log losses
+(`r fmt(sort(others$cv_loss)[4], 3)` to `r fmt(max(others$cv_loss), 3)`).
+
+The test error rates run from `r pct(min(comparison$test_error))` to
+`r pct(max(comparison$test_error))`, and one cat is
+`r pct(1 / nrow(test))` of the `r nrow(test)` test cats. The support vector
+classifier misclassifies `r missed[7]` test cats, `r svc_vs[1]` more than
+each logistic regression and LDA, `r svc_vs[5]` more than QDA,
+and `r -svc_vs[6]` fewer than the random forest. The same three classifiers,
+the quadratic logistic regression, QDA and the random forest, have the three
+smallest test log losses (`r fmt(min(others$test_loss), 3)` to
+`r fmt(sort(others$test_loss)[3], 3)`).
+
+The cross-validation and the test estimates do not rank the classifiers the
+same way: QDA has the largest cross-validation error rate,
+`r pct(others$cv_error[5])`, and the smallest test error rate,
+`r pct(others$test_error[5])`, and the quadratic logistic regression, QDA
+and the random forest go from the largest log losses in cross-validation to
+the smallest on the test cats. None of the interaction, quadratic, QDA or random
+forest classifiers has both a smaller cross-validation error rate and a
+smaller test error rate than logistic regression with main effects only.
+With two explanatory variables and a
+sex difference that is mostly a difference in body weight, a straight
+boundary does about as well as anything here.
 
 ## Conclusion
 
@@ -1560,8 +1557,8 @@ directions. Because a margin is a distance, `svm()` standardizes the
 features by default, which makes the fit independent of their units.
 `e1071::tune()` chooses `cost` by 10-fold cross-validation of the error
 rate, and the chosen classifier is judged by its test error rate and
-confusion matrix. It is compared with other classifiers by error rate, on test
-cats and in cross-validation; unlike logistic regression, LDA, QDA and a
+confusion matrix. It is compared with other classifiers by error rate, in
+cross-validation and on test cats; unlike logistic regression, LDA, QDA and a
 random forest, it gives a class and no probability, so it has no log loss.
 
 The next lecture covers support vector machines, which replace the flat
