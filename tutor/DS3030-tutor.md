@@ -1522,7 +1522,15 @@ cross-validation estimate of the misclassification rate, the cost with the
 smallest is `best.parameters`, and `best.model` is the refit), shown as a
 curve against `cost` on a log axis; the number of support vectors falls as
 `cost` grows. The chosen classifier is evaluated on the test cats by its
-error rate, confusion matrix, sensitivity and specificity. A `Beyond this
+error rate, confusion matrix, sensitivity and specificity. It is then compared
+with logistic regression (main effects; with the interaction; with squares and
+the interaction), LDA, QDA and a random forest on the same cats, by test error
+rate and 10-fold cross-validation error rate with the same folds for every
+classifier, and by log loss for the classifiers that estimate a probability;
+the support vector classifier has no log loss because it gives a class and a
+signed distance, not a probability. The differences among the
+classifiers are within the noise of 48 test cats and 96 cross-validated
+cats. A `Beyond this
 course` callout (the hinge-loss form, `class.weights`, $\nu$-classification,
 one-class SVMs, the dual's bound on the multipliers) is not assessed.
 

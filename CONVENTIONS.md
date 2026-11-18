@@ -469,7 +469,16 @@ convention.
   `tune()`'s `performances$error` is that estimate (misclassification rate
   by default), `dispersion` the standard deviation of the fold error rates,
   `best.parameters` the `cost` with the smallest `error`, and `best.model`
-  the refit to all training observations. The observation is a **cat**
+  the refit to all training observations. The comparison section fits
+  logistic regression (main effects; with the `Hwt`:`Bwt` interaction; with
+  both squares and the interaction), LDA, QDA and `randomForest()` with its
+  defaults to the same training cats, and compares their test error rates
+  and 10-fold CV error rates, the same folds (a seed set in the chunk) for
+  every classifier and the support vector classifier refit at its chosen
+  `cost`, plus **log loss** (two words, as in the classification lecture;
+  $-\tfrac1n\sum_i\log\hat p_i$ with $\hat p_i$ the probability given the
+  observed sex) for the classifiers that give a probability; the support
+  vector classifier gets "&mdash;" because it has none. The observation is a **cat**
   (`MASS::cats`, `Sex` `F`/`M` with `M` coded $y = 1$, `Hwt` in g, `Bwt`
   in kg), with "training cats" and "test cats" (96 and 48, a simple random
   split drawn after the seed 20261114 in the `packages` chunk); the test
