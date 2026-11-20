@@ -1726,6 +1726,16 @@ and variance, why a classification tree grown with the Gini index makes a
 split that leaves the predicted class unchanged, and reading a confusion
 matrix; judging claims about how tree ensembles are tuned and compared.
 
+**Homework 11** (support vector classifiers and support vector machines):
+by-hand practice with signed distances, margins, slack variables, the budget,
+and support vectors, and a short kernel derivation; on real imaging data
+with many features, the effect of standardizing, tuning a linear and a
+radial fit by cross-validation, comparing them with logistic regression and
+a random forest by test error and its standard error, and reading a random
+forest's permutation importance; judging claims about `cost`, training
+error and the radial kernel's locality, and what a support vector machine
+outputs.
+
 **Chapter 2 quiz**: association vs. causation; what data is available under
 supervised vs. unsupervised learning; categorical vs. quantitative variable
 identification; matching a response to regression or classification;
